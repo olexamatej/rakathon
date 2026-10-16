@@ -53,7 +53,13 @@ az role assignment create \
 
 # 2. Seed the HMAC pepper directly into Key Vault. The generated value is
 # never printed and never stored anywhere except the vault.
+KV_ID="$(az keyvault show --name "$KV_NAME" --resource-group "$RG" --query id -o tsv)"
 if ! az keyvault secret show --vault-name "$KV_NAME" --name transfer-hmac-secret >/dev/null 2>&1; then
+  # Data-plane writes need a specific data role; Contributor is not enough.
+  az role assignment create \
+    --role "Key Vault Secrets Officer" \
+    --assignee "$(az account show --query user.name -o tsv)" \
+    --scope "$KV_ID" >/dev/null 2>&1 || true
   HMAC_MESSAGE_PEPPER="$(head -c 32 /dev/urandom | base64)"
   az keyvault secret set --vault-name "$KV_NAME" \
     --name transfer-hmac-secret \
@@ -64,6 +70,10 @@ fi
 
 # 3. Register PostgreSQL admin password. Same handling: only in the vault.
 if [ -n "$GENERATED_PG_PASSWORD" ]; then
+  az role assignment create \
+    --role "Key Vault Secrets Officer" \
+    --assignee "$(az account show --query user.name -o tsv)" \
+    --scope "$KV_ID" >/dev/null 2>&1 || true
   az keyvault secret set --vault-name "$KV_NAME" \
     --name postgres-admin-password \
     --value "$GENERATED_PG_PASSWORD" > /dev/null
