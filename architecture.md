@@ -6,11 +6,12 @@
 
 | Area | Responsibility |
 | --- | --- |
-| `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same local static server. Patient uploads and doctor retrieval use storage; interaction checks and site research use the interaction engine. Recognition remains simulated. |
+| `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same Node server. Patient uploads and doctor retrieval use storage; interaction checks and site research use the interaction engine. Photo recognition uses the server-side Gemini adapter. |
 | Root `App.tsx`, `src/` | Separate older Expo prototype; preserve its entry points. |
 | `apps/doctor-web/` | Doctor-facing browser UI area. |
+| `services/transcription/gemini.mjs` | Gemini image-to-medication adapter; server credentials and strict minimal output. |
 | `services/transfer-api/` | Rust/Axum opaque JSON storage backed by SQLite. |
-| `packages/api-contract/` | Shared OpenAPI storage contract. |
+| `packages/api-contract/` | OpenAPI storage and separate transcription contracts. |
 | `interaction-engine/` | Separate Rust interaction service; not part of storage. |
 | `infra/vps/` | Existing Compose deployment notes and generic image inputs. |
 
@@ -29,12 +30,13 @@ PINs are six random Crockford Base32 characters, stored only as HMAC digests;
 collisions do not overwrite data. Keep `TRANSFER_HMAC_SECRET` outside source
 control and images; rotation invalidates outstanding PINs.
 
-The patient PWA sends `{ "text": "…" }`, where text is the current tab-separated
-list including optional regimen and schedules, without photographs or local IDs.
+The patient PWA sends `{ "version": 1, "regimen": "…", "items": […] }`,
+without photographs or local IDs. The doctor also accepts legacy `{ "text": "…" }`
+tab-separated payloads. Unknown strength/package fields may be empty.
 It records a local snapshot and displays the returned PIN only after a valid 201
 response. The receipt timestamp is client-side; storage returns only the PIN.
-No automatic retry or offline upload queue is used. The local Node static server
-does not proxy `/api`; integrated uploads require the same-origin VPS proxy.
+No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
+storage uploads under `/api/v1/` require the same-origin VPS proxy.
 
 Admin-only endpoints, enabled with `STORAGE_ADMIN_PASSWORD`:
 `GET /v1/admin/blobs` lists paginated size/HMAC metadata;
@@ -46,6 +48,19 @@ demo are removed. Historical SQLite migrations and existing legacy rows are
 retained for database compatibility; those rows are not served or deleted.
 The migration widening the blob limit copies existing blobs transactionally.
 PostgreSQL is not implemented; its old schema is historical only.
+
+## Photo transcription
+
+`POST /api/transcribe` on the patient Node server accepts raw JPEG, PNG or WebP
+(up to 20 MiB), calls Gemini 3.6 Flash and returns only `[{name, schedule}]`.
+Each field is a string or null; visible strength stays in name. The client maps
+these rows to its existing editable items without inventing strength or package
+size. Invalid/incomplete provider output fails instead of returning partial data.
+The server loads `.env`; only the server holds the API key. Large photos use
+temporary Google Files, deleted after generation. There is no automatic retry
+or fallback to simulated data. This is separate from the opaque Rust storage.
+See [configuration and routing](docs/gemini-transcription.md) and
+[the transcription contract](packages/api-contract/transcription.openapi.yaml).
 
 ## Security and lifecycle
 

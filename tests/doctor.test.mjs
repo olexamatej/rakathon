@@ -46,9 +46,10 @@ test('broken stored history is rejected instead of being overwritten', () => {
 
 test('item edits are validated; SÚKL code and link are optional', () => {
   assert.deepEqual(validateItem(item()), {});
+  assert.deepEqual(validateItem(item({ dosage: '', dosesPerPackage: '', schedule: 'Každé pondělí večer 1 tableta' })), {});
   assert.deepEqual(validateItem(item({ schedule: '1-0-0', suklCode: '0254290' })), {});
   assert.deepEqual(Object.keys(validateItem(item({ name: ' ', dosage: '', dosesPerPackage: '0', suklCode: '12' }))).sort(),
-    ['dosage', 'dosesPerPackage', 'name', 'suklCode']);
+    ['dosesPerPackage', 'name', 'suklCode']);
   assert.equal(suklLink(item()), '');
   assert.deepEqual(validateItem(item({ substances: ['Ibuprofen', 'Warfarin'] })), {});
   assert.match(suklLink(item({ suklCode: '0254290' })), /^https:\/\/prehledy\.sukl\.cz\/.*0254290$/);

@@ -7,10 +7,10 @@ by PIN in a separate doctor browser context, then reloads admin and requires
 **exactly one additional record**.
 
 `patient-doctor.spec.mjs` covers the focused handoff: a patient uploads a tiny
-synthetic image, the app's mock recognizer creates two sample medicines, and the
+synthetic image, a Playwright stub of `/api/transcribe` returns two medicines, and the
 patient submits them to the real Rust storage API. A clean doctor browser context
 uses the server-issued PIN and verifies the same medicine names, dosages, and
-schedule from storage. The recognizer is mocked; uploads, storage, and PINs are not.
+schedule from storage, with unknown fields kept empty. Gemini is stubbed; uploads, storage, and PINs are not.
 
 `.github/workflows/storage-e2e.yml` runs automatically on pushes and PRs to
 main/pillgaze, and can also be started manually without inputs or secrets.

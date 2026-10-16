@@ -12,17 +12,36 @@ export function loadRegimens() {
   return regimens;
 }
 
-// Resolves to the medicines array, or { items, regimen } when the photo also names an oncology regimen.
+// The transcription API returns only name + schedule; map unknown legacy UI fields to empty strings.
 export async function recognizePhoto(file) {
   if (!file?.type.startsWith('image/')) throw new Error('Vyberte prosím fotografii.');
   if (file.size > 20 * 1024 * 1024) throw new Error('Fotografie je příliš velká. Vyberte snímek do 20 MB.');
-  // TODO(model): pass the photo to an on-device model or API; validate every returned medicine.
-  // shortcut: every photo returns two fake medicines; replace when recognition is connected.
-  await new Promise(resolve => setTimeout(resolve, 1100));
-  return [
-    { id: newId(), name: 'Ukázkové léčivo Alfa', dosage: '500 mg', dosesPerPackage: '30', schedule: '1-0-0' },
-    { id: newId(), name: 'Ukázkové léčivo Beta', dosage: '10 mg', dosesPerPackage: '20' },
-  ];
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('Použijte fotografii JPEG, PNG nebo WebP.');
+  let response;
+  try {
+    response = await fetch('/api/transcribe', {
+      method: 'POST', headers: { 'Content-Type': file.type, Accept: 'application/json' }, body: file,
+      cache: 'no-store', credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(135_000),
+    });
+  } catch {
+    throw new Error('Fotografii se nepodařilo odeslat k rozpoznání. Zkontrolujte připojení a zkuste to znovu.');
+  }
+  if (!response.ok) {
+    if (response.status === 429) throw new Error('Rozpoznávání je nyní vytížené. Zkuste to později.');
+    if (response.status === 413) throw new Error('Fotografie přesahuje 20 MB. Vyberte menší snímek.');
+    if (response.status === 504) throw new Error('Rozpoznávání trvá příliš dlouho. Zkuste to znovu.');
+    throw new Error('Fotografii se nepodařilo rozpoznat. Zkuste to znovu.');
+  }
+  let rows;
+  try { rows = await response.json(); } catch { throw new Error('Rozpoznávání nevrátilo platný seznam léčiv.'); }
+  const text = value => value === null || (typeof value === 'string' && value.trim().length > 0
+    && value.length <= 120 && !/[\u0000-\u001f\u007f]/.test(value));
+  if (!Array.isArray(rows) || rows.length > 200 || rows.some(row => !row || Object.keys(row).length !== 2
+      || !Object.hasOwn(row, 'name') || !Object.hasOwn(row, 'schedule') || !text(row.name) || !text(row.schedule))) {
+    throw new Error('Rozpoznávání nevrátilo platný seznam léčiv.');
+  }
+  return rows.map(row => ({ id: newId(), name: row.name ?? '', dosage: '', dosesPerPackage: '',
+    ...(row.schedule !== null ? { schedule: row.schedule } : {}) }));
 }
 
 export async function sendList(payload) {

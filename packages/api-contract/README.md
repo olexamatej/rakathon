@@ -8,3 +8,8 @@
 Operational liveness/readiness probes remain separate. Old encrypted transfer
 and demo endpoints are removed. Use synthetic data only; this API does not
 enforce encryption. Update the contract together with its client consumers.
+
+`transcription.openapi.yaml` separately defines the patient Node server's
+`POST /api/transcribe`: raw image in, minimal `[{name, schedule}]` out. This
+endpoint calls Gemini and does not belong to the Rust blob-storage service.
+See [configuration](../../docs/gemini-transcription.md).

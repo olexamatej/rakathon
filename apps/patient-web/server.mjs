@@ -1,6 +1,8 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { loadEnvFile } from 'node:process';
+import { MAX_IMAGE_BYTES, TranscriptionError, transcribeImage } from '../../services/transcription/gemini.mjs';
 
 const files = {
   '/pacient': ['index.html', 'text/html'],
@@ -78,7 +80,7 @@ function loadSuklData() {
 
 const INTERACTION_BODY_LIMIT = 64 * 1024;
 const problem = (res, status, title, detail) => {
-  res.writeHead(status, { ...securityHeaders, 'Content-Type': 'application/problem+json; charset=utf-8' });
+  res.writeHead(status, { ...securityHeaders, 'Cache-Control': 'no-store', 'Content-Type': 'application/problem+json; charset=utf-8' });
   res.end(JSON.stringify({ type: 'about:blank', title, status, detail }));
 };
 
@@ -112,13 +114,42 @@ async function proxyInteractionEngine(req, res, upstreamPath) {
   }
 }
 
-export function createAppServer() {
+async function recognizeImage(req, res, transcriber) {
+  if (req.method !== 'POST') return problem(res, 405, 'Nepovolená metoda', 'Použijte POST s fotografií.');
+  res.setHeader('Cache-Control', 'no-store');
+  const mimeType = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  if (!['image/jpeg', 'image/png', 'image/webp', 'application/octet-stream'].includes(mimeType)) {
+    return problem(res, 415, 'Nepodporovaný obrázek', 'Pošlete přímo fotografii JPEG, PNG nebo WebP.');
+  }
+  if (Number(req.headers['content-length']) > MAX_IMAGE_BYTES) return problem(res, 413, 'Příliš velká fotografie', 'Vyberte snímek do 20 MB.');
+  const chunks = [];
+  let size = 0;
+  try {
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > MAX_IMAGE_BYTES) return problem(res, 413, 'Příliš velká fotografie', 'Vyberte snímek do 20 MB.');
+      chunks.push(chunk);
+    }
+    const rows = await transcriber(Buffer.concat(chunks));
+    res.writeHead(200, { ...securityHeaders, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify(rows));
+  } catch (error) {
+    if (error instanceof TranscriptionError) return problem(res, error.status, 'Rozpoznávání fotografie', error.message);
+    problem(res, 502, 'Rozpoznávání fotografie', 'Fotografii se nepodařilo zpracovat. Zkuste to znovu.');
+  }
+}
+
+export function createAppServer({ transcriber = transcribeImage } = {}) {
   return createServer(async (req, res) => {
     let path;
     try {
       path = new URL(req.url, 'http://localhost').pathname;
     } catch {
       res.writeHead(400).end('Neplatná adresa.');
+      return;
+    }
+    if (path === '/api/transcribe') {
+      await recognizeImage(req, res, transcriber);
       return;
     }
     if (path === '/api/interaction-checks' || path === '/api/interaction-research') {
@@ -171,6 +202,8 @@ export function createAppServer() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  try { loadEnvFile(fileURLToPath(new URL('../../.env', import.meta.url))); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
   const port = Number(process.env.PORT || 8081);
   const server = createAppServer();
   server.on('error', error => {

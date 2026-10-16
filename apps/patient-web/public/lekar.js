@@ -247,7 +247,7 @@ function listView(list) {
       ${list.items.map(item => `<tr>
         <td class="c-name">${cellInput(item, 'name', 'Název léčiva', { maxlength: 120 })}</td>
         <td>${cellInput(item, 'dosage', 'Síla / dávkování', { maxlength: 120 })}</td>
-        <td>${cellInput(item, 'schedule', 'Kdy užívat', { maxlength: 20 })}</td>
+        <td>${cellInput(item, 'schedule', 'Kdy užívat', { maxlength: 120 })}</td>
         <td class="substances">${substancesCell(item)}</td>
         <td class="actions"><button type="button" class="icon-button" data-action="delete-item" data-id="${escape(item.id)}" aria-label="Odstranit ${escape(item.name || 'léčivo')}">${icon('trash')}</button></td></tr>`).join('')}
       </tbody></table></div>`

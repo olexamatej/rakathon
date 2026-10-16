@@ -16,7 +16,7 @@ export const suklLink = item => (/^https:\/\//.test(item.suklUrl || '') ? item.s
 
 const isItem = item => item && /^[a-z0-9-]{8,80}$/.test(item.id)
   && isText(item.name, 120) && isText(item.dosage, 120) && isText(item.dosesPerPackage, 6)
-  && optionalText(item.schedule, 20) && optionalText(item.suklCode, 20) && optionalText(item.suklUrl, 500)
+  && optionalText(item.schedule, 120) && optionalText(item.suklCode, 20) && optionalText(item.suklUrl, 500)
   && (item.substances === undefined || (Array.isArray(item.substances) && item.substances.length <= 30
     && item.substances.every(name => isText(name, 120))));
 const isList = list => list && /^[a-z0-9-]{8,80}$/.test(list.id) && isPin(list.pin)
@@ -62,9 +62,8 @@ export function touch(list) {
 export function validateItem(item) {
   const errors = {};
   if (!item.name.trim()) errors.name = 'Vyplňte název.';
-  if (!item.dosage.trim()) errors.dosage = 'Vyplňte sílu / dávkování.';
-  if (!/^[1-9]\d{0,5}$/.test(item.dosesPerPackage.trim())) errors.dosesPerPackage = 'Zadejte kladné celé číslo.';
-  if (item.schedule && item.schedule.length > 20) errors.schedule = 'Nejvýše 20 znaků.';
+  if (item.dosesPerPackage.trim() && !/^[1-9]\d{0,5}$/.test(item.dosesPerPackage.trim())) errors.dosesPerPackage = 'Zadejte kladné celé číslo.';
+  if (item.schedule && item.schedule.length > 120) errors.schedule = 'Nejvýše 120 znaků.';
   if (item.suklCode && !/^\d{7}$/.test(item.suklCode.trim())) errors.suklCode = 'Kód SÚKL má 7 číslic.';
   return errors;
 }

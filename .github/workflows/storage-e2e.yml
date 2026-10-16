@@ -35,6 +35,7 @@ jobs:
             /e2e/
             /apps/patient-web/
             /apps/storage-admin/
+            /services/transcription/gemini.mjs
             /services/transfer-api/
             /data/regimens.json
       - name: Build isolated application and browser test image
