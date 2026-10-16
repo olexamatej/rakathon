@@ -34,6 +34,30 @@ test('patient uploads its text as JSON and records exactly the storage-issued PI
   assert.equal(fetch.mock.callCount(), 1);
 });
 
+test('sending the same list twice uploads twice and preserves both independent receipts', async t => {
+  const state = createState();
+  state.items.push({ id: 'local-id', name: 'Ukázkové léčivo', dosage: '10 mg', dosesPerPackage: '30' });
+  const text = toText(state.items);
+  const pins = ['01Z9QW', '23ABCD'];
+  const bodies = [];
+  t.mock.method(globalThis, 'fetch', async (_, options) => {
+    bodies.push(options.body);
+    return new Response(JSON.stringify({ pin: pins[bodies.length - 1] }), { status: 201 });
+  });
+  for (let i = 0; i < 2; i++) {
+    recordSubmission(state, state.items, await sendList(text));
+  }
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0], bodies[1]);
+  assert.equal(state.submissions.length, 2);
+  assert.deepEqual(state.submissions.map(entry => entry.pin), [...pins].reverse());
+  assert.notEqual(state.submissions[0].id, state.submissions[1].id);
+  let saved;
+  const storage = { setItem: (_, value) => { saved = value; }, getItem: () => saved };
+  saveState(storage, state);
+  assert.deepEqual(loadState(storage).state.submissions, state.submissions);
+});
+
 test('storage PINs containing 0 and 1 and old simulated PINs remain readable', () => {
   const state = createState();
   state.items.push({ id: 'local-id', name: 'Ukázkové léčivo', dosage: '10 mg', dosesPerPackage: '30' });

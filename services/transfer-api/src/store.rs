@@ -47,6 +47,7 @@ impl TransferStore {
         Ok(result.rows_affected() == 1)
     }
 
+    // Payloads are not unique: identical uploads must occupy separate rows.
     // False means a PIN collision. Never overwrite an existing payload.
     pub async fn create_blob(
         &self,
