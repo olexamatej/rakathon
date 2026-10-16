@@ -63,7 +63,7 @@ function saveStatus() {
 }
 
 function historyView() {
-  return `<div class="page-title"><h1>Historie odeslání</h1></div>
+  return `<h1 class="sr-only">Historie odeslání</h1>
     ${state.submissions.length ? `<div class="history-list">${state.submissions.map(entry => `
       <details class="submission"><summary><span>${escape(date(entry.sentAt))} v ${escape(time(entry.sentAt))}<small>${itemCount(entry.items.length)}</small></span>
         <code>${escape(entry.pin)}</code></summary>
@@ -84,7 +84,7 @@ function photoRows() {
 
 function editor() {
   const busy = isBusy();
-  return `<div class="page-title"><h1 id="medicines-title">Moje léčiva</h1><span class="count">${state.items.length}</span></div>
+  return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
     <form id="list-form"><section class="medicines" aria-labelledby="medicines-title">
       ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
         <legend class="sr-only">Léčiva v seznamu</legend>${state.items.map((item, index) => `
@@ -128,12 +128,12 @@ function render(focus = false) {
     <button class="install-button" data-action="install" aria-label="Nainstalovat aplikaci">${icon('download')}</button></header>
     <main id="main"><nav class="view-tabs" aria-label="Přehled pacienta">
       <a href="/pacient" data-action="home" ${!showHistory ? 'aria-current="page"' : ''}>Seznam</a>
-      <a href="/pacient?historie=1" data-action="history" ${showHistory ? 'aria-current="page"' : ''}>Odeslání</a>
+      <a href="/pacient?historie=1" data-action="history" ${showHistory ? 'aria-current="page"' : ''}>Historie odeslání</a>
     </nav>
       ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
       <p class="save-status" id="save-status" role="status">${saveStatus()}</p>
       ${content}<p class="message" role="status" id="message">${escape(message)}</p></main></div>`;
-  document.title = `${receipt ? 'PIN' : showHistory ? 'Historie odeslání' : 'Moje léčiva'} · PillGaze`;
+  document.title = `${receipt ? 'PIN' : showHistory ? 'Historie odeslání' : 'Seznam'} · PillGaze`;
   if (focus) {
     app.querySelector('h1').tabIndex = -1;
     app.querySelector('h1').focus({ preventScroll: true });

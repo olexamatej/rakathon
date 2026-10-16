@@ -32,6 +32,8 @@ htmlcov/
 /.local/
 /exports/
 /assets/*.csv
+/data/sukl/dlp/
+/data/sukl/spc/
 *.sqlite
 *.sqlite-*
 *.sqlite3*

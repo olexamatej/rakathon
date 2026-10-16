@@ -31,8 +31,6 @@ h1 { font-size: clamp(32px, 6vw, 48px); line-height: 1.13; letter-spacing: -1.7p
 .view-tabs { display: flex; gap: 4px; margin: 8px 0 12px; }
 .view-tabs a { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-bottom: 2px solid transparent; color: var(--muted); text-decoration: none; font-size: 13px; }
 .view-tabs a[aria-current] { border-color: var(--green); color: var(--green); font-weight: 650; }
-.page-title { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.page-title h1 { margin: 8px 0; font-size: 28px; letter-spacing: -1px; }
 h2 { font-size: 18px; font-weight: 650; letter-spacing: -.3px; }
 .save-status { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 12px; }
 .save-status:empty { display: none; }
@@ -55,7 +53,6 @@ h2 { font-size: 18px; font-weight: 650; letter-spacing: -.3px; }
 .photo-job strong { display: block; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .photo-job span span { display: block; font-size: 11px; color: var(--muted); line-height: 1.5; }
 .photo-error span span { color: #963e26; }
-.count { font-size: 13px; color: var(--muted); }
 .empty-list { text-align: center; padding: 24px 12px; border: 1px dashed #cdd8c9; border-radius: 18px; margin-top: 12px; }
 .empty-list svg { display: block; width: 30px; height: 30px; margin: 0 auto 8px; color: #7c917b; }
 .empty-list strong { font-size: 15px; font-weight: 600; }
