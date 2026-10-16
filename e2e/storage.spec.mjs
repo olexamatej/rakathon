@@ -60,6 +60,22 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
   expect(stored.status(), 'Issued PIN must retrieve the stored list').toBe(200);
   expect(await stored.text() === upload.request().postData(), 'Stored bytes must match patient upload').toBe(true);
 
+  // A separate browser context has no patient draft or history: retrieval must use the API.
+  const doctorContext = await context.browser().newContext();
+  try {
+    const doctor = await doctorContext.newPage();
+    await doctor.goto('http://127.0.0.1:4180/lekar');
+    await doctor.locator('#pin').fill(pin);
+    await doctor.locator('#pin-submit').click();
+    await expect(doctor.locator('#main table')).toBeVisible();
+    await expect(doctor.locator('#main .name')).toHaveText(draft.items[0].name);
+    await expect(doctor.locator('#main tbody tr')).toHaveCount(1);
+    await doctor.reload();
+    await expect(doctor.locator('#main .name')).toHaveText(draft.items[0].name);
+  } finally {
+    await doctorContext.close();
+  }
+
   // Reload tests persisted admin login too, and starts pagination at page one.
   await adminAction(admin, () => admin.reload());
   const after = await inventory(admin);

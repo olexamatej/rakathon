@@ -1,23 +1,53 @@
-// Placeholders for the doctor API; replace the bodies, keep the signatures.
+import { normalizePin, isPin, validateItem } from './doctor.js';
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// TODO(server): GET the list stored under this PIN. Resolve to { sentAt, regimen, items } where each
-// item is { name, dosage, dosesPerPackage, schedule?, substances?: [active substance names] }; reject with a message
-// the doctor can read when the PIN is unknown or expired.
-// shortcut: the same fixed demo list for every PIN; the real API decides when a PIN is unknown.
-export async function fetchListByPin(pin) {
-  await wait(600);
-  return {
-    sentAt: new Date().toISOString(),
-    regimen: 'FOLFOX4',
-    items: [
-      { name: 'WARFARIN ORION', dosage: '3 mg', dosesPerPackage: '100', schedule: '0-0-1', substances: ['Warfarin sodný'] },
-      { name: 'IBALGIN', dosage: '200 mg', dosesPerPackage: '12', schedule: '3x', substances: ['Ibuprofen'] },
-      { name: 'LIPERTANCE', dosage: '10 mg / 5 mg / 5 mg', dosesPerPackage: '90', schedule: '1x', substances: ['Perindopril', 'Amlodipin', 'Indapamid'] },
-      { name: 'Metformin', dosage: '500 mg', dosesPerPackage: '30', substances: ['Metformin'] },
-    ],
-  };
+// Read the same tab-separated snapshot uploaded by the patient, including older PINs.
+export function parsePatientList(blob) {
+  const invalid = () => { throw new Error('Uložený záznam nemá platný formát seznamu léčiv.'); };
+  if (!blob || typeof blob.text !== 'string') return invalid();
+  const rows = blob.text.split(/\r?\n/);
+  let regimen = '';
+  if (rows[0].startsWith('Režim onkologické léčby\t')) {
+    const cells = rows.shift().split('\t');
+    if (cells.length !== 2 || cells[1].length > 200) return invalid();
+    regimen = cells[1];
+  }
+  const header = rows.shift();
+  const base = 'Název léčiva\tDosage\tPočet dávek v balení';
+  if (header !== base && header !== base + '\tKdy') return invalid();
+  const withSchedule = header.endsWith('\tKdy');
+  if (!rows.length) return invalid();
+  const items = rows.map(row => {
+    const cells = row.split('\t');
+    if (cells.length !== (withSchedule ? 4 : 3)) return invalid();
+    const [name, dosage, dosesPerPackage, schedule] = cells;
+    const item = { name, dosage, dosesPerPackage, ...(schedule ? { schedule } : {}) };
+    if (name.length > 120 || dosage.length > 120 || Object.keys(validateItem(item)).length) return invalid();
+    return item;
+  });
+  return { regimen, items };
+}
+
+export async function fetchListByPin(value) {
+  const pin = normalizePin(value);
+  if (!isPin(pin)) throw new Error('PIN musí mít 6 znaků.');
+  let response;
+  try {
+    response = await fetch(`/api/v1/transfers/${encodeURIComponent(pin)}`, {
+      headers: { Accept: 'application/json' }, cache: 'no-store', credentials: 'omit',
+      redirect: 'error', signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    throw new Error('Seznam se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu.');
+  }
+  if (response.status === 404) throw new Error('Pro tento PIN nebyl nalezen žádný seznam. Zkontrolujte PIN od pacienta.');
+  if (response.status === 429) throw new Error('Příliš mnoho pokusů. Vyčkejte alespoň minutu.');
+  if (!response.ok) throw new Error('Úložiště nyní není dostupné. Zkuste to později.');
+  let blob;
+  try { blob = await response.json(); }
+  catch { throw new Error('Úložiště nevrátilo platný seznam léčiv.'); }
+  return parsePatientList(blob);
 }
 
 let suklNames;

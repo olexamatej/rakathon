@@ -4,7 +4,7 @@ import {
   createDoctorState, loadDoctorState, saveDoctorState, addList, validateItem,
   normalizePin, isPin, suklLink, formatMedicineLines, formatMedicineInline, HISTORY_LIMIT, DOCTOR_STORAGE_KEY,
 } from '../apps/patient-web/public/doctor.js';
-import { fetchListByPin, fetchInteractions } from '../apps/patient-web/public/doctor-services.js';
+import { fetchInteractions } from '../apps/patient-web/public/doctor-services.js';
 
 const memory = () => {
   const map = new Map();
@@ -57,10 +57,7 @@ test('item edits are validated; SÚKL code and link are optional', () => {
   assert.equal(suklLink(item({ suklUrl: 'javascript:alert(1)' })), '');
 });
 
-test('placeholder doctor API returns a list for a PIN and interaction pairs', async () => {
-  const list = await fetchListByPin('ABC234');
-  assert.ok(list.items.length > 0 && list.items.every(entry => entry.name && entry.dosage && entry.dosesPerPackage));
-  assert.ok((await fetchListByPin('AAAAAA')).items.length > 0);
+test('placeholder interactions return interaction pairs', async () => {
   const items = [item(), item({ name: 'Warfarin' }), item({ name: 'Metformin' })];
   const result = await fetchInteractions(items, { name: 'FOLFOX', drugs: ['Oxaliplatin', 'Fluorouracil'] });
   assert.equal(result.medicines.length, 3); // one card per pair, not per substance

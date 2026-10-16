@@ -147,7 +147,7 @@ function cellInput(item, field, label, attributes = {}) {
 
 function listView(list) {
   return `<div class="list-head"><h1>Seznam léčiv</h1>
-      <p>PIN <code>${escape(list.pin)}</code> · odesláno ${escape(date(list.sentAt || list.loadedAt))} v ${escape(time(list.sentAt || list.loadedAt))} · ${itemCount(list.items.length)}</p></div>
+      <p>PIN <code>${escape(list.pin)}</code> · ${list.sentAt ? 'odesláno' : 'načteno'} ${escape(date(list.sentAt || list.loadedAt))} v ${escape(time(list.sentAt || list.loadedAt))} · ${itemCount(list.items.length)}</p></div>
     ${regimenRow(list)}
     ${list.items.length ? `<div class="table-wrap"><table class="med-table"><thead><tr>
         <th>Léčivo</th><th>Síla / dávkování</th><th>Kdy</th><th>Léčivé látky</th><th><span class="sr-only">Akce</span></th></tr></thead><tbody>
