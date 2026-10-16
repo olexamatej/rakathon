@@ -63,7 +63,10 @@ režimy a kopírování seznamu po řádcích i do jednoho řádku.
 Seznam se načítá ze storage podle skutečného PINu. Účinné látky se doplňují
 podle názvu léčiva z katalogu SÚKL a režim lze upravit přímo v přehledu.
 Změna látek zneplatní načtené interakce; úprava dávkování je zachová.
-Interakce v `doctor-services.js` jsou zatím ukázkové, bez napojení na interaction API.
+Interakce se načítají z interaction API; po otevření podrobností se prohledají
+podporované weby. Jejich stav se zobrazuje v pills a odkaz se shrnutím se objeví
+jen u nalezené stránky. Lokální server používá proxy na `INTERACTION_API_URL`
+(výchozí `https://rakathon.josefkuchar.com`).
 
 ## Co funguje
 

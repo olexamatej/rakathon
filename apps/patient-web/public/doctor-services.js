@@ -97,50 +97,117 @@ export function loadRegimenDrugs() {
   return regimenDrugs;
 }
 
-// TODO(server): load interactions. `regimen` is { name, drugs: [substance] } or null. Resolve to
-// { checkedAt, medicines: [interaction], regimen: { name, interactions: [interaction] } | null }
-// where `medicines` are interactions among the patient's medicines and `regimen.interactions` are
-// interactions of every regimen drug with the patient's medicines, and an interaction is
-// { a, b, severity: 'high' | 'moderate' | 'low' | 'unknown', summary: 'a few words',
-//   links: [{ title, description, url }] } (https pages with a longer text; each link carries its own `description` of what that page says).
-// shortcut: placeholder rows with made-up severities and example links; no real data is queried.
-const SAMPLE = [
-  {
-    severity: 'high', summary: 'Riziko krvácení',
-    links: [
-      { title: 'Souhrn údajů o přípravku', description: 'Souběžné podávání výrazně zvyšuje riziko závažného krvácení včetně nitrolebního; nutná častá kontrola INR a krevního obrazu.', url: 'https://example.org/spc' },
-      { title: 'Klinické doporučení', description: 'Doporučený postup při souběhu: snížení dávky, kontrola laboratorních hodnot po 3–5 dnech a poučení pacienta o varovných příznacích.', url: 'https://example.org/guidance' },
-    ],
-  },
-  {
-    severity: 'moderate', summary: 'Zátěž pro játra',
-    links: [
-      { title: 'Databáze interakcí', description: 'Možné zvýšení hladin jaterních enzymů a zhoršení funkce ledvin při dlouhodobém užívání.', url: 'https://example.org/database' },
-    ],
-  },
-  {
-    severity: 'low', summary: 'Mírné snížení účinku',
-    links: [{ title: 'Přehled studií', description: 'Klinický význam je malý, léčbu není nutné upravovat.', url: 'https://example.org/studies' }],
-  },
-  { severity: 'unknown', summary: 'Bez dostupných údajů', links: [] },
-];
+// Interactions come from the interaction engine (interaction-engine/openapi.yaml) through the
+// same-origin proxy /api/interaction-checks. The engine takes plain drug names and is asynchronous:
+// the same POST is repeated until it stops answering 202.
+const ENGINE_URL = '/api/interaction-checks';
+const RESEARCH_URL = '/api/interaction-research';
+const MAX_INPUTS = 50;
+const POLL_TIMEOUT_MS = 180_000;
 
-const placeholderInteraction = (a, b, index) => ({ a, b, ...structuredClone(SAMPLE[index % SAMPLE.length]) });
+// Medicines first, then the regimen's drugs; `role` tells the two apart when reading the response.
+export function buildInteractionRequest(items, regimen) {
+  const inputs = [
+    ...items.map(item => ({ name: item.name.trim(), role: 'medicine' })),
+    ...(regimen?.drugs || []).map(name => ({ name: name.trim(), role: 'regimen' })),
+  ].filter(input => input.name);
+  return { inputs, drugs: inputs.map(input => input.name) };
+}
 
-export async function fetchInteractions(items, regimen) {
-  await wait(900);
-  const names = items.map(item => item.name);
-  let index = 0;
-  const medicines = [];
-  for (let i = 0; i < names.length; i++) {
-    for (let j = i + 1; j < names.length; j++) medicines.push(placeholderInteraction(names[i], names[j], index++));
+const order = ['contraindicated', 'major', 'moderate', 'minor', 'unknown'];
+
+// Turns an engine response into what the page shows:
+// { checkedAt, medicines: [interaction], regimen: { name, interactions } | null, unresolved, coverage }
+// where interaction = { a, b, names, severity, findings }; a/b are the names the doctor sees and
+// `names` the engine's canonical drug names (what the web research is asked about).
+export function parseInteractionResponse(response, inputs, regimenName = '') {
+  const drugs = new Map(response.drugs.map(drug => [drug.id, drug]));
+  const roles = new Map(); // drugId -> { medicine, regimen, label }
+  const unresolved = [];
+  for (const resolution of response.resolutions) {
+    const input = inputs[resolution.inputIndex];
+    if (!input) continue;
+    if (resolution.status !== 'resolved') {
+      unresolved.push({ name: input.name, role: input.role, message: resolution.message, candidates: resolution.candidates || [] });
+      continue;
+    }
+    const entry = roles.get(resolution.drugId) ?? { medicine: false, regimen: false, label: input.name };
+    if (input.role === 'medicine' && !entry.medicine) entry.label = input.name; // the doctor's own medicine name wins
+    entry[input.role] = true;
+    roles.set(resolution.drugId, entry);
   }
+  const medicines = [];
+  const regimenInteractions = [];
+  for (const interaction of response.interactions) {
+    const [x, y] = interaction.drugIds.map(id => roles.get(id));
+    if (!x || !y || !drugs.has(interaction.drugIds[0])) continue;
+    const row = { a: x.label, b: y.label, names: interaction.drugIds.map(id => drugs.get(id).name), severity: order.includes(interaction.severity) ? interaction.severity : 'unknown', findings: interaction.findings };
+    if (x.medicine && y.medicine) medicines.push(row);
+    else if ((x.regimen && y.medicine) || (x.medicine && y.regimen)) regimenInteractions.push(row);
+    // two drugs that only belong to the regimen are meant to be taken together: not shown
+  }
+  const rank = row => order.indexOf(row.severity);
   return {
-    checkedAt: new Date().toISOString(),
-    medicines,
-    regimen: regimen?.name?.trim() ? {
-      name: regimen.name.trim(),
-      interactions: (regimen.drugs || []).flatMap(drug => names.map(name => placeholderInteraction(drug, name, index++))),
-    } : null,
+    checkedAt: response.checkedAt,
+    medicines: medicines.sort((p, q) => rank(p) - rank(q)),
+    regimen: regimenName.trim() ? { name: regimenName.trim(), interactions: regimenInteractions.sort((p, q) => rank(p) - rank(q)) } : null,
+    unresolved,
+    coverage: response.coverage,
   };
+}
+
+const sleep = (ms, signal) => new Promise((resolve, reject) => {
+  const timer = setTimeout(resolve, ms);
+  signal?.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason ?? new DOMException('Aborted', 'AbortError')); }, { once: true });
+});
+
+// POSTs the same body until the engine stops answering 202 (queued/running). `pollMs` overrides the
+// delay the engine suggests (tests). Resolves to the parsed 200 body; problems become Czech Errors.
+async function postAndPoll(url, body, { signal, pollMs, failure }) {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  for (;;) {
+    let response;
+    try {
+      response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      throw new Error('Službu pro kontrolu interakcí se nepodařilo zavolat.');
+    }
+    if (response.status === 202) {
+      if (Date.now() > deadline) throw new Error('Načítání trvá příliš dlouho. Zkuste to znovu.');
+      const suggested = Number(response.headers.get('Retry-After'));
+      await sleep(pollMs ?? (Number.isFinite(suggested) && suggested > 0 ? Math.min(suggested, 5) * 1000 : 2000), signal);
+      continue;
+    }
+    if (!response.ok) {
+      const problem = await response.json().catch(() => ({}));
+      throw new Error(problem.detail || failure);
+    }
+    return response.json();
+  }
+}
+
+// Loads interactions among the medicines and between the regimen's drugs and the medicines.
+// `regimen` is { name, drugs } or null.
+export async function fetchInteractions(items, regimen, options = {}) {
+  const { inputs, drugs } = buildInteractionRequest(items, regimen);
+  if (drugs.length > MAX_INPUTS) throw new Error(`Seznam má příliš mnoho látek (nejvýše ${MAX_INPUTS} léčiv a látek režimu).`);
+  if (drugs.length < 2) {
+    return { checkedAt: new Date().toISOString(), medicines: [], regimen: regimen?.name?.trim() ? { name: regimen.name.trim(), interactions: [] } : null, unresolved: [], coverage: null };
+  }
+  const response = await postAndPoll(ENGINE_URL, { drugs }, { ...options, failure: 'Interakce se nepodařilo načíst.' });
+  return parseInteractionResponse(response, inputs, regimen?.name || '');
+}
+
+// Sites the research agent can search, as accepted by /interaction-research.
+export const RESEARCH_SITES = ['drugs.com', 'webmd.com', 'patient.info', 'rxlist.com', 'reference.medscape.com', 'rxlabelguard.com', 'rxcheck.dev'];
+
+// Asks an agent to find a page dedicated to exactly this pair on one site. Resolves to
+// { status: 'found' | 'not_found' | 'inconclusive', url: https url | null, summary, site, checkedAt }.
+// It runs a live web search, so it can take a minute; call it on demand only.
+export async function researchInteraction(drugs, site, options = {}) {
+  const result = await postAndPoll(RESEARCH_URL, { drugs, site }, { ...options, failure: 'Hledání podrobností se nepodařilo.' });
+  const valid = ['found', 'not_found', 'inconclusive'].includes(result?.status) && typeof result.summary === 'string';
+  if (!valid) throw new Error('Služba vrátila neplatnou odpověď.');
+  return { ...result, url: result.status === 'found' && /^https:\/\//.test(result.url || '') ? result.url : null };
 }

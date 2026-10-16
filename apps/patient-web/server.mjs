@@ -76,6 +76,42 @@ function loadSuklData() {
   return suklData;
 }
 
+const INTERACTION_BODY_LIMIT = 64 * 1024;
+const problem = (res, status, title, detail) => {
+  res.writeHead(status, { ...securityHeaders, 'Content-Type': 'application/problem+json; charset=utf-8' });
+  res.end(JSON.stringify({ type: 'about:blank', title, status, detail }));
+};
+
+// Same-origin proxy for the interaction engine endpoints (interaction-engine/openapi.yaml): the browser avoids
+// CORS and the CSP stays `connect-src 'self'`. The upstream is read per request so tests can stub it.
+async function proxyInteractionEngine(req, res, upstreamPath) {
+  if (req.method !== 'POST') return problem(res, 405, 'Nepovolená metoda', 'Tato metoda není povolena.');
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > INTERACTION_BODY_LIMIT) return problem(res, 413, 'Příliš velký požadavek', 'Požadavek je příliš velký.');
+    chunks.push(chunk);
+  }
+  const upstream = (process.env.INTERACTION_API_URL || 'https://rakathon.josefkuchar.com').replace(/\/$/, '');
+  try {
+    const response = await fetch(`${upstream}${upstreamPath}`, {
+      method: 'POST',
+      headers: { 'Content-Type': req.headers['content-type'] || 'application/json' },
+      body: Buffer.concat(chunks),
+      signal: AbortSignal.timeout(30_000),
+    });
+    const headers = { ...securityHeaders, 'Cache-Control': 'no-store' };
+    for (const name of ['content-type', 'retry-after', 'content-language']) {
+      if (response.headers.has(name)) headers[name] = response.headers.get(name);
+    }
+    res.writeHead(response.status, headers);
+    res.end(Buffer.from(await response.arrayBuffer()));
+  } catch {
+    problem(res, 502, 'Služba interakcí není dostupná', 'Službu pro kontrolu interakcí se nepodařilo zavolat. Zkuste to znovu.');
+  }
+}
+
 export function createAppServer() {
   return createServer(async (req, res) => {
     let path;
@@ -83,6 +119,10 @@ export function createAppServer() {
       path = new URL(req.url, 'http://localhost').pathname;
     } catch {
       res.writeHead(400).end('Neplatná adresa.');
+      return;
+    }
+    if (path === '/api/interaction-checks' || path === '/api/interaction-research') {
+      await proxyInteractionEngine(req, res, path.replace('/api', ''));
       return;
     }
     if (!['GET', 'HEAD'].includes(req.method)) {
