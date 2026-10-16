@@ -1,10 +1,11 @@
 import { newId } from './lists.js';
 import {
   createDoctorState, loadDoctorState, saveDoctorState, addList, touch, validateItem,
-  normalizePin, isPin, suklLink,
+  normalizePin, isPin, formatMedicineLines, formatMedicineInline,
 } from './doctor.js';
-import { fetchListByPin, fetchInteractions, loadRegimenDrugs } from './doctor-services.js';
-import { attachRegimenCombo } from './regimen-combo.js';
+import { fetchListByPin, fetchInteractions, loadRegimenDrugs, loadSuklNames } from './doctor-services.js';
+import { loadRegimens } from './services.js';
+import { createAutocomplete } from './autocomplete.js';
 
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value).replace(/[&<>"']/g, char => ({
@@ -14,8 +15,9 @@ const date = value => new Intl.DateTimeFormat('cs', { day: 'numeric', month: 'lo
 const time = value => new Intl.DateTimeFormat('cs', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 const itemCount = count => `${count} ${count === 1 ? 'léčivo' : count > 1 && count < 5 ? 'léčiva' : 'léčiv'}`;
 const icons = {
-  edit: '<path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/>',
+  trash: '<path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
   list: '<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h4"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
@@ -24,8 +26,6 @@ let state = createDoctorState();
 let loadFailed = false;
 let loading = false;
 let regimenDrugs = {}; // regimen name -> drug names, filled asynchronously
-let drugsOpen = false;
-let editing = null; // { list, item | null } while the item dialog is open
 const interactions = new Map(); // list id -> { status, data, error, token }
 
 try {
@@ -59,12 +59,6 @@ function historyView(current) {
       <code>${escape(list.pin)}</code>
       <small>${escape(date(list.loadedAt))} ${escape(time(list.loadedAt))} · ${itemCount(list.items.length)}${list.regimen ? ` · ${escape(list.regimen)}` : ''}</small>
     </button>`).join('');
-}
-
-function suklCell(item) {
-  const href = suklLink(item);
-  if (!href) return '<span class="muted">—</span>';
-  return `<a href="${escape(href)}" target="_blank" rel="noopener noreferrer">${escape(item.suklCode || 'Detail')} ↗</a>`;
 }
 
 const regimenOf = list => ({ name: list.regimen, drugs: regimenDrugs[list.regimen] || [] });
@@ -110,8 +104,7 @@ function interactionResults(data, list) {
         : interactionCards(data.regimen.interactions)}
     </section>`;
   }
-  return `<p class="placeholder-note">Zatím placeholder: interakce a odkazy jsou ukázkové, nejsou připojeny k reálným datům.</p>
-    <section class="medicines-panel" aria-labelledby="medicine-interactions-title">
+  return `<section class="medicines-panel" aria-labelledby="medicine-interactions-title">
       <div class="panel-head"><h3 id="medicine-interactions-title">Léčiva pacienta</h3><p>Interakce mezi léčivy v seznamu.</p></div>
       ${medicines}</section>${regimen}`;
 }
@@ -140,9 +133,16 @@ function regimenRow(list) {
       ${list.regimen ? `<strong>${escape(list.regimen)}</strong>` : '<span class="none">neuveden</span>'}
       <button type="button" class="secondary" data-action="edit-regimen">${list.regimen ? 'Upravit' : 'Přidat'}</button></div>
     ${list.regimen ? (drugs.length
-      ? `<details class="regimen-drugs" ${drugsOpen ? 'open' : ''}><summary>Látky v režimu <span>${drugs.length}</span></summary>
-          <ul>${drugs.map(drug => `<li>${escape(drug)}</li>`).join('')}</ul></details>`
+      ? `<div class="regimen-drugs"><span class="label">Látky v režimu</span>
+          <ul>${drugs.map(drug => `<li>${escape(drug)}</li>`).join('')}</ul></div>`
       : '<p class="regimen-drugs-none">Látky pro tento režim nejsou k dispozici.</p>') : ''}</div>`;
+}
+
+// Table cells are borderless inputs: they read like plain text until hovered or focused.
+function cellInput(item, field, label, attributes = {}) {
+  const extra = Object.entries(attributes).map(([key, value]) => `${key}="${escape(value)}"`).join(' ');
+  return `<input class="cell-input" data-id="${escape(item.id)}" data-field="${field}" value="${escape(item[field] || '')}"
+    aria-label="${escape(label)}" placeholder="—" autocomplete="off" spellcheck="false" ${extra}>`;
 }
 
 function listView(list) {
@@ -150,15 +150,19 @@ function listView(list) {
       <p>PIN <code>${escape(list.pin)}</code> · odesláno ${escape(date(list.sentAt || list.loadedAt))} v ${escape(time(list.sentAt || list.loadedAt))} · ${itemCount(list.items.length)}</p></div>
     ${regimenRow(list)}
     ${list.items.length ? `<div class="table-wrap"><table class="med-table"><thead><tr>
-        <th>Léčivo</th><th>Síla / dávkování</th><th>Dávek v balení</th><th>Kdy</th><th>SÚKL</th><th><span class="sr-only">Akce</span></th></tr></thead><tbody>
+        <th>Léčivo</th><th>Síla / dávkování</th><th>Kdy</th><th>Léčivé látky</th><th><span class="sr-only">Akce</span></th></tr></thead><tbody>
       ${list.items.map(item => `<tr>
-        <td class="name">${escape(item.name)}</td><td>${escape(item.dosage)}</td><td class="num">${escape(item.dosesPerPackage)}</td>
-        <td>${item.schedule ? escape(item.schedule) : '<span class="muted">—</span>'}</td><td>${suklCell(item)}</td>
-        <td class="actions"><button type="button" class="icon-button" data-action="edit-item" data-id="${escape(item.id)}" aria-label="Upravit ${escape(item.name)}">${icon('edit')}</button></td></tr>`).join('')}
+        <td class="c-name">${cellInput(item, 'name', 'Název léčiva', { maxlength: 120 })}</td>
+        <td>${cellInput(item, 'dosage', 'Síla / dávkování', { maxlength: 120 })}</td>
+        <td>${cellInput(item, 'schedule', 'Kdy užívat', { maxlength: 20 })}</td>
+        <td class="substances">${item.substances?.length ? `<ul>${item.substances.map(name => `<li>${escape(name)}</li>`).join('')}</ul>` : '<span class="muted">—</span>'}</td>
+        <td class="actions"><button type="button" class="icon-button" data-action="delete-item" data-id="${escape(item.id)}" aria-label="Odstranit ${escape(item.name || 'léčivo')}">${icon('trash')}</button></td></tr>`).join('')}
       </tbody></table></div>`
       : `<div class="doc-empty">${icon('list')}<strong>Seznam je prázdný</strong>Přidejte léčivo ručně.</div>`}
-    <div class="table-actions"><button type="button" class="small-button" data-action="add-item">${icon('plus')} Přidat léčivo</button></div>
-    ${interactionsView(list)}`;
+    <div class="table-actions"><button type="button" class="small-button" data-action="add-item">${icon('plus')} Přidat léčivo</button>
+      <span class="copy-group"><button type="button" class="small-button" data-action="copy-lines" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat po řádcích</span></button>
+      <button type="button" class="small-button" data-action="copy-inline" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat do řádku</span></button></span></div>
+    <div id="interactions-slot">${interactionsView(list)}</div>`;
 }
 
 function render() {
@@ -167,12 +171,19 @@ function render() {
   $('#main').innerHTML = list ? listView(list)
     : `<div class="doc-empty">${icon('list')}<strong>Zadejte PIN pacienta</strong>Seznam léčiv se zobrazí zde.</div>`;
   document.title = `${list ? `PIN ${list.pin}` : 'Lékař'} · PillGaze`;
+  document.querySelectorAll('.cell-input[data-field="name"]').forEach(input => medicineNames.bind(input));
+}
+
+// Only the interactions block is redrawn, so a cell the doctor is typing in keeps its focus.
+function renderInteractions(list) {
+  const slot = $('#interactions-slot');
+  if (slot && currentList()?.id === list.id) slot.innerHTML = interactionsView(list);
 }
 
 async function runInteractions(list) {
   const token = newId();
   interactions.set(list.id, { status: 'loading', token });
-  render();
+  renderInteractions(list);
   try {
     const drugs = await loadRegimenDrugs();
     regimenDrugs = drugs;
@@ -183,14 +194,15 @@ async function runInteractions(list) {
     if (interactions.get(list.id)?.token !== token) return;
     interactions.set(list.id, { status: 'error', error: error.message || 'Interakce se nepodařilo načíst.', token });
   }
-  render();
+  renderInteractions(list);
 }
 
 // After an edit the shown interactions are outdated; refetch when they were already requested.
-function afterEdit(list) {
+function afterEdit(list, { redraw = true } = {}) {
   touch(list);
   persist();
-  render();
+  if (redraw) render();
+  else $('#history').innerHTML = historyView(list);
   if (interactions.has(list.id)) void runInteractions(list);
 }
 
@@ -239,94 +251,116 @@ $('#history').addEventListener('click', event => {
 });
 
 window.addEventListener('hashchange', render);
-// <details> does not bubble `toggle`, so listen in the capture phase to remember its state across renders.
-$('#main').addEventListener('toggle', event => {
-  if (event.target.classList?.contains('regimen-drugs')) drugsOpen = event.target.open;
-}, true);
 void loadRegimenDrugs().then(drugs => { regimenDrugs = drugs; render(); });
 
-const itemDialog = $('#item-dialog');
-const itemForm = $('#item-form');
 const regimenDialog = $('#regimen-dialog');
-let deleteArmed = false;
-
-function openItemDialog(list, item) {
-  editing = { list, item };
-  deleteArmed = false;
-  $('#item-dialog-title').textContent = item ? 'Upravit léčivo' : 'Přidat léčivo';
-  $('#item-delete').hidden = !item;
-  $('#item-delete').textContent = 'Odstranit';
-  for (const field of ['name', 'dosage', 'dosesPerPackage', 'schedule', 'suklCode']) {
-    itemForm.elements[field].value = item?.[field] || '';
-    itemForm.elements[field].removeAttribute('aria-invalid');
-  }
-  itemForm.querySelectorAll('[data-error]').forEach(node => { node.textContent = ''; });
-  itemDialog.showModal();
-}
+const medicineNames = createAutocomplete({ getOptions: loadSuklNames, id: 'medicine-suggestions', minWidth: 320 });
+let armedDelete = null;
 
 $('#main').addEventListener('click', event => {
   const button = event.target.closest('[data-action]');
   const list = currentList();
   if (!button || !list) return;
   switch (button.dataset.action) {
-    case 'edit-item': openItemDialog(list, list.items.find(item => item.id === button.dataset.id)); break;
-    case 'add-item': openItemDialog(list, null); break;
+    case 'add-item': {
+      const item = { id: newId(), name: '', dosage: '', dosesPerPackage: '' };
+      list.items.push(item);
+      afterEdit(list);
+      document.querySelector(`.cell-input[data-id="${item.id}"][data-field="name"]`)?.focus();
+      break;
+    }
+    case 'delete-item':
+      // Two clicks: the first arms the button, the second removes the row.
+      if (armedDelete !== button) {
+        armedDelete = button;
+        button.classList.add('armed');
+        button.setAttribute('aria-label', 'Potvrdit odstranění');
+        setTimeout(() => { if (armedDelete === button) disarmDelete(); }, 3000);
+        break;
+      }
+      armedDelete = null;
+      list.items = list.items.filter(item => item.id !== button.dataset.id);
+      afterEdit(list);
+      break;
     case 'edit-regimen':
       $('#regimen-input').value = list.regimen;
       regimenDialog.showModal();
       break;
     case 'interactions': void runInteractions(list); break;
+    case 'copy-lines': void copyText(button, formatMedicineLines(list.items)); break;
+    case 'copy-inline': void copyText(button, formatMedicineInline(list.items)); break;
   }
 });
 
-itemForm.addEventListener('submit', event => {
-  event.preventDefault();
-  if (!editing) return;
-  const { list, item } = editing;
-  const value = name => itemForm.elements[name].value.trim();
-  const draft = {
-    name: value('name'), dosage: value('dosage'), dosesPerPackage: value('dosesPerPackage'),
-    schedule: value('schedule'), suklCode: value('suklCode'),
-  };
-  const errors = validateItem(draft);
-  for (const field of ['name', 'dosage', 'dosesPerPackage', 'schedule', 'suklCode']) {
-    itemForm.querySelector(`[data-error="${field}"]`).textContent = errors[field] || '';
-    if (errors[field]) itemForm.elements[field].setAttribute('aria-invalid', 'true');
-    else itemForm.elements[field].removeAttribute('aria-invalid');
+async function copyText(button, text) {
+  const label = button.querySelector('span');
+  const original = label.textContent;
+  let copied = true;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Clipboard API needs HTTPS or localhost; fall back for plain-HTTP access.
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.append(area);
+    area.select();
+    copied = document.execCommand('copy');
+    area.remove();
   }
-  const firstInvalid = Object.keys(errors)[0];
-  if (firstInvalid) return itemForm.elements[firstInvalid].focus();
-  const target = item || { id: newId() };
-  const codeChanged = (target.suklCode || '') !== draft.suklCode;
-  Object.assign(target, { name: draft.name, dosage: draft.dosage, dosesPerPackage: draft.dosesPerPackage });
-  for (const field of ['schedule', 'suklCode']) {
-    if (draft[field]) target[field] = draft[field];
-    else delete target[field];
-  }
-  if (codeChanged) delete target.suklUrl; // the API link belonged to the previous code
-  if (!item) list.items.push(target);
-  editing = null;
-  itemDialog.close();
-  afterEdit(list);
+  label.textContent = copied ? 'Zkopírováno' : 'Kopírování se nezdařilo';
+  setTimeout(() => { if (label.isConnected) label.textContent = original; }, 2000);
+}
+
+function disarmDelete() {
+  armedDelete?.classList.remove('armed');
+  armedDelete?.setAttribute('aria-label', 'Odstranit léčivo');
+  armedDelete = null;
+}
+$('#main').addEventListener('focusout', event => {
+  if (event.target === armedDelete) disarmDelete();
 });
 
-$('#item-cancel').addEventListener('click', () => itemDialog.close());
-itemDialog.addEventListener('close', () => { editing = null; });
-$('#item-delete').addEventListener('click', event => {
-  if (!editing?.item) return;
-  if (!deleteArmed) {
-    deleteArmed = true;
-    event.target.textContent = 'Opravdu odstranit?';
+// Cells commit on change (blur or Enter); an invalid value stays visible and marked, the data is untouched.
+$('#main').addEventListener('change', event => {
+  const input = event.target.closest('.cell-input');
+  const list = currentList();
+  const item = list?.items.find(entry => entry.id === input?.dataset.id);
+  if (!item) return;
+  const field = input.dataset.field;
+  const value = input.value.trim();
+  const error = validateItem({ ...item, [field]: value })[field];
+  if (error) {
+    input.setAttribute('aria-invalid', 'true');
+    input.title = error;
     return;
   }
-  const { list, item } = editing;
-  list.items = list.items.filter(entry => entry.id !== item.id);
-  editing = null;
-  itemDialog.close();
-  afterEdit(list);
+  input.removeAttribute('aria-invalid');
+  input.removeAttribute('title');
+  if (value === (item[field] || '')) return;
+  if (field === 'schedule' && !value) delete item.schedule;
+  else item[field] = value;
+  afterEdit(list, { redraw: false });
 });
 
-attachRegimenCombo($('#regimen-input'), $('#regimen-suggestions'));
+$('#main').addEventListener('keydown', event => {
+  const input = event.target.closest('.cell-input');
+  if (!input) return;
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    input.blur();
+  } else if (event.key === 'Escape') {
+    const item = currentList()?.items.find(entry => entry.id === input.dataset.id);
+    input.value = item?.[input.dataset.field] || '';
+    input.removeAttribute('aria-invalid');
+    input.removeAttribute('title');
+    input.blur();
+  }
+});
+
+createAutocomplete({ getOptions: loadRegimens, container: regimenDialog, id: 'regimen-suggestions' }).bind($('#regimen-input'));
 $('#regimen-cancel').addEventListener('click', () => regimenDialog.close());
 $('#regimen-form').addEventListener('submit', event => {
   event.preventDefault();

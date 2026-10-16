@@ -55,7 +55,8 @@ z `data/solid-tumors-regimens.json` s metadaty původu. Z lokálního
 `python3 scripts/slim_regimens.py`; zdrojový ZIP není v Gitu.
 
 Lékařské rozhraní je dostupné na `/lekar` ve stejném lokálním serveru. Nabízí
-lokální historii PINů, úpravy léčiv a režimu, odkazy SÚKL a přehled interakcí.
+lokální historii PINů, přímé úpravy léčiv v tabulce, našeptávání názvů ze SÚKL,
+režimy a kopírování seznamu po řádcích i do jednoho řádku.
 `doctor-services.js` zatím vrací stejný ukázkový seznam pro každý PIN a smyšlené
 interakce; není napojený na storage ani interaction API.
 
