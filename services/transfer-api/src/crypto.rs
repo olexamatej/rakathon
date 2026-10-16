@@ -54,6 +54,15 @@ pub fn digest(pepper: &[u8], purpose: &[u8], value: &[u8]) -> [u8; 32] {
     mac.finalize().into_bytes().into()
 }
 
+pub fn verify_digest(pepper: &[u8], purpose: &[u8], value: &[u8], expected: &[u8; 32]) -> bool {
+    let mut mac = Hmac::<Sha256>::new_from_slice(pepper)
+        .expect("HMAC-SHA-256 accepts keys of any length");
+    mac.update(purpose);
+    mac.update(b"\0");
+    mac.update(value);
+    mac.verify_slice(expected).is_ok()
+}
+
 pub fn valid_retrieval_code(code: &str) -> bool {
     code.len() == 12
         && code

@@ -101,3 +101,11 @@ Do not use real patient data during local development. Before public deployment,
 review Azure storage, trusted-proxy client IP handling, rate limits across
 replicas, expiry cleanup, secret handling, TLS, monitoring scrubbing, and
 recovery behavior.
+
+## Storage administration
+
+Optional password-protected metadata listing and hard deletion for JSON blobs:
+`GET /v1/admin/blobs?offset=0` and `DELETE /v1/admin/blobs/{pinDigest}`.
+Set `STORAGE_ADMIN_PASSWORD` privately to enable; unset means disabled (404).
+See [`apps/storage-admin/README.md`](../../apps/storage-admin/README.md) for
+the separate static UI, authentication limits, tests and deployment inputs.

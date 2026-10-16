@@ -1,0 +1,25 @@
+# Example only; this does not modify the live VPS stacks.
+services:
+  storage-admin:
+    image: ${STORAGE_ADMIN_IMAGE:?Set a tested storage admin image tag}
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 0.25
+    mem_limit: 64m
+    pids_limit: 64
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    networks:
+      pillgaze-transfer-local:
+        aliases: [pillgaze-storage-admin]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/ready]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+networks:
+  pillgaze-transfer-local:
+    external: true

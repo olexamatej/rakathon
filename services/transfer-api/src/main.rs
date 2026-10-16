@@ -1,3 +1,4 @@
+mod admin;
 mod crypto;
 mod model;
 mod store;
@@ -40,6 +41,7 @@ const DEFAULT_DATABASE_PATH: &str = "services/transfer-api/data/transfers.sqlite
 struct AppState {
     store: TransferStore,
     pepper: Arc<Vec<u8>>,
+    admin_password_digest: Option<[u8; 32]>,
 }
 
 #[derive(Serialize)]
@@ -53,6 +55,7 @@ struct CreateBlobResponse {
 }
 
 enum ApiError {
+    Unauthorized,
     BadRequest,
     NotFound,
     RateLimited,
@@ -62,6 +65,7 @@ enum ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, code) = match self {
+            Self::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             Self::BadRequest => (StatusCode::BAD_REQUEST, "bad_request"),
             Self::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             Self::RateLimited => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
@@ -82,6 +86,7 @@ struct Config {
     database_path: PathBuf,
     pepper: Vec<u8>,
     cors_origins: Vec<HeaderValue>,
+    admin_password_digest: Option<[u8; 32]>,
 }
 
 impl Config {
@@ -107,7 +112,14 @@ impl Config {
             .map(|origin| origin.parse::<HeaderValue>())
             .collect::<Result<Vec<_>, _>>()
             .map_err(|_| "CORS_ALLOWED_ORIGINS contains an invalid origin".to_owned())?;
-        Ok(Self { bind_address, database_path, pepper, cors_origins })
+        let admin_password_digest = match env::var("STORAGE_ADMIN_PASSWORD") {
+            Ok(password) if !password.is_empty() && password.len() <= 256 =>
+                Some(crypto::digest(&pepper, b"storage-admin:password:v1", password.as_bytes())),
+            Ok(_) => return Err("STORAGE_ADMIN_PASSWORD must be 1–256 bytes or unset".to_owned()),
+            Err(env::VarError::NotPresent) => None,
+            Err(_) => return Err("STORAGE_ADMIN_PASSWORD must be valid Unicode".to_owned()),
+        };
+        Ok(Self { bind_address, database_path, pepper, cors_origins, admin_password_digest })
     }
 }
 
@@ -140,7 +152,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     migrate(&pool).await?;
 
     let store = TransferStore::new(pool);
-    let state = AppState { store, pepper: Arc::new(config.pepper) };
+    let state = AppState {
+        store, pepper: Arc::new(config.pepper),
+        admin_password_digest: config.admin_password_digest,
+    };
     start_cleanup_worker(state.store.clone());
 
     let cors = CorsLayer::new()
@@ -161,6 +176,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/demo/styles.css", get(demo_styles))
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))
+        .route("/v1/admin/blobs", get(admin::list_blobs))
+        .route("/v1/admin/blobs/{pin_digest}", delete(admin::delete_blob))
         .route("/v1/transfers", post(create_blob))
         .route("/v1/encrypted-transfers", post(create_transfer))
         .route("/v1/transfers/redeem", post(redeem_transfer))
@@ -507,7 +524,10 @@ mod blob_tests {
             .await
             .unwrap();
         migrate(&pool).await.unwrap();
-        AppState { store: TransferStore::new(pool), pepper: Arc::new(vec![42; 32]) }
+        AppState {
+            store: TransferStore::new(pool), pepper: Arc::new(vec![42; 32]),
+            admin_password_digest: None,
+        }
     }
 
     fn json_headers() -> HeaderMap {

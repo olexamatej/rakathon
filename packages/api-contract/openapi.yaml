@@ -142,6 +142,90 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /v1/admin/blobs:
+    get:
+      operationId: listAdminBlobs
+      summary: List opaque JSON storage metadata only
+      description: >-
+        Enabled only when STORAGE_ADMIN_PASSWORD is configured. Requires its
+        value as a Bearer credential over HTTPS. No original PINs or payloads
+        are returned. Admin calls share a 60/minute socket-IP rate limit.
+      security:
+        - StorageAdminPassword: []
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 4294967295
+            default: 0
+      responses:
+        '200':
+          description: At most 100 metadata rows, ordered by digest.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items, hasMore]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 100
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [pinDigest, sizeBytes]
+                      properties:
+                        pinDigest:
+                          type: string
+                          pattern: '^[0-9A-F]{64}$'
+                        sizeBytes:
+                          type: integer
+                          minimum: 0
+                          description: Exact JSON payload byte count, not database disk usage.
+                  hasMore:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Missing or invalid admin password.
+        '404':
+          description: Admin endpoints disabled.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/admin/blobs/{pinDigest}:
+    delete:
+      operationId: deleteAdminBlob
+      summary: Hard delete one opaque JSON blob
+      description: >-
+        Deletes only the selected blob, not legacy encrypted transfers or backup
+        copies. The HMAC digest is an identifier, not an authorization credential.
+      security:
+        - StorageAdminPassword: []
+      parameters:
+        - name: pinDigest
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9A-Fa-f]{64}$'
+      responses:
+        '204':
+          description: Blob deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Missing or invalid admin password.
+        '404':
+          description: Blob not found or admin endpoints disabled.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
   /health/live:
     get:
       operationId: liveness
@@ -159,6 +243,11 @@ paths:
         '503':
           description: A required dependency is unavailable.
 components:
+  securitySchemes:
+    StorageAdminPassword:
+      type: http
+      scheme: bearer
+      description: Privately configured admin password. Not a revocation token; never log it.
   parameters:
     IdempotencyKey:
       name: Idempotency-Key

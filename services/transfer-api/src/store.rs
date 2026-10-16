@@ -1,6 +1,7 @@
 use std::net::IpAddr;
 
 use chrono::Utc;
+use serde::Serialize;
 use sqlx::{FromRow, SqlitePool};
 
 use crate::{crypto, model::StoredEnvelope};
@@ -8,6 +9,13 @@ use crate::{crypto, model::StoredEnvelope};
 #[derive(Clone)]
 pub struct TransferStore {
     pool: SqlitePool,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlobMetadata {
+    pub pin_digest: String,
+    pub size_bytes: i64,
 }
 
 #[cfg(test)]
@@ -55,6 +63,25 @@ impl TransferStore {
             .fetch_one(&self.pool)
             .await?;
         Ok(())
+    }
+
+    pub async fn list_blobs(&self, offset: u32) -> Result<Vec<BlobMetadata>, sqlx::Error> {
+        // Select metadata only; never load payloads into the admin response.
+        sqlx::query_as::<_, BlobMetadata>(
+            "SELECT hex(pin_digest) AS pin_digest, length(payload) AS size_bytes \
+             FROM blob_transfers ORDER BY pin_digest LIMIT 101 OFFSET ?",
+        )
+        .bind(i64::from(offset))
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    pub async fn delete_blob(&self, digest: &[u8; 32]) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query("DELETE FROM blob_transfers WHERE pin_digest = ?")
+            .bind(digest.as_slice())
+            .execute(&self.pool)
+            .await?;
+        Ok(result.rows_affected() == 1)
     }
 
     // False means a PIN collision. Never overwrite an existing payload.

@@ -78,6 +78,8 @@ jobs:
           package-manager-cache: false
       - name: Check transfer demo JavaScript syntax
         run: node --check apps/transfer-demo/app.js
+      - name: Test storage admin client
+        run: node --test apps/storage-admin/tests/*.test.mjs
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Report dependency vulnerabilities (non-blocking)

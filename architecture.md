@@ -109,6 +109,8 @@ The initial contract is [`packages/api-contract/openapi.yaml`](packages/api-cont
 | `POST /v1/encrypted-transfers` | Legacy encrypted demo: return a retrieval code, expiry, and revocation token once. |
 | `POST /v1/transfers/redeem` | Atomically redeem a code and return the encrypted envelope. Supports a same-client idempotent retry. |
 | `DELETE /v1/transfers/{transferId}` | Revoke a transfer using its separate revocation token. |
+| `GET /v1/admin/blobs` | Password-protected paginated JSON storage metadata (size and HMAC PIN digest only). |
+| `DELETE /v1/admin/blobs/{pinDigest}` | Password-protected hard deletion of one JSON blob. |
 | `GET /health/live` | Process liveness; does not depend on PostgreSQL. |
 | `GET /health/ready` | Readiness check; succeeds only when required dependencies are available. |
 
@@ -160,6 +162,12 @@ Operational configuration lives in `/home/rhodes/rakathon-site`,
 The manual frontend refresh builds from an explicit `origin/main` revision and
 retains a previous image for rollback. Repository pushes do not automatically
 deploy the frontend or API. See [the VPS guide](infra/vps/README.md).
+
+The separate static admin in `apps/storage-admin/` is intended for `/storage-admin`.
+Its private container does not mount the database; admin list/delete requests
+go through the transfer API, enabled only when `STORAGE_ADMIN_PASSWORD` is set.
+See [admin configuration and limits](apps/storage-admin/README.md). These are
+repository deployment inputs, not evidence that admin has been deployed.
 
 No Kubernetes cluster was installed. AKS, k3s, Helm, Flux, Bicep, and their
 unused deployment workflows were removed from this checkout. Do not reintroduce
