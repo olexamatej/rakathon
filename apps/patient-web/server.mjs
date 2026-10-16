@@ -5,6 +5,13 @@ import { fileURLToPath } from 'node:url';
 const files = {
   '/pacient': ['index.html', 'text/html'],
   '/pacient/': ['index.html', 'text/html'],
+  '/lekar': ['lekar.html', 'text/html'],
+  '/lekar/': ['lekar.html', 'text/html'],
+  '/lekar.js': ['lekar.js', 'text/javascript'],
+  '/lekar.css': ['lekar.css', 'text/css'],
+  '/doctor.js': ['doctor.js', 'text/javascript'],
+  '/doctor-services.js': ['doctor-services.js', 'text/javascript'],
+  '/regimen-combo.js': ['regimen-combo.js', 'text/javascript'],
   '/app.js': ['app.js', 'text/javascript'],
   '/lists.js': ['lists.js', 'text/javascript'],
   '/services.js': ['services.js', 'text/javascript'],
@@ -23,14 +30,20 @@ const securityHeaders = {
   'Content-Security-Policy': "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
 };
 
-// Only regimen names leave the data file, never the rest of the dataset. Synthetic regimens are
-// per-biosimilar copies of a real regimen (GEMOX-B (bevacizumab-xxxx) ...) and would flood autocomplete.
-let regimenNames;
-function loadRegimenNames() {
-  regimenNames ??= readFile(new URL('../../data/solid-tumors-regimens.json', import.meta.url), 'utf8')
-    .then(text => JSON.stringify([...new Set(JSON.parse(text).regimens.filter(regimen => regimen.type === 'Regimen').map(regimen => regimen.name))].sort()))
-    .catch(error => { regimenNames = undefined; throw error; });
-  return regimenNames;
+// Only regimen names and their drugs leave the data directory. data/regimens.json is the slim
+// extract of solid-tumors-regimens.json (scripts/slim_regimens.py), so no extra data is loaded.
+let regimenData;
+function loadRegimenData() {
+  regimenData ??= readFile(new URL('../../data/regimens.json', import.meta.url), 'utf8')
+    .then(text => {
+      const regimens = JSON.parse(text);
+      return {
+        names: JSON.stringify(regimens.map(regimen => regimen.name)),
+        drugs: JSON.stringify(Object.fromEntries(regimens.map(regimen => [regimen.name, regimen.drugs]))),
+      };
+    })
+    .catch(error => { regimenData = undefined; throw error; });
+  return regimenData;
 }
 
 export function createAppServer() {
@@ -50,9 +63,10 @@ export function createAppServer() {
       res.writeHead(302, { Location: '/pacient' }).end();
       return;
     }
-    if (path === '/regimens.json') {
+    if (path === '/regimens.json' || path === '/regimen-drugs.json') {
       try {
-        const body = await loadRegimenNames();
+        const data = await loadRegimenData();
+        const body = path === '/regimens.json' ? data.names : data.drugs;
         res.writeHead(200, { ...securityHeaders, 'Content-Type': 'application/json; charset=utf-8' });
         res.end(req.method === 'HEAD' ? undefined : body);
       } catch {

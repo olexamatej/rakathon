@@ -6,7 +6,7 @@
 
 | Area | Responsibility |
 | --- | --- |
-| `apps/patient-web/` | Patient PWA: photos, medication list, regimen, local history. Recognition is simulated; upload uses the storage API and displays its PIN. |
+| `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same local static server. Recognition, doctor retrieval and doctor interactions remain simulated. |
 | Root `App.tsx`, `src/` | Separate older Expo prototype; preserve its entry points. |
 | `apps/doctor-web/` | Doctor-facing browser UI area. |
 | `services/transfer-api/` | Rust/Axum opaque JSON storage backed by SQLite. |
