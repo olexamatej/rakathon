@@ -211,10 +211,15 @@ fn command(config: &Config, prompt: &str, site: Option<&str>) -> Command {
             serde_json::to_string(&[site]).unwrap()
         ));
     }
-    if let Some(model) = &config.model {
+    let (model, service_tier) = if site.is_some() {
+        (Some("gpt-6-luna"), Some("priority"))
+    } else {
+        (config.model.as_deref(), config.service_tier.as_deref())
+    };
+    if let Some(model) = model {
         cmd.arg("--model").arg(model);
     }
-    if let Some(tier) = &config.service_tier {
+    if let Some(tier) = service_tier {
         cmd.arg("-c").arg(format!(
             "service_tier={}",
             serde_json::to_string(tier).unwrap()

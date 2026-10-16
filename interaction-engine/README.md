@@ -63,8 +63,8 @@ it does not make a model call or verify Codex authentication.
 | --- | --- | --- |
 | `BIND_ADDR` | `127.0.0.1:3000` | HTTP listener |
 | `CODEX_BIN` | `codex` on PATH | Codex executable |
-| `CODEX_MODEL` | `gpt-6.1-sol` | Optional model override |
-| `CODEX_SERVICE_TIER` | `priority` (Fast) | `default` for Standard; `fast` or `priority` to request Fast mode |
+| `CODEX_MODEL` | `gpt-6.1-sol` | Optional interaction-check model override |
+| `CODEX_SERVICE_TIER` | `priority` (Fast) | Interaction checks: `default` for Standard; `fast` or `priority` to request Fast mode |
 | `CODEX_TIMEOUT_SECONDS` | `90` | Per-process deadline |
 | `MAX_CONCURRENT_CHECKS` | `4` | Maximum simultaneous Codex processes |
 | `JOBS_PATH` | `data/jobs.sqlite3` | Persistent request/result database; one server per database |
@@ -141,8 +141,9 @@ expose web tools; Code Mode execution remains disabled. Live retrieval is
 enabled through Codex's hosted search tool; command network
 access remains disabled. This does not automate login or browser-only checkers.
 
-Research shares the existing model, service tier, `CODEX_TIMEOUT_SECONDS`
-(default 90 seconds), and `MAX_CONCURRENT_CHECKS` capacity. Requests return 202 while pending,
+Research uses `gpt-6-luna` with Fast mode (`service_tier="priority"`), independently
+of `CODEX_MODEL` and `CODEX_SERVICE_TIER`. It shares `CODEX_TIMEOUT_SECONDS`
+(default 90 seconds) and `MAX_CONCURRENT_CHECKS` capacity. Requests return 202 while pending,
 receive 429 when the queue is full, and return a retained 503 for model/process
 failures, timeouts, or invalid output. Completed negative and inconclusive
 research returns 200. Responses declare `Content-Language: cs`,
