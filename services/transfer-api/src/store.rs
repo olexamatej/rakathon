@@ -171,12 +171,14 @@ mod tests {
             .execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!("../migrations-sqlite/0002_create_blob_transfers.sql"))
             .execute(&pool).await.unwrap();
-        let store = TransferStore::new(pool.clone());
-        assert!(store.create_blob(&[3; 32], None, b"{\"kept\":true}", 1).await.unwrap());
+        sqlx::query("INSERT INTO blob_transfers (pin_digest, payload, created_at) VALUES (?, ?, ?)")
+            .bind([3; 32].as_slice()).bind(b"{\"kept\":true}".as_slice()).bind(1_i64)
+            .execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!("../migrations-sqlite/0003_blob_limit_1mib.sql"))
             .execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!("../migrations-sqlite/0004_blob_debug_pin.sql"))
             .execute(&pool).await.unwrap();
+        let store = TransferStore::new(pool);
         assert_eq!(store.get_blob(&[3; 32]).await.unwrap().unwrap(), b"{\"kept\":true}");
     }
 }
