@@ -1,6 +1,6 @@
 # Drug Interaction API
 
-Rust/Axum server implementing [openapi.yaml](openapi.yaml). Each check starts a
+Rust/Axum server implementing [openapi.yaml](openapi.yaml). Each uncached check runs in the background using a
 fresh `codex exec --ephemeral` process and requests schema-constrained JSON.
 Rust validates the result and constructs the public response.
 
@@ -16,10 +16,36 @@ cargo run --release
 ```
 
 ```sh
-curl http://127.0.0.1:3000/interaction-checks \
+curl -i http://127.0.0.1:3000/interaction-checks \
   -H 'Content-Type: application/json' \
   -d '{"drugs":["warfarin","ibuprofen","unknown-drug-name"]}'
 ```
+
+Repeat the same POST to poll. The first request returns `202 Accepted` with
+`{"state":"queued"}`; subsequent requests return `202` with `queued` or `running`
+while work is pending. Follow `Retry-After: 2`, backing off to five seconds for
+longer waits. On completion the same request returns `200` with the existing
+result schema, or a retained `503` problem response on failure. No public job IDs
+or separate polling URLs are needed. Both endpoints use this behavior.
+
+Identical validated data shares one execution. Drug strings, spelling, whitespace,
+and order are significant because results echo input names and indexes. Research
+site URLs are canonicalized to their supported domain. Object property order and
+JSON formatting do not matter. Model, service tier and prompt versions are also
+part of the internal fingerprint. Successful results are reused for 24 hours
+and failures for 30 seconds by default, measured from completion. After expiry,
+the next matching request starts fresh work. Completed negative or inconclusive
+research is a successful result and uses the normal result retention period.
+
+Requests and results are stored locally in SQLite at `JOBS_PATH`. Queued work
+and completed results survive restarts. Interrupted running work becomes a
+retained `503` with code `worker_interrupted`; execution failures use
+`execution_failed`, and expired queued work uses `queue_timeout`. This is a
+single-server queue: a lock prevents two server processes sharing one database.
+Expired records are deleted during queue maintenance and submission. Pending
+work waits at most `QUEUE_TIMEOUT_SECONDS` before being marked failed when the
+queue is next checked. The inference timeout starts when execution starts.
+All API responses use `Cache-Control: no-store` independently of internal reuse.
 
 `GET /openapi.yaml` serves the contract. `GET /healthz` checks the HTTP process;
 it does not make a model call or verify Codex authentication.
@@ -32,13 +58,18 @@ it does not make a model call or verify Codex authentication.
 | `CODEX_SERVICE_TIER` | `priority` (Fast) | `default` for Standard; `fast` or `priority` to request Fast mode |
 | `CODEX_TIMEOUT_SECONDS` | `90` | Per-process deadline |
 | `MAX_CONCURRENT_CHECKS` | `4` | Maximum simultaneous Codex processes |
+| `JOBS_PATH` | `data/jobs.sqlite3` | Persistent request/result database; one server per database |
+| `MAX_QUEUED_CHECKS` | `100` | Maximum queued requests, shared by both endpoints |
+| `RESULT_TTL_SECONDS` | `86400` | Successful-result retention after completion |
+| `FAILURE_TTL_SECONDS` | `30` | Failure retention before another attempt is allowed |
+| `QUEUE_TIMEOUT_SECONDS` | `300` | Maximum wait before execution |
 | `RUST_LOG` | `info` | Server logging filter |
 
 Low reasoning effort is requested for latency. One model call evaluates the
 whole submitted list. There is no retry loop or per-pair subprocess fan-out.
 No authentication is required by the API, as agreed in the initial spec. The
-listener defaults to localhost. Requests beyond available capacity receive 429
-with `Retry-After`. Bodies are limited to 64 KiB.
+listener defaults to localhost. New requests beyond the queue limit receive 429
+with `Retry-After`; existing requests can still be polled when the queue is full. Bodies are limited to 64 KiB.
 
 ## Inference and response handling
 
@@ -64,7 +95,7 @@ with `Retry-After`. Bodies are limited to 64 KiB.
 
 ## External-site research
 
-`POST /interaction-research` waits for a fresh agent to research exactly two
+`POST /interaction-research` queues a fresh agent to research exactly two
 names on one supported site using live web search:
 
 ```sh
@@ -102,8 +133,8 @@ enabled through Codex's hosted search tool; command network
 access remains disabled. This does not automate login or browser-only checkers.
 
 Research shares the existing model, service tier, `CODEX_TIMEOUT_SECONDS`
-(default 90 seconds), and `MAX_CONCURRENT_CHECKS` capacity. Requests wait for
-the result, receive 429 when capacity is full, and receive 503 for model/process
+(default 90 seconds), and `MAX_CONCURRENT_CHECKS` capacity. Requests return 202 while pending,
+receive 429 when the queue is full, and return a retained 503 for model/process
 failures, timeouts, or invalid output. Completed negative and inconclusive
 research returns 200. Responses declare `Content-Language: cs`,
 `X-Interaction-Source: web-search`, and `Cache-Control: no-store`.
@@ -134,7 +165,7 @@ does not make a claim about provider-side retention.
 Unexpected tool events (except web-search events on research requests), failed processes, invalid responses, or timeouts return
 a generic 503 without exposing model output or CLI diagnostics. Server logs do
 not include submitted names or raw responses. Processes are killed and reaped
-on timeout; concurrency permits remain held for background checks even when a
+on timeout; workers continue background checks even when a
 client disconnects.
 
 CLI behavior can change between versions. Recheck restriction flags and the live
@@ -152,8 +183,7 @@ cargo test
 
 Tests use a fake executable rather than making paid model calls. They cover
 OpenAPI response conformance, pair invariants, partial resolution, invalid input,
-subprocess flags, invalid output, unexpected tool activity, timeout cleanup, and
-capacity limits. The subprocess tests require Unix and `/usr/bin/python3`.
+subprocess flags, invalid output, unexpected tool activity, timeout cleanup, capacity limits, request deduplication, persistent results, expiry, and restart recovery. The subprocess tests require Unix and `/usr/bin/python3`.
 
 An optional live smoke test uses your configured Codex login and makes a real
 model call:
@@ -192,6 +222,6 @@ cargo run --example validate_benchmark -- benchmarks/<new-run-name>
 To benchmark only Astra, add `--models gpt-6-astra` to the benchmark command.
 
 The runner uses three repetitions per model/mode by default and measures real
-HTTP calls sequentially. These commands use the configured Codex login and make
+HTTP submissions and polling sequentially, with a separate database per run to ensure fresh inference. These commands use the configured Codex login and make
 real model calls. Fast is requested through the Codex `service_tier` setting;
 the CLI does not confirm the actual served tier in its event output.

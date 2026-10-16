@@ -31,8 +31,18 @@ paths:
     post:
       operationId: checkDrugInteractions
       tags: [Interactions]
-      summary: Check pairwise interactions between drug names
+      summary: Submit or poll a pairwise interaction check
       description: |
+        Submit and poll by repeating the same POST body. New work returns 202
+        with state queued; duplicate pending requests return 202 with state queued
+        or running and do not start another execution. Completed results return
+        200 unchanged. Exact drug strings and order determine request identity.
+        Successful results are retained for RESULT_TTL_SECONDS (default 86400);
+        failures return a stored 503 for FAILURE_TTL_SECONDS (default 30).
+        After expiry, the next identical POST starts fresh work. Poll every two
+        seconds while 202 is returned, backing off to five seconds if needed.
+        No public job IDs or separate polling URLs are used.
+
         Accepts generic or brand names. Names must be nonblank after trimming.
         Names that cannot be resolved uniquely are reported alongside results;
         the service must not silently choose a candidate for an ambiguous name.
@@ -64,6 +74,18 @@ paths:
             example:
               drugs: [warfarin, ibuprofen, unknown-drug-name]
       responses:
+        '202':
+          description: Work accepted or still in progress. Repeat the same POST to poll.
+          headers:
+            Retry-After:
+              description: Suggested polling delay in seconds.
+              schema: {type: integer, const: 2}
+            Cache-Control:
+              schema: {type: string, const: no-store}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingResponse'
         '200':
           description: |
             Check completed for all distinct resolved drugs. Inspect status,
@@ -178,7 +200,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         '429':
-          description: Request rate or simultaneous-check capacity limit exceeded.
+          description: Shared pending-work queue is full; existing requests can still be polled.
           headers:
             Retry-After:
               description: Seconds to wait before retrying.
@@ -211,9 +233,17 @@ paths:
     post:
       operationId: researchDrugInteraction
       tags: [Interactions]
-      summary: Research a drug pair on a supported external site
+      summary: Submit or poll research on a supported external site
       description: |
-        Waits for a fresh agent using live web search restricted to one selected
+        Submit and poll by repeating the same POST body. New or pending work
+        returns 202 with state queued or running; duplicates share one execution.
+        Completed results return 200 unchanged. Results are retained for 86400
+        seconds and failures return a stored 503 for 30 seconds by default,
+        configurable via RESULT_TTL_SECONDS and FAILURE_TTL_SECONDS. Poll every
+        two seconds while 202 is returned. Exact drug strings and order determine
+        identity; equivalent supported site URLs/domains use the canonical domain.
+        After expiry, the next identical POST starts fresh work.
+        Uses a fresh agent with live web search restricted to one selected
         site. Accepts precisely two drug names and either a canonical domain or
         the exact checker URL from the site enum. Returned site is canonical.
         found means a dedicated pair page was retrieved, even if that page reports
@@ -224,7 +254,7 @@ paths:
         The summary is in Czech and limited to 1–3 short sentences. Clinical
         claims must come from the retrieved pair page. Findings are agent-reported,
         not independently medically verified. Service/model failures and timeouts
-        return 503. Shares CODEX_TIMEOUT_SECONDS and MAX_CONCURRENT_CHECKS with
+        return a retained 503. Shares CODEX_TIMEOUT_SECONDS and MAX_CONCURRENT_CHECKS with
         interaction checks (defaults: 90 seconds, 4 concurrent processes).
       requestBody:
         required: true
@@ -236,6 +266,18 @@ paths:
               drugs: [warfarin, ibuprofen]
               site: drugs.com
       responses:
+        '202':
+          description: Work accepted or still in progress. Repeat the same POST to poll.
+          headers:
+            Retry-After:
+              description: Suggested polling delay in seconds.
+              schema: {type: integer, const: 2}
+            Cache-Control:
+              schema: {type: string, const: no-store}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingResponse'
         '200':
           description: Research completed, including negative or inconclusive outcomes.
           headers:
@@ -266,7 +308,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         '429':
-          description: Shared agent capacity exhausted.
+          description: Shared pending-work queue is full; existing requests can still be polled.
           headers:
             Retry-After:
               schema: {type: integer, minimum: 0}
@@ -291,6 +333,14 @@ paths:
                 $ref: '#/components/schemas/Problem'
 components:
   schemas:
+    PendingResponse:
+      type: object
+      additionalProperties: false
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [queued, running]
     ResearchDrugs:
       type: array
       minItems: 2
@@ -640,6 +690,10 @@ components:
           maximum: 599
         detail:
           type: string
+        code:
+          type: string
+          enum: [execution_failed, worker_interrupted, queue_timeout]
+          description: Machine-readable code for retained background-work failures.
         instance:
           type: string
           format: uri-reference

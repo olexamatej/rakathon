@@ -1,4 +1,5 @@
 mod codex;
+mod jobs;
 pub mod model;
 pub mod report;
 mod research;
@@ -15,7 +16,6 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
-use tokio::sync::Semaphore;
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -25,6 +25,11 @@ pub struct Config {
     pub service_tier: Option<String>,
     pub timeout: Duration,
     pub max_concurrent: usize,
+    pub jobs_path: PathBuf,
+    pub max_queued: usize,
+    pub result_ttl: Duration,
+    pub failure_ttl: Duration,
+    pub queue_timeout: Duration,
 }
 
 impl Config {
@@ -61,8 +66,24 @@ impl Config {
             service_tier,
             timeout: Duration::from_secs(timeout),
             max_concurrent,
+            jobs_path: env::var_os("JOBS_PATH")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| "data/jobs.sqlite3".into()),
+            max_queued: env_number("MAX_QUEUED_CHECKS", 100)? as usize,
+            result_ttl: Duration::from_secs(env_number("RESULT_TTL_SECONDS", 86400)?),
+            failure_ttl: Duration::from_secs(env_number("FAILURE_TTL_SECONDS", 30)?),
+            queue_timeout: Duration::from_secs(env_number("QUEUE_TIMEOUT_SECONDS", 300)?),
         })
     }
+}
+
+fn env_number(name: &str, default: u64) -> anyhow::Result<u64> {
+    let value = env::var(name)
+        .unwrap_or_else(|_| default.to_string())
+        .parse()
+        .with_context(|| format!("{name} must be an integer"))?;
+    ensure!(value > 0, "{name} must be positive");
+    Ok(value)
 }
 
 fn normalize_service_tier(tier: &str) -> anyhow::Result<String> {
@@ -76,7 +97,7 @@ fn normalize_service_tier(tier: &str) -> anyhow::Result<String> {
 #[derive(Clone)]
 pub struct AppState {
     config: Arc<Config>,
-    permits: Arc<Semaphore>,
+    jobs: Arc<jobs::Store>,
 }
 
 impl AppState {
@@ -93,13 +114,14 @@ impl AppState {
             config.codex_bin = env::current_dir()?.join(&config.codex_bin);
         }
         Ok(Self {
-            permits: Arc::new(Semaphore::new(config.max_concurrent)),
+            jobs: Arc::new(jobs::Store::open(&config)?),
             config: Arc::new(config),
         })
     }
 }
 
 pub fn app(state: AppState) -> Router {
+    jobs::start(&state);
     Router::new()
         .route("/interaction-checks", post(check))
         .route("/interaction-research", post(research_check))
@@ -123,7 +145,7 @@ pub fn app(state: AppState) -> Router {
         .with_state(state)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 struct CheckRequest {
     drugs: Vec<String>,
@@ -152,50 +174,11 @@ async fn check(
             ));
         }
     }
-    let permit = state.permits.clone().try_acquire_owned().map_err(|_| {
-        Problem::new(
-            StatusCode::TOO_MANY_REQUESTS,
-            "Kapacita pro kontrolu interakcí je nyní vyčerpána. Zkuste to za chvíli znovu.",
-        )
-    })?;
-
-    // The owned permit remains with the worker even if the HTTP client disconnects.
-    // Each worker is bounded by the Codex timeout and reaps its process on failure.
-    let task = tokio::spawn(async move {
-        let _permit = permit;
-        let result = codex::infer(&state.config, &request.drugs).await?;
-        report::build_report(&request.drugs, result)
-    });
-    match task.await {
-        Ok(Ok(report)) => Ok((
-            [
-                (header::CACHE_CONTROL, "no-store"),
-                (header::CONTENT_LANGUAGE, "cs"),
-                (
-                    header::HeaderName::from_static("x-interaction-source"),
-                    "model-knowledge",
-                ),
-                (
-                    header::HeaderName::from_static("x-sources-verified"),
-                    "false",
-                ),
-            ],
-            Json(report),
-        )
-            .into_response()),
-        Ok(Err(error)) => {
-            // No input names, prompts, raw model output, or credentials in logs.
-            tracing::warn!(error = %error, "interaction inference failed");
-            Err(Problem::new(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "Služba nedokázala dokončit kontrolu interakcí s platným výsledkem. Zkuste to později znovu.",
-            ))
-        }
-        Err(_) => Err(Problem::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Při zpracování kontroly interakcí došlo k vnitřní chybě.",
-        )),
-    }
+    jobs::submit(
+        &state,
+        jobs::Kind::Check,
+        serde_json::to_value(request).unwrap(),
+    )
 }
 
 async fn research_check(
@@ -227,41 +210,13 @@ async fn research_check(
             "Vyberte podporovaný web nebo jeho přesnou adresu uvedenou v dokumentaci API.",
         ));
     }
-    let permit = state.permits.clone().try_acquire_owned().map_err(|_| {
-        Problem::new(
-            StatusCode::TOO_MANY_REQUESTS,
-            "Kapacita služby je nyní vyčerpána. Zkuste to za chvíli znovu.",
-        )
-    })?;
-    let task = tokio::spawn(async move {
-        let _permit = permit;
-        research::research(&state.config, &request).await
-    });
-    match task.await {
-        Ok(Ok(result)) => Ok((
-            [
-                (header::CACHE_CONTROL, "no-store"),
-                (header::CONTENT_LANGUAGE, "cs"),
-                (
-                    header::HeaderName::from_static("x-interaction-source"),
-                    "web-search",
-                ),
-            ],
-            Json(result),
-        )
-            .into_response()),
-        Ok(Err(error)) => {
-            tracing::warn!(error = %error, "interaction research failed");
-            Err(Problem::new(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "Služba nedokázala dokončit průzkum s platným výsledkem. Zkuste to později znovu.",
-            ))
-        }
-        Err(_) => Err(Problem::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Při průzkumu interakcí došlo k vnitřní chybě.",
-        )),
-    }
+    let mut request = request;
+    request.site = research::site(&request.site).unwrap().0.into();
+    jobs::submit(
+        &state,
+        jobs::Kind::Research,
+        serde_json::to_value(request).unwrap(),
+    )
 }
 
 struct Problem {

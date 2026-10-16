@@ -63,7 +63,8 @@ def main():
             port = sock.getsockname()[1]
         env = os.environ.copy()
         env.update(CODEX_MODEL=model, CODEX_SERVICE_TIER=metadata["requestedServiceTiers"][mode],
-                   CODEX_TIMEOUT_SECONDS="90", MAX_CONCURRENT_CHECKS="1", BIND_ADDR=f"127.0.0.1:{port}")
+                   CODEX_TIMEOUT_SECONDS="90", MAX_CONCURRENT_CHECKS="1", BIND_ADDR=f"127.0.0.1:{port}",
+                   JOBS_PATH=str(output / f"{stem}.jobs.sqlite3"))
         with (output / f"{stem}.server.log").open("w") as log:
             process = subprocess.Popen([str(binary)], cwd=root, env=env, stdout=log, stderr=log)
             try:
@@ -81,13 +82,22 @@ def main():
                     data=json.dumps(request).encode(), headers={"Content-Type": "application/json"})
                 started = time.perf_counter()
                 error = None
-                try:
-                    response = urllib.request.urlopen(http_request, timeout=100)
-                except urllib.error.HTTPError as exc:
-                    response = exc
-                except (OSError, urllib.error.URLError) as exc:
-                    response = None
-                    error = str(exc)
+                deadline = time.monotonic() + 100
+                while True:
+                    try:
+                        response = urllib.request.urlopen(http_request, timeout=10)
+                    except urllib.error.HTTPError as exc:
+                        response = exc
+                    except (OSError, urllib.error.URLError) as exc:
+                        response = None
+                        error = str(exc)
+                    if response is None or response.status != 202:
+                        break
+                    with response:
+                        response.read()
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(f"Polling deadline exceeded: {stem}")
+                    time.sleep(0.2)
                 if response is not None:
                     with response:
                         raw = response.read()

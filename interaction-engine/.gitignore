@@ -2,3 +2,6 @@
 .env
 knowledge-base/
 __pycache__/
+
+/data/jobs.sqlite3*
+/data/jobs.lock

@@ -28,7 +28,7 @@ const SITES: [(&str, &str); 7] = [
     ("rxcheck.dev", "https://rxcheck.dev/"),
 ];
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ResearchRequest {
     pub drugs: [String; 2],

@@ -168,11 +168,20 @@ fn saved_czech_response_has_no_external_links_and_matches_openapi() {
 fn config(bin: PathBuf) -> Config {
     Config {
         bind: "127.0.0.1:0".parse().unwrap(),
+        jobs_path: if bin.parent().is_some_and(|p| p.is_dir()) {
+            bin.with_extension("sqlite3")
+        } else {
+            tempfile::tempdir().unwrap().keep().join("jobs.sqlite3")
+        },
         codex_bin: bin,
         model: None,
         service_tier: None,
         timeout: Duration::from_secs(5),
         max_concurrent: 1,
+        max_queued: 100,
+        result_ttl: Duration::from_secs(86400),
+        failure_ttl: Duration::from_secs(30),
+        queue_timeout: Duration::from_secs(300),
     }
 }
 
@@ -185,6 +194,24 @@ async fn send(
 }
 
 async fn send_path(
+    router: Router,
+    path: &str,
+    body: String,
+    content_type: &str,
+) -> (StatusCode, axum::http::HeaderMap, Value) {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(100);
+    loop {
+        let response = send_once(router.clone(), path, body.clone(), content_type).await;
+        if response.0 != StatusCode::ACCEPTED {
+            return response;
+        }
+        assert_matches_openapi(&response.2, "PendingResponse");
+        assert!(tokio::time::Instant::now() < deadline, "polling timed out");
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}
+
+async fn send_once(
     router: Router,
     path: &str,
     body: String,
@@ -277,6 +304,8 @@ fn fake_codex(extra: &str, events: &str) -> tempfile::TempDir {
 import json, os, pathlib, sys, time
 root = pathlib.Path(__file__).resolve().parent
 request = json.load(sys.stdin)
+with (root / 'invocations').open('a') as counter:
+    counter.write('1\n')
 (root / 'invocation.json').write_text(json.dumps({{'args': sys.argv[1:], 'cwd': os.getcwd(), 'input': request, 'pid': os.getpid()}}))
 {extra}
 sys.stdout.write((root / 'events').read_text())
@@ -405,7 +434,7 @@ async fn deadline_kills_and_reaps_the_process() {
 
 #[cfg(unix)]
 #[tokio::test]
-async fn busy_worker_returns_429_without_launching_another_process() {
+async fn identical_requests_share_running_work() {
     let fixture = fake_codex("time.sleep(0.5)", &events(model_result()));
     let router = app(AppState::new(config(fixture.path().join("codex"))).unwrap());
     let first = tokio::spawn(send(
@@ -413,28 +442,33 @@ async fn busy_worker_returns_429_without_launching_another_process() {
         json!({"drugs": input()}).to_string(),
         "application/json",
     ));
-    for _ in 0..100 {
+    for _ in 0..500 {
         if fixture.path().join("invocation.json").exists() {
             break;
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert!(fixture.path().join("invocation.json").exists());
-    let (status, headers, _) = send(
+    let (status, headers, body) = send_once(
         router,
+        "/interaction-checks",
         json!({"drugs": input()}).to_string(),
         "application/json",
     )
     .await;
-    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
-    assert_eq!(headers["retry-after"], "1");
+    assert_eq!(status, StatusCode::ACCEPTED);
+    assert_eq!(body, json!({"state": "running"}));
+    assert_eq!(headers["retry-after"], "2");
     assert_eq!(first.await.unwrap().0, StatusCode::OK);
 }
 
 #[tokio::test]
 #[ignore = "requires an authenticated Codex CLI and makes a real model call"]
 async fn live_codex_smoke() {
-    let router = app(AppState::new(Config::from_env().unwrap()).unwrap());
+    let database = tempfile::tempdir().unwrap();
+    let mut cfg = Config::from_env().unwrap();
+    cfg.jobs_path = database.path().join("jobs.sqlite3");
+    let router = app(AppState::new(cfg).unwrap());
     let started = std::time::Instant::now();
     let (status, headers, body) = send(
         router,
@@ -622,7 +656,10 @@ async fn live_research_smoke() {
     let _ = tracing_subscriber::fmt()
         .with_env_filter("interaction_engine=debug")
         .try_init();
-    let router = app(AppState::new(Config::from_env().unwrap()).unwrap());
+    let database = tempfile::tempdir().unwrap();
+    let mut cfg = Config::from_env().unwrap();
+    cfg.jobs_path = database.path().join("jobs.sqlite3");
+    let router = app(AppState::new(cfg).unwrap());
     let (status, _, body) = send_path(
         router,
         "/interaction-research",
@@ -646,6 +683,7 @@ async fn research_shares_capacity_with_checks_and_times_out() {
     );
     let mut cfg = config(fixture.path().join("codex"));
     cfg.timeout = Duration::from_secs(3);
+    cfg.max_queued = 1;
     let router = app(AppState::new(cfg).unwrap());
     let worker = tokio::spawn(send_path(
         router.clone(),
@@ -660,9 +698,18 @@ async fn research_shares_capacity_with_checks_and_times_out() {
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert!(fixture.path().join("invocation.json").exists());
-    let (status, headers, _) = send(
+    let (status, _, _) = send_once(
         router.clone(),
+        "/interaction-checks",
         json!({"drugs": input()}).to_string(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    let (status, headers, _) = send_once(
+        router.clone(),
+        "/interaction-checks",
+        json!({"drugs": ["Other A", "Other B"]}).to_string(),
         "application/json",
     )
     .await;
@@ -680,4 +727,240 @@ async fn research_shares_capacity_with_checks_and_times_out() {
             .success()
     );
     assert!(!PathBuf::from(invocation["cwd"].as_str().unwrap()).exists());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn submissions_are_immediate_atomic_and_reuse_persisted_results() {
+    let fixture = fake_codex("time.sleep(0.2)", &events(model_result()));
+    let cfg = config(fixture.path().join("codex"));
+    let router = app(AppState::new(cfg.clone()).unwrap());
+    let payload = json!({"drugs": input()}).to_string();
+    let (a, b) = tokio::join!(
+        send_once(
+            router.clone(),
+            "/interaction-checks",
+            payload.clone(),
+            "application/json"
+        ),
+        send_once(
+            router.clone(),
+            "/interaction-checks",
+            payload.clone(),
+            "application/json"
+        ),
+    );
+    for (status, headers, body) in [a, b] {
+        assert_eq!(status, StatusCode::ACCEPTED);
+        assert_eq!(headers["retry-after"], "2");
+        assert_eq!(headers["cache-control"], "no-store");
+        assert_matches_openapi(&body, "PendingResponse");
+        assert!(body.get("id").is_none());
+    }
+    let completed = send(router.clone(), payload.clone(), "application/json").await;
+    assert_eq!(completed.0, StatusCode::OK);
+    let cached = send_once(
+        router.clone(),
+        "/interaction-checks",
+        payload.clone(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(cached.0, StatusCode::OK);
+    assert_eq!(cached.2, completed.2);
+    assert_eq!(
+        fs::read_to_string(fixture.path().join("invocations")).unwrap(),
+        "1\n"
+    );
+    assert!(
+        AppState::new(cfg.clone()).is_err(),
+        "another server must not open this store"
+    );
+    drop(router);
+    tokio::task::yield_now().await;
+    let restarted = app(AppState::new(cfg.clone()).unwrap());
+    let cached = send_once(
+        restarted.clone(),
+        "/interaction-checks",
+        payload.clone(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(cached.0, StatusCode::OK);
+    assert_eq!(cached.2, completed.2);
+    let db = rusqlite::Connection::open(&cfg.jobs_path).unwrap();
+    db.execute("UPDATE jobs SET expires=0", []).unwrap();
+    assert_eq!(
+        send_once(
+            restarted.clone(),
+            "/interaction-checks",
+            payload.clone(),
+            "application/json"
+        )
+        .await
+        .0,
+        StatusCode::ACCEPTED
+    );
+    assert_eq!(
+        send(restarted, payload, "application/json").await.0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        fs::read_to_string(fixture.path().join("invocations")).unwrap(),
+        "1\n1\n"
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn research_site_aliases_share_work_and_failures_expire() {
+    let fixture = fake_codex("sys.exit(1)", "");
+    let cfg = config(fixture.path().join("codex"));
+    let router = app(AppState::new(cfg.clone()).unwrap());
+    let payload = research_input().to_string();
+    let first = send_path(
+        router.clone(),
+        "/interaction-research",
+        payload.clone(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(first.0, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(first.2["code"], "execution_failed");
+    let mut alias = research_input();
+    alias["site"] = json!("https://www.drugs.com/drug_interactions.html");
+    let cached = send_once(
+        router.clone(),
+        "/interaction-research",
+        alias.to_string(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(cached.0, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(cached.2, first.2);
+    let db = rusqlite::Connection::open(&cfg.jobs_path).unwrap();
+    db.execute("UPDATE jobs SET expires=0", []).unwrap();
+    assert_eq!(
+        send_once(
+            router.clone(),
+            "/interaction-research",
+            payload.clone(),
+            "application/json"
+        )
+        .await
+        .0,
+        StatusCode::ACCEPTED
+    );
+    assert_eq!(
+        send_path(router, "/interaction-research", payload, "application/json")
+            .await
+            .0,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(
+        fs::read_to_string(fixture.path().join("invocations")).unwrap(),
+        "1\n1\n"
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn restart_recovers_queue_and_reports_interrupted_work() {
+    let fixture = fake_codex("", &events(model_result()));
+    let cfg = config(fixture.path().join("codex"));
+    let state = AppState::new(cfg.clone()).unwrap();
+    // Persist work without starting workers, then simulate a restart.
+    let db = rusqlite::Connection::open(&cfg.jobs_path).unwrap();
+    for (key, state, created) in [
+        ("queued", "queued", chrono::Utc::now().timestamp()),
+        ("running", "running", 0),
+        ("expired_queue", "queued", 0),
+    ] {
+        db.execute("INSERT INTO jobs (fingerprint, kind, request, state, created) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![key, "\"check\"", json!({"drugs": input()}).to_string(), state, created]).unwrap();
+    }
+    drop(state);
+    let router = app(AppState::new(cfg).unwrap());
+    for _ in 0..500 {
+        let state: String = db
+            .query_row(
+                "SELECT state FROM jobs WHERE fingerprint='queued'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        if state == "succeeded" {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let queued: String = db
+        .query_row(
+            "SELECT state FROM jobs WHERE fingerprint='queued'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(queued, "succeeded");
+    for (key, code) in [
+        ("running", "worker_interrupted"),
+        ("expired_queue", "queue_timeout"),
+    ] {
+        let (state, body): (String, String) = db
+            .query_row(
+                "SELECT state, body FROM jobs WHERE fingerprint=?1",
+                [key],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(state, "failed");
+        assert_eq!(serde_json::from_str::<Value>(&body).unwrap()["code"], code);
+    }
+    drop(router);
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn request_identity_preserves_drug_order_and_spelling() {
+    let fixture = fake_codex("", &events(model_result()));
+    let cfg = config(fixture.path().join("codex"));
+    let router = app(AppState::new(cfg.clone()).unwrap());
+    for names in [
+        vec!["A", "B"],
+        vec!["B", "A"],
+        vec!["a", "B"],
+        vec![" A", "B"],
+    ] {
+        assert_eq!(
+            send_once(
+                router.clone(),
+                "/interaction-checks",
+                json!({"drugs": names}).to_string(),
+                "application/json"
+            )
+            .await
+            .0,
+            StatusCode::ACCEPTED
+        );
+    }
+    let db = rusqlite::Connection::open(&cfg.jobs_path).unwrap();
+    let count: i64 = db
+        .query_row("SELECT COUNT(*) FROM jobs", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(count, 4);
+    // Drain before the fixture's executable is deleted.
+    for _ in 0..500 {
+        let count: i64 = db
+            .query_row(
+                "SELECT COUNT(*) FROM jobs WHERE state IN ('queued', 'running')",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        if count == 0 {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("workers did not drain");
 }
