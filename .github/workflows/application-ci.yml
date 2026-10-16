@@ -42,7 +42,6 @@ jobs:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
-            /apps/transfer-demo/
             /services/transfer-api/
       - name: Prepare executable temporary directory for Rustup
         run: mkdir -p "$RUNNER_TEMP/rust-tmp"
@@ -76,8 +75,6 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
-      - name: Check transfer demo JavaScript syntax
-        run: node --check apps/transfer-demo/app.js
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Report dependency vulnerabilities (non-blocking)

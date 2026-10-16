@@ -1,26 +1,16 @@
 openapi: 3.1.0
 info:
-  title: PillGaze Transfer API
-  version: 0.1.0
+  title: PillGaze Blob Storage API
+  version: 0.2.0
   description: >-
-    Opaque JSON blob storage plus a separate legacy client-encrypted relay. Responses
-    use Cache-Control: no-store; clients must not cache one-time secrets or payloads.
-servers:
-  - url: https://{host}
-    variables:
-      host:
-        default: api.example.invalid
+    Store opaque JSON and retrieve its exact bytes using a six-character PIN.
+    No expiry, consumption, revocation, or encryption enforcement. Synthetic data only.
+    Responses use Cache-Control: no-store. Never log payloads or PINs.
 paths:
   /v1/transfers:
     post:
-      operationId: createBlobTransfer
-      summary: Store an opaque JSON blob and return only its PIN
-      description: >-
-        Accepts any valid JSON value, storing the exact request bytes without
-        interpreting fields. Maximum request size is 393216 bytes. Returns a
-        random six-character alphanumeric PIN. No expiry or retrieval endpoint
-        is implemented for these blobs yet. This endpoint does not guarantee
-        client-side encryption; use synthetic data only. Never log bodies or PINs.
+      operationId: createTransfer
+      summary: Store an opaque JSON blob
       requestBody:
         required: true
         content:
@@ -28,7 +18,7 @@ paths:
             schema: {}
       responses:
         '201':
-          description: Blob stored.
+          description: Stored; the response contains only the PIN.
           content:
             application/json:
               schema:
@@ -37,107 +27,33 @@ paths:
                 required: [pin]
                 properties:
                   pin:
-                    type: string
-                    pattern: '^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$'
+                    $ref: '#/components/schemas/Pin'
         '400':
           description: Invalid JSON or missing application/json content type.
         '413':
-          $ref: '#/components/responses/PayloadTooLarge'
+          description: Request exceeds 1048576 bytes (1 MiB).
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
-  /v1/encrypted-transfers:
-    post:
-      operationId: createTransfer
-      summary: Store an encrypted medication-list envelope
-      description: >-
-        Stores ciphertext only. The one-time retrieval code and revocation token
-        are returned once and must not be logged. The client-generated
-        decryption key is never sent to this API.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTransferRequest'
-      responses:
-        '201':
-          description: Transfer created. Secrets are returned only in this response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateTransferResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '422':
-          description: Request body is not valid JSON or does not match the request schema.
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
-  /v1/transfers/redeem:
-    post:
-      operationId: redeemTransfer
-      summary: Atomically consume a one-time retrieval code
-      description: >-
-        A retry with the same Idempotency-Key and code returns the same
-        ciphertext. A different key cannot redeem an already consumed transfer.
-        The code authorizes retrieval but does not decrypt the envelope.
+  /v1/transfers/{pin}:
+    get:
+      operationId: getTransfer
+      summary: Retrieve the original JSON blob without modifying or consuming it
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RedeemTransferRequest'
-      responses:
-        '200':
-          description: Encrypted envelope retrieved; decrypt it locally with the separately obtained key.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RedeemTransferResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '422':
-          description: Request body is not valid JSON or does not match the request schema.
-        '404':
-          description: Transfer is unknown or no longer available.
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
-  /v1/transfers/{transferId}:
-    delete:
-      operationId: revokeTransfer
-      summary: Revoke a transfer before it is redeemed
-      parameters:
-        - name: transferId
+        - name: pin
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
-        - name: Authorization
-          in: header
-          required: true
-          description: Bearer revocation token returned by createTransfer.
-          schema:
-            type: string
-            pattern: '^Bearer .+$'
+            $ref: '#/components/schemas/Pin'
       responses:
-        '204':
-          description: Transfer revoked, or already revoked with the same token.
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '200':
+          description: Exact original request bytes, with application/json content type.
+          content:
+            application/json:
+              schema: {}
         '404':
-          description: Transfer is unknown, no longer revocable, or the token is invalid.
+          description: Unknown or invalid PIN.
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
@@ -145,120 +61,29 @@ paths:
   /health/live:
     get:
       operationId: liveness
-      summary: Process liveness probe
       responses:
         '200':
           description: Process is running.
   /health/ready:
     get:
       operationId: readiness
-      summary: Dependency readiness probe
       responses:
         '200':
-          description: Required dependencies are ready.
+          description: Database is reachable.
         '503':
-          description: A required dependency is unavailable.
+          $ref: '#/components/responses/Unavailable'
 components:
-  parameters:
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      description: Client-generated random value reused only for retrying the same redemption request.
-      schema:
-        type: string
-        minLength: 22
-        maxLength: 128
   schemas:
-    CreateTransferRequest:
-      type: object
-      additionalProperties: false
-      required: [envelope]
-      properties:
-        envelope:
-          $ref: '#/components/schemas/EncryptedEnvelope'
-        expiresInSeconds:
-          type: integer
-          minimum: 60
-          maximum: 3600
-          default: 900
-    CreateTransferResponse:
-      type: object
-      additionalProperties: false
-      required: [transferId, retrievalCode, revocationToken, expiresAt]
-      properties:
-        transferId:
-          type: string
-          format: uuid
-        retrievalCode:
-          type: string
-          description: High-entropy one-time code; do not treat as the decryption key.
-          pattern: '^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{12}$'
-          minLength: 12
-          maxLength: 12
-        revocationToken:
-          type: string
-          description: Opaque secret used only to revoke this transfer.
-        expiresAt:
-          type: string
-          format: date-time
-    RedeemTransferRequest:
-      type: object
-      additionalProperties: false
-      required: [retrievalCode]
-      properties:
-        retrievalCode:
-          type: string
-          pattern: '^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{12}$'
-          minLength: 12
-          maxLength: 12
-    RedeemTransferResponse:
-      type: object
-      additionalProperties: false
-      required: [transferId, envelope, expiresAt]
-      properties:
-        transferId:
-          type: string
-          format: uuid
-        envelope:
-          $ref: '#/components/schemas/EncryptedEnvelope'
-        expiresAt:
-          type: string
-          format: date-time
-    EncryptedEnvelope:
-      type: object
-      additionalProperties: false
-      required: [format, formatVersion, algorithm, nonce, ciphertext]
-      properties:
-        format:
-          type: string
-          const: pillgaze.medication-list
-        formatVersion:
-          type: integer
-          const: 1
-        algorithm:
-          type: string
-          const: A256GCM
-        nonce:
-          type: string
-          description: Unpadded base64url-encoded 12-byte AES-GCM nonce.
-          pattern: '^[A-Za-z0-9_-]{16}$'
-        ciphertext:
-          type: string
-          description: Unpadded base64url-encoded authenticated ciphertext, including the authentication tag; decoded size is at most 262144 bytes.
-          contentEncoding: base64url
-          minLength: 22
-          maxLength: 349526
+    Pin:
+      type: string
+      pattern: '^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$'
   responses:
-    BadRequest:
-      description: Request is invalid.
-    PayloadTooLarge:
-      description: Request exceeds the configured size limit.
     RateLimited:
-      description: Too many requests; retry after the indicated delay.
+      description: Source rate limit exceeded; respect Retry-After.
       headers:
         Retry-After:
           schema:
             type: integer
+            example: 60
     Unavailable:
-      description: A required dependency is temporarily unavailable.
+      description: Storage is temporarily unavailable.
