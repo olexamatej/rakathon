@@ -9,8 +9,9 @@
     "ios": "expo start --ios",
     "web": "BROWSER=none expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "export:web": "expo export --platform web"
+    "test": "node --experimental-strip-types --test tests/*.test.*",
+    "export:web": "expo export --platform web",
+    "web:patient": "node apps/patient-web/server.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

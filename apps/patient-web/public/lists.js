@@ -1,0 +1,86 @@
+export const STORAGE_KEY = 'pillgaze:patient:v2';
+const LEGACY_PREFIX = 'pillgaze:list:v1:';
+
+export function newId() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), n => n.toString(16).padStart(2, '0')).join('');
+}
+
+export function createState() {
+  return { items: [], submissions: [] };
+}
+
+const isDate = value => typeof value === 'string' && Number.isFinite(Date.parse(value));
+const isId = value => typeof value === 'string' && /^[a-z0-9-]{8,80}$/.test(value);
+const isText = (value, limit) => typeof value === 'string' && value.length <= limit;
+const isReceipt = value => value && typeof value.pin === 'string'
+  && /^[A-Z2-9]{6}$/.test(value.pin) && isDate(value.sentAt);
+const isItems = items => Array.isArray(items)
+  && items.every(item => item && isId(item.id)
+    && isText(item.name, 120) && isText(item.dosage, 120)
+    && isText(item.dosesPerPackage, 6))
+  && new Set(items.map(item => item.id)).size === items.length;
+const isSubmission = value => value && isId(value.id) && isReceipt(value)
+  && isItems(value.items) && canSend(value.items);
+const isState = state => state && isItems(state.items) && Array.isArray(state.submissions)
+  && state.submissions.every(isSubmission)
+  && new Set(state.submissions.map(entry => entry.id)).size === state.submissions.length;
+
+export function loadState(storage) {
+  const saved = storage.getItem(STORAGE_KEY);
+  if (saved !== null) {
+    const state = JSON.parse(saved);
+    if (!isState(state)) throw new Error('Neplatný formát uloženého seznamu.');
+    return { state, skipped: 0 };
+  }
+
+  // Keep legacy records intact; migrate the most recently edited list once.
+  const legacy = [];
+  let skipped = 0;
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (!key?.startsWith(LEGACY_PREFIX)) continue;
+    try {
+      const list = JSON.parse(storage.getItem(key));
+      if (!list || !isId(list.id) || key !== LEGACY_PREFIX + list.id
+        || !isDate(list.updatedAt) || !isItems(list.items)
+        || !(list.receipt === null || (isReceipt(list.receipt) && canSend(list.items)))) {
+        throw new Error('Invalid legacy list');
+      }
+      legacy.push(list);
+    } catch {
+      skipped++;
+    }
+  }
+  legacy.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  const state = {
+    items: structuredClone(legacy[0]?.items || []),
+    submissions: legacy.filter(list => list.receipt).map(list => ({
+      id: list.id, pin: list.receipt.pin, sentAt: list.receipt.sentAt, items: list.items,
+    })).sort((a, b) => Date.parse(b.sentAt) - Date.parse(a.sentAt)),
+  };
+  return { state, skipped };
+}
+
+export function saveState(storage, state) {
+  if (!isState(state)) throw new Error('Neplatný formát seznamu.');
+  storage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+export function recordSubmission(state, items, receipt) {
+  const entry = { id: newId(), pin: receipt?.pin, sentAt: receipt?.sentAt, items: structuredClone(items) };
+  if (!isSubmission(entry)) throw new Error('Neplatná odpověď při odeslání seznamu.');
+  state.submissions.unshift(entry);
+  return entry;
+}
+
+export function canSend(items) {
+  return items.length > 0 && items.every(item => item.name.trim() && item.dosage.trim()
+    && /^[1-9]\d{0,5}$/.test(item.dosesPerPackage));
+}
+
+export function toText(items) {
+  if (!canSend(items)) throw new Error('Doplňte název, dosage a počet dávek u každého léčiva.');
+  const clean = value => value.trim().replace(/[\t\r\n]+/g, ' ');
+  return ['Název léčiva\tDosage\tPočet dávek v balení',
+    ...items.map(item => [item.name, item.dosage, item.dosesPerPackage].map(clean).join('\t'))].join('\n');
+}
