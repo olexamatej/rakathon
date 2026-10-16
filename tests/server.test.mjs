@@ -35,6 +35,9 @@ test('patient routes, PWA assets and private-file boundaries', async t => {
   assert.ok(names.length > 5000 && names.every(name => typeof name === 'string'));
   assert.ok(names.includes('IBALGIN'));
   assert.equal(new Set(names).size, names.length);
+  const substances = await (await fetch(base + '/sukl-substances.json')).json();
+  assert.deepEqual(substances.IBALGIN, ['Ibuprofen']);
+  assert.ok(Object.keys(substances).every(name => names.includes(name)));
   const manifest = await (await fetch(base + '/manifest.webmanifest')).json();
   assert.equal(manifest.start_url, '/pacient');
   assert.equal(manifest.display, 'standalone');

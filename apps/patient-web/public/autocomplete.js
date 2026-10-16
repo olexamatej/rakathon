@@ -119,7 +119,8 @@ export function createAutocomplete({ getOptions, container = document.body, id, 
     event.preventDefault();
     pick(option.dataset.name);
   });
-  window.addEventListener('scroll', () => { if (!list.hidden) hide(); }, true);
+  // Page/table scrolling moves the anchor away, but scrolling the list itself must keep it open.
+  window.addEventListener('scroll', event => { if (!list.hidden && event.target !== list) hide(); }, true);
   window.addEventListener('resize', hide);
   return { bind, hide };
 }

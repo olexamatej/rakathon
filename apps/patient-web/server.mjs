@@ -46,16 +46,34 @@ function loadRegimenData() {
   return regimenData;
 }
 
-// Distinct medicine names from the SÚKL catalogue, for autocomplete only (names never restrict input).
-let suklNames;
-function loadSuklNames() {
-  suklNames ??= readFile(new URL('../../data/sukl/medications.json', import.meta.url), 'utf8')
+// Medicine names and their active substances from the SÚKL catalogue. Names feed autocomplete (they
+// never restrict input); substances map a name to its active substances. A name can have several
+// catalogue variants, so the most common substance list wins.
+const sentenceCase = text => text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+let suklData;
+function loadSuklData() {
+  suklData ??= readFile(new URL('../../data/sukl/medications.json', import.meta.url), 'utf8')
     .then(text => {
-      const records = JSON.parse(text);
-      return JSON.stringify([...new Set(records.map(record => record.name).filter(Boolean))].sort());
+      const variants = new Map(); // name -> Map(substance list JSON -> count)
+      for (const record of JSON.parse(text)) {
+        if (!record.name) continue;
+        const substances = (record.activeSubstances || []).map(entry => entry.name || entry.inn).filter(Boolean).map(sentenceCase);
+        const counts = variants.get(record.name) ?? new Map();
+        const key = JSON.stringify(substances);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+        variants.set(record.name, counts);
+      }
+      const names = [...variants.keys()].sort();
+      const substances = {};
+      for (const name of names) {
+        const [best] = [...variants.get(name)].sort((a, b) => b[1] - a[1])[0];
+        const list = JSON.parse(best);
+        if (list.length) substances[name] = list;
+      }
+      return { names: JSON.stringify(names), substances: JSON.stringify(substances) };
     })
-    .catch(error => { suklNames = undefined; throw error; });
-  return suklNames;
+    .catch(error => { suklData = undefined; throw error; });
+  return suklData;
 }
 
 export function createAppServer() {
@@ -75,9 +93,10 @@ export function createAppServer() {
       res.writeHead(302, { Location: '/pacient' }).end();
       return;
     }
-    if (path === '/sukl-names.json') {
+    if (path === '/sukl-names.json' || path === '/sukl-substances.json') {
       try {
-        const body = await loadSuklNames();
+        const data = await loadSuklData();
+        const body = path === '/sukl-names.json' ? data.names : data.substances;
         res.writeHead(200, { ...securityHeaders, 'Content-Type': 'application/json; charset=utf-8' });
         res.end(req.method === 'HEAD' ? undefined : body);
       } catch {

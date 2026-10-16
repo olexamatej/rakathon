@@ -1,9 +1,9 @@
 import { newId } from './lists.js';
 import {
   createDoctorState, loadDoctorState, saveDoctorState, addList, touch, validateItem,
-  normalizePin, isPin, formatMedicineLines, formatMedicineInline,
+  normalizePin, isPin, formatMedicineLines, formatMedicineInline, applySubstances,
 } from './doctor.js';
-import { fetchListByPin, fetchInteractions, loadRegimenDrugs, loadSuklNames } from './doctor-services.js';
+import { fetchListByPin, fetchInteractions, loadRegimenDrugs, loadSuklNames, loadSuklSubstances } from './doctor-services.js';
 import { loadRegimens } from './services.js';
 import { createAutocomplete } from './autocomplete.js';
 
@@ -26,7 +26,20 @@ let state = createDoctorState();
 let loadFailed = false;
 let loading = false;
 let regimenDrugs = {}; // regimen name -> drug names, filled asynchronously
-const interactions = new Map(); // list id -> { status, data, error, token }
+const interactions = new Map(); // list id -> { status, data, error, token, signature }
+
+// What the interactions depend on: the active substances of every medicine (its name when the
+// catalogue does not know them) and the regimen's drugs (its name when they are unknown). Dosage,
+// schedule and package size do not matter, so editing them never clears the interactions.
+function interactionSignature(list) {
+  const medicines = list.items
+    .map(item => (item.substances?.length ? item.substances : [item.name.trim()]).filter(Boolean).map(name => name.toLowerCase()).sort().join('+'))
+    .filter(Boolean).sort();
+  const regimen = list.regimen.trim()
+    ? (regimenDrugs[list.regimen] || [list.regimen.trim()]).map(name => name.toLowerCase()).sort()
+    : [];
+  return JSON.stringify([medicines, regimen]);
+}
 
 try {
   state = loadDoctorState(localStorage);
@@ -120,23 +133,33 @@ function interactionsView(list) {
     body = interactionResults(entry.data, list);
   }
   const busy = entry?.status === 'loading';
+  // A loaded result is final until a change of substances clears it; a failed load can be retried.
+  const canLoad = !busy && list.items.length && (!entry || entry.status === 'error');
   return `<section class="interactions" aria-labelledby="interactions-title" aria-live="polite">
     <div class="interactions-head"><h2 id="interactions-title">Interakce</h2>
-      <button type="button" class="primary" data-action="interactions" ${busy || !list.items.length ? 'disabled' : ''}>${entry?.status === 'done' ? 'Načíst znovu' : 'Načíst interakce'}</button>
-      ${entry?.status === 'done' ? `<small>Načteno v ${escape(time(entry.data.checkedAt))}</small>` : ''}</div>
+      ${entry?.status === 'done' ? `<small>Načteno v ${escape(time(entry.data.checkedAt))}</small>` : ''}
+      <button type="button" class="primary" data-action="interactions" ${canLoad ? '' : 'disabled'}>Načíst interakce</button></div>
     ${body}</section>`;
 }
 
-function regimenRow(list) {
+const regimenDrugsView = list => {
   const drugs = list.regimen ? regimenDrugs[list.regimen] || [] : [];
-  return `<div class="regimen-row"><div class="regimen-main"><span class="label">Režim onkologické léčby</span>
-      ${list.regimen ? `<strong>${escape(list.regimen)}</strong>` : '<span class="none">neuveden</span>'}
-      <button type="button" class="secondary" data-action="edit-regimen">${list.regimen ? 'Upravit' : 'Přidat'}</button></div>
-    ${list.regimen ? (drugs.length
-      ? `<div class="regimen-drugs"><span class="label">Látky v režimu</span>
-          <ul>${drugs.map(drug => `<li>${escape(drug)}</li>`).join('')}</ul></div>`
-      : '<p class="regimen-drugs-none">Látky pro tento režim nejsou k dispozici.</p>') : ''}</div>`;
+  if (!list.regimen) return '';
+  return drugs.length
+    ? `<div class="regimen-drugs"><span class="label">Látky v režimu</span>
+        <ul>${drugs.map(drug => `<li>${escape(drug)}</li>`).join('')}</ul></div>`
+    : '<p class="regimen-drugs-none">Látky pro tento režim nejsou k dispozici.</p>';
+};
+
+function regimenRow(list) {
+  return `<div class="regimen-row"><label class="regimen-main"><span class="label">Režim onkologické léčby</span>
+      <input class="cell-input regimen-input" data-field="regimen" value="${escape(list.regimen)}" maxlength="200"
+        placeholder="Napište název režimu (volitelné)" autocomplete="off" spellcheck="false"></label>
+    <div id="regimen-drugs-slot">${regimenDrugsView(list)}</div></div>`;
 }
+
+const substancesCell = item => item.substances?.length
+  ? `<ul>${item.substances.map(name => `<li>${escape(name)}</li>`).join('')}</ul>` : '<span class="muted">—</span>';
 
 // Table cells are borderless inputs: they read like plain text until hovered or focused.
 function cellInput(item, field, label, attributes = {}) {
@@ -155,12 +178,12 @@ function listView(list) {
         <td class="c-name">${cellInput(item, 'name', 'Název léčiva', { maxlength: 120 })}</td>
         <td>${cellInput(item, 'dosage', 'Síla / dávkování', { maxlength: 120 })}</td>
         <td>${cellInput(item, 'schedule', 'Kdy užívat', { maxlength: 20 })}</td>
-        <td class="substances">${item.substances?.length ? `<ul>${item.substances.map(name => `<li>${escape(name)}</li>`).join('')}</ul>` : '<span class="muted">—</span>'}</td>
+        <td class="substances">${substancesCell(item)}</td>
         <td class="actions"><button type="button" class="icon-button" data-action="delete-item" data-id="${escape(item.id)}" aria-label="Odstranit ${escape(item.name || 'léčivo')}">${icon('trash')}</button></td></tr>`).join('')}
       </tbody></table></div>`
       : `<div class="doc-empty">${icon('list')}<strong>Seznam je prázdný</strong>Přidejte léčivo ručně.</div>`}
     <div class="table-actions"><button type="button" class="small-button" data-action="add-item">${icon('plus')} Přidat léčivo</button>
-      <span class="copy-group"><button type="button" class="small-button" data-action="copy-lines" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat po řádcích</span></button>
+      <span class="copy-group"><button type="button" class="small-button" data-action="copy-lines" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat v tabulce</span></button>
       <button type="button" class="small-button" data-action="copy-inline" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat do řádku</span></button></span></div>
     <div id="interactions-slot">${interactionsView(list)}</div>`;
 }
@@ -172,6 +195,7 @@ function render() {
     : `<div class="doc-empty">${icon('list')}<strong>Zadejte PIN pacienta</strong>Seznam léčiv se zobrazí zde.</div>`;
   document.title = `${list ? `PIN ${list.pin}` : 'Lékař'} · PillGaze`;
   document.querySelectorAll('.cell-input[data-field="name"]').forEach(input => medicineNames.bind(input));
+  document.querySelectorAll('.regimen-input').forEach(input => regimenNames.bind(input));
 }
 
 // Only the interactions block is redrawn, so a cell the doctor is typing in keeps its focus.
@@ -181,29 +205,33 @@ function renderInteractions(list) {
 }
 
 async function runInteractions(list) {
+  if (interactions.get(list.id)?.status === 'loading') return;
+  regimenDrugs = await loadRegimenDrugs(); // the regimen's drugs are part of the signature below
   const token = newId();
-  interactions.set(list.id, { status: 'loading', token });
+  const signature = interactionSignature(list);
+  interactions.set(list.id, { status: 'loading', token, signature });
   renderInteractions(list);
   try {
-    const drugs = await loadRegimenDrugs();
-    regimenDrugs = drugs;
     const data = await fetchInteractions(structuredClone(list.items), list.regimen ? regimenOf(list) : null);
-    if (interactions.get(list.id)?.token !== token) return;
-    interactions.set(list.id, { status: 'done', data, token });
+    if (interactions.get(list.id)?.token !== token) return; // cleared by an edit meanwhile
+    interactions.set(list.id, { status: 'done', data, token, signature });
   } catch (error) {
     if (interactions.get(list.id)?.token !== token) return;
-    interactions.set(list.id, { status: 'error', error: error.message || 'Interakce se nepodařilo načíst.', token });
+    interactions.set(list.id, { status: 'error', error: error.message || 'Interakce se nepodařilo načíst.', token, signature });
   }
   renderInteractions(list);
 }
 
-// After an edit the shown interactions are outdated; refetch when they were already requested.
 function afterEdit(list, { redraw = true } = {}) {
   touch(list);
   persist();
+  // Changed substances invalidate the loaded interactions: clear them (this also drops a request in flight).
+  if (interactions.get(list.id) && interactions.get(list.id).signature !== interactionSignature(list)) interactions.delete(list.id);
   if (redraw) render();
-  else $('#history').innerHTML = historyView(list);
-  if (interactions.has(list.id)) void runInteractions(list);
+  else {
+    $('#history').innerHTML = historyView(list);
+    renderInteractions(list);
+  }
 }
 
 // --- PIN entry ---
@@ -229,6 +257,7 @@ $('#pin-form').addEventListener('submit', async event => {
   try {
     const received = await fetchListByPin(pin);
     const list = addList(state, { pin, items: received.items, regimen: received.regimen, sentAt: received.sentAt });
+    applySubstances(list.items, await loadSuklSubstances());
     persist();
     pinInput.value = '';
     location.hash = encodeURIComponent(list.id);
@@ -252,8 +281,14 @@ $('#history').addEventListener('click', event => {
 
 window.addEventListener('hashchange', render);
 void loadRegimenDrugs().then(drugs => { regimenDrugs = drugs; render(); });
+// Lists stored earlier (or from an API without substances) get theirs from the catalogue once it loads.
+void loadSuklSubstances().then(map => {
+  if (!state.lists.map(list => applySubstances(list.items, map)).some(Boolean)) return;
+  persist();
+  render();
+});
 
-const regimenDialog = $('#regimen-dialog');
+const regimenNames = createAutocomplete({ getOptions: loadRegimens, id: 'regimen-suggestions', minWidth: 320 });
 const medicineNames = createAutocomplete({ getOptions: loadSuklNames, id: 'medicine-suggestions', minWidth: 320 });
 let armedDelete = null;
 
@@ -282,11 +317,7 @@ $('#main').addEventListener('click', event => {
       list.items = list.items.filter(item => item.id !== button.dataset.id);
       afterEdit(list);
       break;
-    case 'edit-regimen':
-      $('#regimen-input').value = list.regimen;
-      regimenDialog.showModal();
-      break;
-    case 'interactions': void runInteractions(list); break;
+    case 'interactions': if (!button.disabled) void runInteractions(list); break;
     case 'copy-lines': void copyText(button, formatMedicineLines(list.items)); break;
     case 'copy-inline': void copyText(button, formatMedicineInline(list.items)); break;
   }
@@ -324,9 +355,17 @@ $('#main').addEventListener('focusout', event => {
 });
 
 // Cells commit on change (blur or Enter); an invalid value stays visible and marked, the data is untouched.
-$('#main').addEventListener('change', event => {
+$('#main').addEventListener('change', async event => {
   const input = event.target.closest('.cell-input');
   const list = currentList();
+  if (input?.dataset.field === 'regimen' && list) {
+    const regimen = input.value.trim().slice(0, 200);
+    if (regimen === list.regimen) return;
+    list.regimen = regimen;
+    $('#regimen-drugs-slot').innerHTML = regimenDrugsView(list);
+    afterEdit(list, { redraw: false });
+    return;
+  }
   const item = list?.items.find(entry => entry.id === input?.dataset.id);
   if (!item) return;
   const field = input.dataset.field;
@@ -342,6 +381,12 @@ $('#main').addEventListener('change', event => {
   if (value === (item[field] || '')) return;
   if (field === 'schedule' && !value) delete item.schedule;
   else item[field] = value;
+  if (field === 'name') {
+    // A new name means new active substances (or none, when the catalogue does not know it).
+    applySubstances([item], await loadSuklSubstances(), { replace: true });
+    const cell = input.closest('tr')?.querySelector('.substances');
+    if (cell) cell.innerHTML = substancesCell(item);
+  }
   afterEdit(list, { redraw: false });
 });
 
@@ -352,25 +397,14 @@ $('#main').addEventListener('keydown', event => {
     event.preventDefault();
     input.blur();
   } else if (event.key === 'Escape') {
-    const item = currentList()?.items.find(entry => entry.id === input.dataset.id);
-    input.value = item?.[input.dataset.field] || '';
+    const list = currentList();
+    input.value = input.dataset.field === 'regimen'
+      ? list?.regimen || ''
+      : list?.items.find(entry => entry.id === input.dataset.id)?.[input.dataset.field] || '';
     input.removeAttribute('aria-invalid');
     input.removeAttribute('title');
     input.blur();
   }
-});
-
-createAutocomplete({ getOptions: loadRegimens, container: regimenDialog, id: 'regimen-suggestions' }).bind($('#regimen-input'));
-$('#regimen-cancel').addEventListener('click', () => regimenDialog.close());
-$('#regimen-form').addEventListener('submit', event => {
-  event.preventDefault();
-  const list = currentList();
-  if (!list) return regimenDialog.close();
-  const regimen = $('#regimen-input').value.trim().slice(0, 200);
-  regimenDialog.close();
-  if (regimen === list.regimen) return;
-  list.regimen = regimen;
-  afterEdit(list);
 });
 
 render();

@@ -57,8 +57,10 @@ z `data/solid-tumors-regimens.json` s metadaty původu. Z lokálního
 Lékařské rozhraní je dostupné na `/lekar` ve stejném lokálním serveru. Nabízí
 lokální historii PINů, přímé úpravy léčiv v tabulce, našeptávání názvů ze SÚKL,
 režimy a kopírování seznamu po řádcích i do jednoho řádku.
-`doctor-services.js` zatím vrací stejný ukázkový seznam pro každý PIN a smyšlené
-interakce; není napojený na storage ani interaction API.
+Seznam se načítá ze storage podle skutečného PINu. Účinné látky se doplňují
+podle názvu léčiva z katalogu SÚKL a režim lze upravit přímo v přehledu.
+Změna látek zneplatní načtené interakce; úprava dávkování je zachová.
+Interakce v `doctor-services.js` jsou zatím ukázkové, bez napojení na interaction API.
 
 ## Co funguje
 
