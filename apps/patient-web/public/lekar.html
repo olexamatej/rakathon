@@ -37,34 +37,12 @@
     </div>
   </div>
 
-  <dialog id="item-dialog" aria-labelledby="item-dialog-title">
-    <form id="item-form" novalidate>
-      <h2 id="item-dialog-title">Léčivo</h2>
-      <label>Název léčiva<input name="name" maxlength="120" required autocomplete="off"><small class="field-error" data-error="name"></small></label>
-      <div class="form-pair">
-        <label>Síla / dávkování<input name="dosage" maxlength="120" required autocomplete="off" placeholder="Např. 500 mg"><small class="field-error" data-error="dosage"></small></label>
-        <label>Dávek v balení<input name="dosesPerPackage" maxlength="6" inputmode="numeric" required autocomplete="off" placeholder="Např. 30"><small class="field-error" data-error="dosesPerPackage"></small></label>
-      </div>
-      <div class="form-pair">
-        <label><span>Kdy užívat <span class="optional">volitelné</span></span><input name="schedule" maxlength="20" autocomplete="off" placeholder="1-0-0 nebo 4x"><small class="field-error" data-error="schedule"></small></label>
-        <label><span>Kód SÚKL <span class="optional">volitelné</span></span><input name="suklCode" maxlength="7" inputmode="numeric" autocomplete="off" placeholder="7 číslic"><small class="field-error" data-error="suklCode"></small></label>
-      </div>
-      <div class="dialog-actions">
-        <button type="button" class="text-button danger" id="item-delete" hidden>Odstranit</button>
-        <span class="spacer"></span>
-        <button type="button" class="secondary" id="item-cancel">Zrušit</button>
-        <button type="submit" class="primary">Uložit</button>
-      </div>
-    </form>
-  </dialog>
-
   <dialog id="regimen-dialog" aria-labelledby="regimen-dialog-title">
     <form id="regimen-form" novalidate>
       <h2 id="regimen-dialog-title">Režim onkologické léčby</h2>
       <label for="regimen-input" class="sr-only">Název režimu</label>
       <div class="combo-block">
         <input id="regimen-input" maxlength="200" autocomplete="off" placeholder="Začněte psát název režimu (nechte prázdné pro odebrání)">
-        <ul id="regimen-suggestions" aria-label="Návrhy režimů" hidden></ul>
       </div>
       <div class="dialog-actions">
         <span class="spacer"></span>

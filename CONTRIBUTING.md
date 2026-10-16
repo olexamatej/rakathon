@@ -116,3 +116,9 @@ socket or access to the VPS application networks.
 
 Deployment automation needs a defined target and credentials scoped to that target;
 neither workflow deploys the application.
+
+The browser storage flow is checked separately by
+[Patient storage E2E](e2e/README.md). Each push/PR starts a disposable non-root
+container on a GitHub hosted VM, running the checked-out frontend and real Rust
+API with temporary SQLite. The runtime has no external network, host mounts,
+Docker socket or published ports. No production services or secrets are used.

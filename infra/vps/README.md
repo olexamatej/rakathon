@@ -37,24 +37,26 @@ Use the operational READMEs in those directories for current image revisions,
 API checks, build procedures and recovery details. They are separate from this
 application checkout.
 
-## Manual frontend update and rollback
+## Unified update and rollback
 
 ```sh
-/home/rhodes/refresh-rakathon-ui.sh --status
-/home/rhodes/refresh-rakathon-ui.sh
-/home/rhodes/refresh-rakathon-ui.sh --rollback
+/home/rhodes/refresh-rakathon.sh --status
+/home/rhodes/refresh-rakathon.sh
+/home/rhodes/refresh-rakathon.sh --rollback
 ```
 
-The refresh script fetches an explicit `origin/main` revision without switching
-or resetting any worktree. It tests and builds the frontend in bounded non-root
-containers, then recreates only the frontend and retains its previous image.
+The refresh script fetches `origin/main` once without switching or resetting any
+worktree. It deploys API, storage admin and frontend from the same commit using
+bounded non-root builds. If a component fails, already updated components are
+rolled back in reverse order. Rollback uses the recorded local images.
 Dependency downloads use the existing restricted egress proxy without accessing
-runner credentials or workspace. Rollback uses the recorded local image.
+runner credentials or workspace. The frontend component is an internal script
+at `/home/rhodes/rakathon-site/bin/deploy-ui.sh`; the separate top-level
+UI wrapper has been removed.
 
-Frontend recreation may briefly interrupt Rakathon requests; the API, database,
-other websites, DNS, firewall and certificates are not changed. API updates are
-a separate deliberate operation managed under `/home/rhodes/pillgaze-transfer`.
-Repository pushes do not automatically deploy either service.
+Recreating components may briefly interrupt their Rakathon endpoints. Database
+storage and secrets are preserved. Other websites, DNS, firewall and certificates
+are unchanged. Repository pushes do not automatically deploy the service.
 
 ## Retained image inputs
 

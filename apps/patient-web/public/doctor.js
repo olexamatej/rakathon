@@ -16,7 +16,9 @@ export const suklLink = item => (/^https:\/\//.test(item.suklUrl || '') ? item.s
 
 const isItem = item => item && /^[a-z0-9-]{8,80}$/.test(item.id)
   && isText(item.name, 120) && isText(item.dosage, 120) && isText(item.dosesPerPackage, 6)
-  && optionalText(item.schedule, 20) && optionalText(item.suklCode, 20) && optionalText(item.suklUrl, 500);
+  && optionalText(item.schedule, 20) && optionalText(item.suklCode, 20) && optionalText(item.suklUrl, 500)
+  && (item.substances === undefined || (Array.isArray(item.substances) && item.substances.length <= 30
+    && item.substances.every(name => isText(name, 120))));
 const isList = list => list && /^[a-z0-9-]{8,80}$/.test(list.id) && isPin(list.pin)
   && isDate(list.loadedAt) && isDate(list.updatedAt) && isText(list.regimen, 200)
   && Array.isArray(list.items) && list.items.every(isItem)
@@ -66,3 +68,17 @@ export function validateItem(item) {
   if (item.suklCode && !/^\d{7}$/.test(item.suklCode.trim())) errors.suklCode = 'Kód SÚKL má 7 číslic.';
   return errors;
 }
+
+// Plain-text exports of the medicine list for pasting elsewhere.
+const medicineText = item => [item.name, item.dosage].map(part => part.trim()).filter(Boolean).join(' ');
+
+// One medicine per line in space-aligned columns (name, dosage, schedule); a missing value is "-".
+export function formatMedicineLines(items) {
+  const rows = items.map(item => [item.name, item.dosage, item.schedule].map(value => value?.trim() || '-'));
+  const widths = [0, 1].map(column => Math.max(...rows.map(row => row[column].length)));
+  return rows.map(row => [row[0].padEnd(widths[0]), row[1].padEnd(widths[1]), row[2]].join('   ')).join('\n');
+}
+
+// Everything on one line: "NAME DOSAGE SCHEDULE, NAME DOSAGE SCHEDULE, ...".
+export const formatMedicineInline = items => items
+  .map(item => [medicineText(item), item.schedule?.trim()].filter(Boolean).join(' ')).join(', ');

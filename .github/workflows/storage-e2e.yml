@@ -1,0 +1,59 @@
+name: Patient storage E2E
+
+on:
+  push:
+    branches: [main, pillgaze]
+  pull_request:
+    branches: [main, pillgaze]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: storage-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  storage:
+    name: Patient upload and authenticated storage admin
+    # Docker builds run on an ephemeral VM, preserving the Hetzner runner's
+    # isolation. The test container itself has no network access beyond loopback.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out test and application sources
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.dockerignore
+            /e2e/
+            /apps/patient-web/
+            /apps/storage-admin/
+            /services/transfer-api/
+            /data/regimens.json
+      - name: Build isolated application and browser test image
+        run: docker build --file e2e/Dockerfile --tag pillgaze-storage-e2e .
+      - name: Test patient to storage admin flow without external network
+        run: |
+          docker run --rm --name storage-e2e --init \
+            --network none --read-only --user 1000:1000 \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --cpus 2 --memory 2g --pids-limit 256 --shm-size 128m \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m \
+            pillgaze-storage-e2e
+          printf '%s\n' \
+            'Patient storage E2E passed: 101 → 102 records, server PIN and stored payload verified.' \
+            'Disposable non-root container, network disabled, temporary SQLite; no production access.' \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove test container after interruption
+        if: always()
+        run: |
+          if docker container inspect storage-e2e > /dev/null 2>&1; then
+            docker container rm --force storage-e2e
+          fi

@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createDoctorState, loadDoctorState, saveDoctorState, addList, validateItem,
-  normalizePin, isPin, suklLink, HISTORY_LIMIT, DOCTOR_STORAGE_KEY,
+  normalizePin, isPin, suklLink, formatMedicineLines, formatMedicineInline, HISTORY_LIMIT, DOCTOR_STORAGE_KEY,
 } from '../apps/patient-web/public/doctor.js';
-import { fetchListByPin, fetchInteractions } from '../apps/patient-web/public/doctor-services.js';
+import { fetchInteractions } from '../apps/patient-web/public/doctor-services.js';
 
 const memory = () => {
   const map = new Map();
@@ -50,16 +50,14 @@ test('item edits are validated; SÚKL code and link are optional', () => {
   assert.deepEqual(Object.keys(validateItem(item({ name: ' ', dosage: '', dosesPerPackage: '0', suklCode: '12' }))).sort(),
     ['dosage', 'dosesPerPackage', 'name', 'suklCode']);
   assert.equal(suklLink(item()), '');
+  assert.deepEqual(validateItem(item({ substances: ['Ibuprofen', 'Warfarin'] })), {});
   assert.match(suklLink(item({ suklCode: '0254290' })), /^https:\/\/prehledy\.sukl\.cz\/.*0254290$/);
   assert.equal(suklLink(item({ suklUrl: 'https://example.test/x', suklCode: '0254290' })), 'https://example.test/x');
   assert.match(suklLink(item({ suklUrl: 'javascript:alert(1)', suklCode: '0254290' })), /^https:\/\/prehledy/);
   assert.equal(suklLink(item({ suklUrl: 'javascript:alert(1)' })), '');
 });
 
-test('placeholder doctor API returns a list for a PIN and interaction pairs', async () => {
-  const list = await fetchListByPin('ABC234');
-  assert.ok(list.items.length > 0 && list.items.every(entry => entry.name && entry.dosage && entry.dosesPerPackage));
-  assert.ok((await fetchListByPin('AAAAAA')).items.length > 0);
+test('placeholder interactions return interaction pairs', async () => {
   const items = [item(), item({ name: 'Warfarin' }), item({ name: 'Metformin' })];
   const result = await fetchInteractions(items, { name: 'FOLFOX', drugs: ['Oxaliplatin', 'Fluorouracil'] });
   assert.equal(result.medicines.length, 3); // one card per pair, not per substance
@@ -72,4 +70,20 @@ test('placeholder doctor API returns a list for a PIN and interaction pairs', as
   }
   assert.equal((await fetchInteractions(items, null)).regimen, null);
   assert.deepEqual((await fetchInteractions([item()], null)).medicines, []);
+});
+
+test('medicine list exports as lines and as one comma-separated line', () => {
+  const items = [
+    { name: 'HELICID 20 ZENTIVA', dosage: '20 mg', schedule: '1-0-0' },
+    { name: 'LIPERTANCE', dosage: '10 mg / 5 mg / 5 mg', schedule: '1x' },
+    { name: 'Metformin', dosage: '500 mg' },
+  ];
+  assert.equal(formatMedicineLines(items), [
+    'HELICID 20 ZENTIVA   20 mg                 1-0-0',
+    'LIPERTANCE           10 mg / 5 mg / 5 mg   1x',
+    'Metformin            500 mg                -',
+  ].join('\n'));
+  assert.equal(formatMedicineLines([{ name: 'X', dosage: '' }]), 'X   -   -');
+  assert.equal(formatMedicineInline(items), 'HELICID 20 ZENTIVA 20 mg 1-0-0, LIPERTANCE 10 mg / 5 mg / 5 mg 1x, Metformin 500 mg');
+  assert.equal(formatMedicineLines([]), '');
 });
