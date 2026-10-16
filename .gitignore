@@ -1,6 +1,11 @@
 __pycache__/
 .venv/
 .pytest_cache/
+.ruff_cache/
+.cache/
+.coverage
+coverage.xml
+htmlcov/
 .local/
 exports/
 *.sqlite3*

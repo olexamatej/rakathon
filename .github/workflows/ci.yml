@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+  schedule:
+    - cron: "23 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  OPENBLAS_NUM_THREADS: "1"
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  UV_PYTHON_PREFERENCE: only-managed
+  UV_CACHE_DIR: .cache/uv
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  quality:
+    name: Python lint and JavaScript syntax
+    # Fork PRs must never execute on the persistent self-hosted runner.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, ARM64, hetzner-sandbox]
+    timeout-minutes: 10
+    steps:
+      - name: Check out source and synthetic test schema
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /*.py
+            /requirements*.txt
+            /ruff.toml
+            /tests/
+            /web/
+            /assets/datapackage.json
+      - name: Set up Python and uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.13.1"
+          python-version: "3.12"
+          activate-environment: true
+          enable-cache: false
+      - name: Install development dependencies
+        run: |
+          uv pip install --only-binary :all: -r requirements-dev.txt
+      - name: Lint Python
+        run: ruff check .
+      - name: Validate GitHub Actions workflows
+        run: |
+          curl --fail --silent --show-error --location --connect-timeout 5 --max-time 60 \
+            --output "$RUNNER_TEMP/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_arm64.tar.gz
+          printf '325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6  %s\n' \
+            "$RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -config-file .github/actionlint.yaml -shellcheck= -pyflakes= .github/workflows/*.yml
+      - name: Compile Python sources
+        run: python -m compileall -q analysis.py app.py data.py tests
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: Check JavaScript syntax
+        run: node --check web/app.js
+
+  tests:
+    name: Tests (Python ${{ matrix.python }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, ARM64, hetzner-sandbox]
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        python: ["3.10", "3.12", "3.14"]
+    steps:
+      - name: Check out source and synthetic test schema
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /*.py
+            /requirements*.txt
+            /ruff.toml
+            /tests/
+            /web/
+            /assets/datapackage.json
+      - name: Set up Python and uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.13.1"
+          python-version: ${{ matrix.python }}
+          activate-environment: true
+          enable-cache: false
+      - name: Install development dependencies
+        run: |
+          uv pip install --only-binary :all: -r requirements-dev.txt
+      - name: Check dependency compatibility
+        run: uv pip check
+      - name: Run synthetic tests with branch coverage
+        run: |
+          coverage run --branch --source=analysis,app,data -m unittest discover -s tests -v
+          coverage report --show-missing
+      - name: Audit installed dependencies
+        run: pip-audit --strict --progress-spinner off --timeout 15 --cache-dir "$RUNNER_TEMP/pip-audit"
+
+  security:
+    name: Python security scan
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, ARM64, hetzner-sandbox]
+    timeout-minutes: 10
+    steps:
+      - name: Check out source and synthetic test schema
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /*.py
+            /requirements*.txt
+            /ruff.toml
+            /tests/
+            /web/
+            /assets/datapackage.json
+      - name: Set up Python and uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.13.1"
+          python-version: "3.12"
+          activate-environment: true
+          enable-cache: false
+      - name: Install development dependencies
+        run: |
+          uv pip install --only-binary :all: -r requirements-dev.txt
+      - name: Scan Python for medium and high severity findings
+        run: bandit -q -ll analysis.py app.py data.py

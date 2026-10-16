@@ -31,6 +31,38 @@ OPENBLAS_NUM_THREADS=1 python -m unittest discover -s tests -v
 node --check web/app.js
 ```
 
+## Průběžné kontroly (CI)
+
+GitHub Actions spouští při pushi a pull requestu do `master`, ručně a každé pondělí:
+
+- Ruff kontrolu Pythonu a kompilaci zdrojů, kontrolu workflow pomocí actionlint
+  a kontrolu syntaxe JavaScriptu na Node.js 24.
+- Syntetické testy na Pythonu 3.10, 3.12 a 3.14, včetně výpisu pokrytí větví.
+- `pip-audit` pro známé zranitelnosti všech nainstalovaných závislostí na každé
+  testované verzi Pythonu a Bandit pro středně a vysoce závažné nálezy ve zdrojích.
+
+Kontroly běží na izolovaném ARM64 runneru s limity prostředků. Checkout obsahuje
+jen zdroje, testy, konfiguraci a schéma `assets/datapackage.json`; skutečná CSV,
+exporty a hodnocení nejsou vstupem CI. Nevytváříme ani nenahráváme datové artefakty.
+Pull requesty z forků se na tomto trvalém runneru nespouštějí. GitHub token má jen
+právo čtení a checkout jej neukládá. Akce a nástroje mají pevné verze; Dependabot
+každý týden navrhuje aktualizace. Kontroly nic nenasazují ani veřejně nepublikují.
+
+Stejné kontroly lze spustit lokálně po instalaci vývojových závislostí:
+
+```bash
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/ruff check .
+OPENBLAS_NUM_THREADS=1 .venv/bin/coverage run --branch --source=analysis,app,data -m unittest discover -s tests -v
+.venv/bin/coverage report --show-missing
+.venv/bin/bandit -q -ll analysis.py app.py data.py
+.venv/bin/pip-audit --strict --progress-spinner off
+node --check web/app.js
+```
+
+Pokrytí se zatím reportuje bez minimálního procentního prahu. HTTP obsluha má
+nižší pokrytí než výpočty a práce s daty; přidání integračních testů je další krok.
+
 ## Průchod demem
 
 1. **Přehled případů:** graf očekávání proti skutečnosti a seřazená fronta kandidátů.
