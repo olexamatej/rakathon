@@ -36,6 +36,7 @@ struct AppState {
     store: TransferStore,
     pepper: Arc<Vec<u8>>,
     admin_password_digest: Option<[u8; 32]>,
+    admin_debug_visibility: bool,
 }
 
 #[derive(Serialize)]
@@ -81,6 +82,7 @@ struct Config {
     pepper: Vec<u8>,
     cors_origins: Vec<HeaderValue>,
     admin_password_digest: Option<[u8; 32]>,
+    admin_debug_visibility: bool,
 }
 
 impl Config {
@@ -113,7 +115,8 @@ impl Config {
             Err(env::VarError::NotPresent) => None,
             Err(_) => return Err("STORAGE_ADMIN_PASSWORD must be valid Unicode".to_owned()),
         };
-        Ok(Self { bind_address, database_path, pepper, cors_origins, admin_password_digest })
+        let admin_debug_visibility = env::var("STORAGE_ADMIN_DEBUG_VISIBILITY").is_ok_and(|v| v == "true");
+        Ok(Self { bind_address, database_path, pepper, cors_origins, admin_password_digest, admin_debug_visibility })
     }
 }
 
@@ -149,6 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         store, pepper: Arc::new(config.pepper),
         admin_password_digest: config.admin_password_digest,
+        admin_debug_visibility: config.admin_debug_visibility,
     };
     start_cleanup_worker(state.store.clone());
 
@@ -278,7 +282,8 @@ async fn create_blob(
     for _ in 0..10 {
         let pin = crypto::new_pin().map_err(|_| ApiError::Unavailable)?;
         let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
-        let created = state.store.create_blob(&pin_digest, &body, now).await.map_err(|_| {
+        let debug_pin = state.admin_debug_visibility.then_some(pin.as_str());
+        let created = state.store.create_blob(&pin_digest, debug_pin, &body, now).await.map_err(|_| {
             // Do not include database errors: they might contain payload details.
             error!("blob transfer creation failed");
             ApiError::Unavailable
@@ -375,6 +380,7 @@ mod blob_tests {
         AppState {
             store: TransferStore::new(pool), pepper: Arc::new(vec![42; 32]),
             admin_password_digest: None,
+            admin_debug_visibility: false,
         }
     }
 

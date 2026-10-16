@@ -94,7 +94,12 @@ if (typeof document !== 'undefined') {
       const digest = document.createElement('td');
       const code = document.createElement('code');
       code.textContent = item.pinDigest;
+      code.textContent = item.pin || item.pinDigest;
       digest.append(code);
+      const content = document.createElement('td');
+      const pre = document.createElement('pre');
+      pre.textContent = item.payload ?? '(obsah skrytý nebo PIN nebyl uložen)';
+      content.append(pre);
       const action = document.createElement('td');
       const button = document.createElement('button');
       button.type = 'button';
@@ -108,7 +113,7 @@ if (typeof document !== 'undefined') {
         });
       });
       action.append(button);
-      row.append(size, digest, action);
+      row.append(size, digest, content, action);
       return row;
     });
     element('rows').replaceChildren(...rows);
@@ -120,7 +125,7 @@ if (typeof document !== 'undefined') {
 
   async function load() {
     const current = generation;
-    const data = await client.request(`?offset=${offset}`);
+    const data = await client.request(`?offset=${offset}&includeSensitive=${element('show-sensitive').checked}`);
     if (current !== generation) return;
     element('login').hidden = true;
     element('storage').hidden = false;
@@ -152,6 +157,7 @@ if (typeof document !== 'undefined') {
     }
   }
 
+  element('show-sensitive').addEventListener('change', () => run(load));
   element('login').addEventListener('submit', (event) => {
     event.preventDefault();
     if (busy) return;

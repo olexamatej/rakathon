@@ -16,6 +16,10 @@ pub struct TransferStore {
 pub struct BlobMetadata {
     pub pin_digest: String,
     pub size_bytes: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pin: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payload: Option<String>,
 }
 
 impl TransferStore {
@@ -28,12 +32,15 @@ impl TransferStore {
         Ok(())
     }
 
-    pub async fn list_blobs(&self, offset: u32) -> Result<Vec<BlobMetadata>, sqlx::Error> {
-        // Select metadata only; never load payloads into the admin response.
+    pub async fn list_blobs(&self, offset: u32, include_sensitive: bool) -> Result<Vec<BlobMetadata>, sqlx::Error> {
         sqlx::query_as::<_, BlobMetadata>(
-            "SELECT hex(pin_digest) AS pin_digest, length(payload) AS size_bytes \
+            "SELECT hex(pin_digest) AS pin_digest, length(payload) AS size_bytes, \
+             CASE WHEN ? THEN pin ELSE NULL END AS pin, \
+             CASE WHEN ? THEN CAST(payload AS TEXT) ELSE NULL END AS payload \
              FROM blob_transfers ORDER BY created_at DESC, rowid DESC LIMIT 101 OFFSET ?",
         )
+        .bind(include_sensitive)
+        .bind(include_sensitive)
         .bind(i64::from(offset))
         .fetch_all(&self.pool)
         .await
@@ -52,16 +59,18 @@ impl TransferStore {
     pub async fn create_blob(
         &self,
         pin_digest: &[u8; 32],
+        pin: Option<&str>,
         payload: &[u8],
         now: i64,
     ) -> Result<bool, sqlx::Error> {
         let result = sqlx::query(
-            "INSERT INTO blob_transfers (pin_digest, payload, created_at) VALUES (?, ?, ?) \
+            "INSERT INTO blob_transfers (pin_digest, payload, created_at, pin) VALUES (?, ?, ?, ?) \
              ON CONFLICT(pin_digest) DO NOTHING",
         )
         .bind(pin_digest.as_slice())
         .bind(payload)
         .bind(now)
+        .bind(pin)
         .execute(&self.pool)
         .await?;
         Ok(result.rows_affected() == 1)
@@ -122,8 +131,8 @@ mod tests {
         let store = TransferStore::new(pool);
         let digest = [7; 32];
         let payload = b" { \"z\": 1, \"a\": [true, null] } \n";
-        assert!(store.create_blob(&digest, payload, 1).await.unwrap());
-        assert!(!store.create_blob(&digest, b"{}", 2).await.unwrap());
+        assert!(store.create_blob(&digest, None, payload, 1).await.unwrap());
+        assert!(!store.create_blob(&digest, None, b"{}", 2).await.unwrap());
         store.cleanup().await.unwrap();
         assert_eq!(store.get_blob(&digest).await.unwrap().unwrap(), payload);
         assert_eq!(store.get_blob(&digest).await.unwrap().unwrap(), payload);
@@ -150,8 +159,8 @@ mod tests {
             .connect("sqlite::memory:").await.unwrap();
         crate::migrate(&pool).await.unwrap();
         let store = TransferStore::new(pool);
-        assert!(store.create_blob(&[1; 32], &vec![b'x'; 1048576], 1).await.unwrap());
-        assert!(store.create_blob(&[2; 32], &vec![b'x'; 1048577], 1).await.is_err());
+        assert!(store.create_blob(&[1; 32], None, &vec![b'x'; 1048576], 1).await.unwrap());
+        assert!(store.create_blob(&[2; 32], None, &vec![b'x'; 1048577], 1).await.is_err());
     }
 
     #[tokio::test]
@@ -163,8 +172,10 @@ mod tests {
         sqlx::raw_sql(include_str!("../migrations-sqlite/0002_create_blob_transfers.sql"))
             .execute(&pool).await.unwrap();
         let store = TransferStore::new(pool.clone());
-        assert!(store.create_blob(&[3; 32], b"{\"kept\":true}", 1).await.unwrap());
+        assert!(store.create_blob(&[3; 32], None, b"{\"kept\":true}", 1).await.unwrap());
         sqlx::raw_sql(include_str!("../migrations-sqlite/0003_blob_limit_1mib.sql"))
+            .execute(&pool).await.unwrap();
+        sqlx::raw_sql(include_str!("../migrations-sqlite/0004_blob_debug_pin.sql"))
             .execute(&pool).await.unwrap();
         assert_eq!(store.get_blob(&[3; 32]).await.unwrap().unwrap(), b"{\"kept\":true}");
     }

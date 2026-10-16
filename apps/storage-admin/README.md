@@ -1,10 +1,7 @@
 # Storage admin
 
-Small Czech HTML/CSS/JavaScript admin, matching the patient PWA technology. Lists
-only opaque JSON blobs from `blob_transfers`: exact payload byte count and a
-64-character hexadecimal HMAC PIN digest, plus a confirmed delete action. It
-does not show original PINs, JSON content, or legacy encrypted demo transfers.
-Admin adds no database migration or change to PIN storage. The current main's
+Small Czech HTML/CSS/JavaScript admin, matching the patient PWA technology. Lists JSON blobs from `blob_transfers`: exact payload byte count, HMAC digest, and (when explicitly enabled) original PIN and stored JSON. Sensitive display is controlled by the UI checkbox and the API environment flag `STORAGE_ADMIN_DEBUG_VISIBILITY=true`. The flag also stores PINs for new uploads in the database; existing PINs cannot be recovered from their HMAC digests. Keep this mode limited to synthetic debugging data.
+The optional PIN column is added by migration 0004; existing rows remain NULL. The current main's
 existing 1 MiB widening migration still applies when updating an older API.
 
 ## Authentication
