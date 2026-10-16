@@ -139,14 +139,11 @@ test('text handoff includes only requested fields and keeps one row per medicine
   assert.ok(!text.includes('private'));
 });
 
-test('a photo can yield multiple medicines; the demo returns a six-character PIN', async () => {
+test('a photo can yield multiple medicines; recognition remains simulated', async () => {
   const items = await recognizePhoto(new File(['synthetic fixture'], 'fixture.png', { type: 'image/png' }));
   assert.equal(items.length, 2);
   assert.equal(canSend(items), true);
   assert.notEqual(items[0].id, items[1].id);
-  const response = await sendList(toText(items));
-  assert.match(response.pin, /^[A-Z2-9]{6}$/);
-  assert.ok(Number.isFinite(Date.parse(response.sentAt)));
   await assert.rejects(recognizePhoto(new File(['text'], 'test.txt', { type: 'text/plain' })));
   await assert.rejects(sendList(''));
 });

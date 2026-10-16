@@ -27,10 +27,30 @@ export async function recognizePhoto(file) {
 
 export async function sendList(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('Seznam je prázdný.');
-  // TODO(server): POST text only, validate the response and return the server-issued PIN.
-  // shortcut: this is a local simulation with no upload or server-side PIN; replace with the API.
-  await new Promise(resolve => setTimeout(resolve, 750));
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const pin = Array.from(crypto.getRandomValues(new Uint8Array(6)), n => alphabet[n % alphabet.length]).join('');
+  let response;
+  try {
+    // Each POST creates a blob: never retry automatically or invent a local PIN.
+    response = await fetch('/api/v1/transfers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ text }),
+      cache: 'no-store',
+      credentials: 'omit',
+      redirect: 'error',
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    throw new Error('Nepodařilo se potvrdit odeslání. Zkontrolujte připojení. Opakované odeslání může vytvořit další kopii seznamu.');
+  }
+  if (response.status === 429) throw new Error('Příliš mnoho odeslání. Vyčkejte alespoň minutu před dalším pokusem.');
+  if (response.status === 413) throw new Error('Seznam je příliš velký. Maximální velikost je 1 MiB.');
+  if (response.status !== 201) throw new Error('Úložiště nyní nemůže potvrdit odeslání seznamu.');
+  let pin;
+  try {
+    ({ pin } = await response.json());
+    if (typeof pin !== 'string' || !/^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin)) throw new Error();
+  } catch {
+    throw new Error('Úložiště nevrátilo platný PIN. Seznam již mohl být uložen.');
+  }
   return { pin, sentAt: new Date().toISOString() };
 }
