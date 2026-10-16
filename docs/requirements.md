@@ -36,4 +36,4 @@
 - [ ] Predviesť funkčný tok: fotografie obalov a tlačeného zoznamu → zlúčený zoznam → anonymný prenos medzi zariadeniami → editácia lekárom → kontrola interakcií → kopírovanie do dokumentácie.
 - [ ] Predviesť identifikáciu bežného onkologického režimu a jeho liečiv.
 
-Zdroje: [zadanie](assets/RAKATHON_2026_MOU_Rusinko.md), [prezentácia](assets/Rakathon_Rusinko_prezentace.md).
+Zdroje: [zadanie](../assets/RAKATHON_2026_MOU_Rusinko.md), [prezentácia](../assets/Rakathon_Rusinko_prezentace.md).

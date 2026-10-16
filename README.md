@@ -2,6 +2,8 @@
 
 Základ pacientské aplikace a náhledu pracovního rozhraní lékaře v React Native / Expo / TypeScript. Vychází ze [zadání PillGaze](assets/RAKATHON_2026_MOU_Rusinko.md) a [prezentace](assets/Rakathon_Rusinko_prezentace.md).
 
+[Checklist zadání](docs/requirements.md) · [Pravidla spolupráce a CI](CONTRIBUTING.md) · [Katalog SÚKL](data/sukl/README.md)
+
 ## Spuštění
 
 Node.js 22.13+ (ověřeno na 24), npm. Bez účtu, API klíčů a backendu.
@@ -48,23 +50,43 @@ Další kroky podle zadání:
 
 ## Kód a ověření
 
-- `App.tsx` — obrazovky, stav, fotografie, lokální předání a schránka.
-- `src/ui.tsx` — společné komponenty, editor a styly.
-- `src/medication.ts` — datový model, validace, export a demo předání.
-- `tests/medication.test.ts` — validace, export, podmínky předání, expirace a oddělení kopií.
-- `assets/` — původní zadání a modelová data; hromadné fotografie se do aplikace nebalí.
+```text
+App.tsx, index.ts       Expo vstup, obrazovky a stav aplikace
+src/                   Sdílené UI a pravidla pro seznam léků / demo předání
+tests/                 Testy logiky a offline kontrola veřejného katalogu
+docs/                  Checklist požadavků, nikoli potvrzení jejich implementace
+data/sukl/             Veřejný katalog léčiv a metadata jeho původu
+assets/                Původní zadání, modelové seznamy a fotografie
+.github/               CI workflows a PR checklist
+```
+
+Katalog SÚKL je připravený pro další vývoj, ale aplikace ho zatím nepoužívá.
+Jeho záznamy rozlišují síly a varianty balení pomocí kódu SÚKL; nejde o seznam
+pacientů, doporučené dávkování ani databázi interakcí. Podrobnosti a pravidla
+aktualizace jsou v [popisu katalogu](data/sukl/README.md).
+
+Původní podklady v `assets/` se hromadně nebalí do aplikace a CI je nečte.
+Lokální `knowledge-base/` není potřeba ke spuštění ani testům.
 
 ```sh
 npm run typecheck
 npm test
-npm run export:web
+npm run export:web -- --max-workers 1
 npx expo install --check
 npx expo export --platform ios --platform android --output-dir /tmp/pillgaze-native-export
 ```
 
 Export pro iOS/Android ověřuje JS bundle, nikoli nativní sestavení nebo fotoaparát na zařízení.
 
+Při pushi a PR do `main` nebo `pillgaze` běží kontroly repozitáře a aplikační CI: instalace
+z lockfilu, TypeScript, testy a webový export na Node.js 24. Nic se automaticky
+nenasazuje. Na tomto VPS spouštějte instalaci a testy v izolovaném sandboxu,
+nikoli pod host účtem s přístupem k Dockeru; viz [CONTRIBUTING.md](CONTRIBUTING.md).
+
 `npm audit` k 16. 10. 2026 hlásí 22 položek (15 high, 7 moderate), odvozených z `braces`, `node-forge` a `uuid` ve vývojových nástrojích Expo/Metro/Xcode. Nabízené vynucené opravy snižují Expo na SDK 44 a React Native na 0.72; nebyly aplikovány. Před nasazením znovu ověřte opravy upstreamu.
+
+Audit je v CI viditelný, ale zatím neblokující. Zelený build neznamená čistý
+bezpečnostní audit; nepoužívejte `npm audit fix --force`.
 
 ## Výzkumné podklady
 
