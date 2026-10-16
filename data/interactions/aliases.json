@@ -1,0 +1,16 @@
+{
+  "1064": {
+    "sourceName": "PARACETAMOL",
+    "targetId": "DDInter14",
+    "targetName": "Acetaminophen",
+    "cas": "103-90-2",
+    "source": "https://ddinter2.scbdd.com/server/drug-detail/DDInter14/"
+  },
+  "5491": {
+    "sourceName": "POTASSIUM CLAVULANATE",
+    "targetId": "DDInter394",
+    "targetName": "Clavulanic acid",
+    "parentCode": "4746",
+    "source": "data/sukl/dlp/dlp_soli.csv"
+  }
+}

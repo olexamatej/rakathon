@@ -1,36 +1,12 @@
 {
-  "name": "pillgaze",
+  "name": "pillgaze-patient",
   "version": "0.1.0",
   "private": true,
-  "main": "index.ts",
+  "type": "module",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "BROWSER=none expo start --web",
-    "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "export:web": "expo export --platform web"
+    "start": "node server.mjs",
+    "web": "node server.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.*"
   },
-  "engines": {
-    "node": ">=22.13.0"
-  },
-  "dependencies": {
-    "@expo/vector-icons": "^15.0.2",
-    "expo": "~57.0.30",
-    "expo-clipboard": "~57.0.2",
-    "expo-font": "~57.0.4",
-    "expo-image-picker": "~57.0.20",
-    "expo-status-bar": "~57.0.1",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.86.3",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-web": "^0.21.2"
-  },
-  "devDependencies": {
-    "@types/react": "~19.2.2",
-    "@types/node": "^24.0.0",
-    "typescript": "~6.0.3"
-  }
+  "engines": { "node": ">=22.13.0" }
 }

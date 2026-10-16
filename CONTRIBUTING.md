@@ -22,12 +22,8 @@ archived on `legacy-prognosis`.
   Update catalog data and provenance metadata together; preserve source values.
   See `data/sukl/README.md` for the current snapshot and update procedure.
 
-## Application boundaries and small changes
+## Small changes
 
-- Keep Expo's entry points (`App.tsx`, `index.ts`) at the root. Reuse `src/ui.tsx`
-  for shared UI and keep medication rules independent of UI in `src/medication.ts`.
-  Add focused modules and tests as features grow, rather than reorganizing files
-  while someone else is editing them.
 - Add regression tests for changes to validation, export, and handoff behavior.
   Keep fixtures synthetic; do not read patient documents or photographs in tests.
   Offline integrity tests may read the versioned public SÚKL catalog, but must
@@ -41,18 +37,15 @@ archived on `legacy-prognosis`.
   `.github/pull_request_template.md` is a short checklist; copy it manually if
   GitHub does not offer it (automatic templates come from the default branch).
 
-Before pushing application changes, use Node.js 24 and run:
-
-```sh
-npm ci
-npm run typecheck
-npm test
-npm run export:web -- --max-workers 1
-```
+The patient PWA lives in `public/` and uses browser APIs without dependencies.
+`server.mjs` serves only its public files. Use Node.js 22.13 or newer and run `npm test`
+for list persistence, text handoff and public-file boundary checks. Preview with
+`npm run web` and check the photo flow in a mobile viewport. Installation and camera
+behavior still need checks on real devices over HTTPS.
 
 On this VPS, run repository installation, tests, and builds only in the sandbox,
 not as the Docker-enabled host account. Use a separate preview directory, never
-the live Actions checkout. A web export checks bundling, not native device behavior.
+the live Actions checkout.
 
 ## Continuous integration
 
@@ -62,31 +55,13 @@ whitespace, accidentally tracked ignored files, and GitHub Actions workflows wit
 actionlint. The ignored-file check covers filenames and patterns, not secret
 contents; review commits for credentials as well.
 
-`.github/workflows/application-ci.yml` runs on the same branch events. It uses
-Node.js 24, installs the committed lockfile with `npm ci`, checks TypeScript, runs
-unit tests and the offline public-catalog integrity checks, and exports the Expo
-web bundle with one Metro worker.
-No application lint rules or formatter are imposed on the active development work.
-
-The full `npm audit --audit-level=high` report is deliberately **non-blocking**
-while Expo's upstream tooling findings are being reviewed. An audit failure emits
-a workflow warning and job summary, including when the audit service is unavailable.
-A green application build is not a clean security audit. Review the audit output
-on dependency changes and before deployment; do not run `npm audit fix --force`,
-which currently proposes incompatible framework downgrades. See README for the
-dated findings. Making the audit blocking needs a deliberate review of upstream
-fixes or narrowly scoped, documented exceptions, not silently ignoring advisories.
-
-Both workflows use the existing ARM64 sandbox runner, read-only repository
+The workflow uses the existing ARM64 sandbox runner, read-only repository
 permissions, SHA-pinned actions, checkout without persisted credentials, and
-cancellation of older runs on the same branch or pull request. Repository checks
-have a five-minute timeout and configuration-only checkout; application checks
-have a fifteen-minute timeout and exclude all reference `assets/` and the local
-knowledge base. The current app does not import those files. If runtime assets
-are added, explicitly include only the necessary reviewed files in CI checkout.
-Neither workflow uploads artifacts, publishes the prototype, or uses secrets.
+cancellation of older runs on the same branch or pull request. It has a five-minute
+timeout and configuration-only checkout. It does not upload artifacts, publish
+the prototype, or use secrets.
 Fork pull requests are excluded from this persistent runner. It has no Docker
 socket or access to the VPS application networks.
 
 Deployment automation needs a defined target and credentials scoped to that target;
-neither workflow deploys the application.
+the workflow does not deploy an application.

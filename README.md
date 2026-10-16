@@ -1,93 +1,52 @@
-# PillGaze · Rakathon 2026
+# PillGaze · pacient
 
-Základ pacientské aplikace a náhledu pracovního rozhraní lékaře v React Native / Expo / TypeScript. Vychází ze [zadání PillGaze](assets/RAKATHON_2026_MOU_Rusinko.md) a [prezentace](assets/Rakathon_Rusinko_prezentace.md).
+Malá pacientská PWA bez závislostí. Funguje v mobilním prohlížeči a lze ji přidat na plochu jako aplikaci.
 
 [Checklist zadání](docs/requirements.md) · [Pravidla spolupráce a CI](CONTRIBUTING.md) · [Katalog SÚKL](data/sukl/README.md)
 
 ## Spuštění
 
-Node.js 22.13+ (ověřeno na 24), npm. Bez účtu, API klíčů a backendu.
+Node.js 22.13 nebo novější; není potřeba instalovat balíčky ani sestavovat bundle.
 
 ```sh
-npm ci
-npm start          # QR kód pro Expo Go; telefon a počítač na stejné síti
-npm run web       # webový server; vypsanou adresu otevřete ručně v prohlížeči
+npm run web
+# http://localhost:8081/pacient
+npm test
 ```
 
-`npm run android` otevře Android emulátor; `npm run ios` vyžaduje macOS s Xcode. Použité Expo SDK 57 odpovídá doporučení pro Expo Go na fyzickém telefonu během přechodu na SDK 58 ([Expo, 16. 10. 2026](https://docs.expo.dev/get-started/create-a-project/)).
+Server neotevírá prohlížeč automaticky. Jiný port: `PORT=8082 npm run web`.
+Na tomto VPS spouštějte příkazy v sandboxu podle [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Webový skript používá `BROWSER=none`, aby fungoval i na Linuxu bez grafického prostředí, kde automatické `xdg-open` selhává kódem 3. Na Linuxu/macOS otevřete vypsanou adresu (obvykle `http://localhost:8081`) ručně. V PowerShellu spusťte `$env:BROWSER='none'; npx expo start --web`.
+## Flow
 
-## Co funguje
+- `/pacient` rovnou otevře jeden hlavní seznam. Nový uživatel začíná s prázdným seznamem; vracejícímu se obnoví poslední uložené položky včetně rozpracovaných úprav.
+- Fotoaparát nebo galerie přidají snímky do hlavního seznamu, galerie podporuje více fotografií. Každý snímek se zpracovává zvlášť a může vrátit více léčiv.
+- Výsledek obsahuje název léčiva, dosage (sílu / dávkování) a počet dávek v balení. Položky lze upravit a odstranit.
+- **Odeslat seznam** se zpřístupní při alespoň jedné kompletní položce a po dokončení zpracování. Připraví text a otevře samostatnou obrazovku se šestimístným PINem z demo služby a tlačítkem **Domů**, které vrací na hlavní seznam. Odeslání seznam nevyprázdní.
+- Malá záložka **Odeslání** obsahuje datum, PIN a rozbalovací kopii odeslaných položek. Pozdější úpravy hlavního seznamu tyto kopie nemění.
+- Hlavní seznam i historie odeslání se průběžně ukládají společně do localStorage pod klíčem `pillgaze:patient:v2`. Při přechodu ze starší verze se jednorázově převezme naposledy upravený seznam a dostupná odeslání; původní záznamy `pillgaze:list:v1:<id>` se nemažou. I prázdný poslední seznam zůstane prázdný.
+- Chyba ukládání je viditelná. Poškozená aktuální data se nepřepisují a úpravy zůstanou zablokované do úspěšného načtení. Vymazání dat prohlížeče odstraní seznam i historii odeslání; data se nesynchronizují mezi zařízeními či prohlížeči.
 
-- České rozhraní s částmi Moje léky, Podklady a Předání.
-- Pořízení fotografie / výběr obrázku, náhled a odstranění podkladu; volba krabičky nebo seznamu. Na webu závisí otevření fotoaparátu na prohlížeči, galerie používá výběr souboru.
-- Ruční přidání, úprava, odstranění a potvrzení léku. Název, síla a dávkování jsou samostatná textová pole; dávkování se automaticky neinterpretuje.
-- Výslovně označená ukázková data z modelového seznamu „Pacient 1“ v `assets/Data/50_Pacientu.md`.
-- Lokální ukázka čtyřmístného PINu s platností 3 minuty, jedním použitím a zneplatněním při změně pacientova seznamu. Předání vyžaduje potvrzení všech položek.
-- Lékař převezme nezávislou pracovní kopii, může ji editovat a zkopírovat text s tabulátory do dokumentace.
+## Placeholdery
 
-## Rychlé demo
+- `TODO(model)` v `public/services.js`: nahradit `recognizePhoto(file)` lokálním modelem nebo externím API. Nyní každý čitelný obrázek vrací dvě fiktivní položky Alfa/Beta, bez analýzy obsahu. UI to označuje jako demo.
+- `TODO(server)` v `public/services.js`: `sendList(text)` má odeslat pouze text a vrátit serverový PIN. Zatím nic neodesílá a PIN vzniká lokálně; neslouží ke skutečnému předání seznamu.
 
-1. V části Pacient zvolte **Vyzkoušet ukázkový seznam**.
-2. U jednotlivých léků potvrďte údaje, případně je upravte tužkou.
-3. Přejděte do **Předání** a vytvořte demo PIN.
-4. Ve stejné otevřené aplikaci přepněte nahoře na **Lékař** a PIN zadejte.
-5. Upravte pracovní seznam a zvolte **Zkopírovat do schránky**. Na webu schránka vyžaduje localhost nebo HTTPS; při odmítnutí lze text označit ručně.
+Fotografie se neukládají do localStorage ani neposílají na server. Dočasné náhledy žijí jen v paměti. Po reloadu zůstávají již přepsané položky; probíhající zpracování je nutné zopakovat. Fotky mají limit 20 MB; nečitelný formát má chybový stav. Používejte ukázková data.
 
-## Hranice tohoto základu
+## Instalace a hosting
 
-Jde o lokální prototyp, nikoli celé soutěžní MVP. PIN nefunguje v jiné kartě, telefonu ani počítači a není bezpečnostním mechanismem. Žádné fotografie ani seznamy aplikace neodesílá na server. Stav žije jen v paměti; reload/restart ho smaže. Snímky mohou být dočasně v cache systémového pickeru, odstranění podkladu odstraní náhled, nikoli původní soubor v galerii.
+Instalaci otevře ikona vpravo nahoře. Na iOS použijte Safari → Sdílet → Přidat na plochu; na Androidu nabídku instalace prohlížeče. Fotoaparát používá systémový výběr souboru s `capture="environment"`; na počítači se může otevřít běžný dialog pro soubory.
 
-OCR, slučování údajů s vahami spolehlivosti, databázová validace léčiv, kontrola interakcí a rozpoznávání onkologických režimů nejsou implementované. UI neukazuje smyšlené rozpoznané léky, míru jistoty ani tvrzení o bezpečnosti kombinace. Používejte modelová data, ne identifikovatelné zdravotní záznamy.
+Instalace a service worker vyžadují HTTPS (nebo localhost). Samotné HTTP přes LAN stačí pro náhled, ne pro ověření instalace. Po prvním online načtení se ukládá pouze aplikační shell pro offline použití. Jde o instalaci PWA z prohlížeče; APK ani balíček pro App Store se negeneruje. Viz [požadavky PWA](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable) a [podpora fotoaparátu](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/capture).
 
-Další kroky podle zadání:
+Pro hosting vystavte pouze `public/`, mapujte `/pacient` a `/pacient/` na `index.html` a zachovejte soubory v kořeni URL. Nevystavujte kořen repozitáře. Přiložený Node server používá explicitní seznam veřejných souborů. Při změně shellu zvyšte verzi cache v `public/sw.js`.
 
-1. Zapojit zpracování fotografií, uvádět původ a spolehlivost jednotlivých polí a řešit konflikty před potvrzením. Před odesíláním obrazů vyřešit odstranění osobních údajů.
-2. Nahradit `createDemoHandoff` / `receiveDemoHandoff` skutečným anonymním přenosem mezi zařízeními. PIN vydávat na serveru, omezit pokusy, řešit kolize, atomické jednorázové převzetí, expiraci a mazání; žádné dlouhodobé externí ukládání seznamů.
-3. Připojit externí klinické zdroje pouze v rozhraní lékaře a výsledky zobrazovat odděleně od původního seznamu, na vyžádání.
-4. Doplnit chráněné lokální uložení pro opakované použití a otestovat oprávnění fotoaparátu a obnovu aplikace na telefonech.
-
-## Kód a ověření
-
-```text
-App.tsx, index.ts       Expo vstup, obrazovky a stav aplikace
-src/                   Sdílené UI a pravidla pro seznam léků / demo předání
-tests/                 Testy logiky a offline kontrola veřejného katalogu
-docs/                  Checklist požadavků, nikoli potvrzení jejich implementace
-data/sukl/             Veřejný katalog léčiv a metadata jeho původu
-assets/                Původní zadání, modelové seznamy a fotografie
-.github/               CI workflows a PR checklist
-```
+## Podklady
 
 Katalog SÚKL je připravený pro další vývoj, ale aplikace ho zatím nepoužívá.
 Jeho záznamy rozlišují síly a varianty balení pomocí kódu SÚKL; nejde o seznam
 pacientů, doporučené dávkování ani databázi interakcí. Podrobnosti a pravidla
 aktualizace jsou v [popisu katalogu](data/sukl/README.md).
 
-Původní podklady v `assets/` se hromadně nebalí do aplikace a CI je nečte.
-Lokální `knowledge-base/` není potřeba ke spuštění ani testům.
-
-```sh
-npm run typecheck
-npm test
-npm run export:web -- --max-workers 1
-npx expo install --check
-npx expo export --platform ios --platform android --output-dir /tmp/pillgaze-native-export
-```
-
-Export pro iOS/Android ověřuje JS bundle, nikoli nativní sestavení nebo fotoaparát na zařízení.
-
-Při pushi a PR do `main` nebo `pillgaze` běží kontroly repozitáře a aplikační CI: instalace
-z lockfilu, TypeScript, testy a webový export na Node.js 24. Nic se automaticky
-nenasazuje. Na tomto VPS spouštějte instalaci a testy v izolovaném sandboxu,
-nikoli pod host účtem s přístupem k Dockeru; viz [CONTRIBUTING.md](CONTRIBUTING.md).
-
-`npm audit` k 16. 10. 2026 hlásí 22 položek (15 high, 7 moderate), odvozených z `braces`, `node-forge` a `uuid` ve vývojových nástrojích Expo/Metro/Xcode. Nabízené vynucené opravy snižují Expo na SDK 44 a React Native na 0.72; nebyly aplikovány. Před nasazením znovu ověřte opravy upstreamu.
-
-Audit je v CI viditelný, ale zatím neblokující. Zelený build neznamená čistý
-bezpečnostní audit; nepoužívejte `npm audit fix --force`.
-
-## Výzkumné podklady
-
-`knowledge-base/` je gitignorovaný lokální klon týmového Fieldnotes workspace; není potřeba ke spuštění aplikace. Pokyny k práci s ním jsou v `AGENTS.md`.
+[Zadání](docs/requirements.md), `assets/`, `data/`, výzkumné `scripts/` a jejich Python testy zůstávají nezávislé na aplikaci. Pokyny k výzkumu a `knowledge-base/` jsou v [AGENTS.md](AGENTS.md).

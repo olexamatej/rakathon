@@ -15,6 +15,7 @@ venv/
 .tox/
 .nox/
 .cache/
+/.cache/
 .coverage
 .coverage.*
 coverage.xml
