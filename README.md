@@ -112,8 +112,11 @@ bezpečnostní audit; nepoužívejte `npm audit fix --force`.
 ## Výzkumné podklady
 
 `knowledge-base/` je gitignorovaný lokální klon týmového Fieldnotes workspace; není potřeba ke spuštění aplikace. Pokyny k práci s ním jsou v `AGENTS.md`.
-# VPS deployment
 
-The full application deploys from `master` to `https://rakathon.denishromada.cz`.
-See [the VPS release guide](infra/vps/README.md) for one-time bootstrap,
-automatic frontend/API builds, persistence and rollback. Azure workflows are retired.
+## Nasazení na VPS
+
+Živé demo je **https://rakathon.denishromada.com** a používá Docker Compose,
+nikoli Kubernetes. Frontend a Rust API mají oddělené Compose projekty;
+pushe do repozitáře je automaticky nemění. Provozní cesty, ruční aktualizaci
+frontendu a návrat popisuje [VPS průvodce](infra/vps/README.md).
+Nepoužité AKS/k3s podklady a jejich deploy workflow byly odstraněny.

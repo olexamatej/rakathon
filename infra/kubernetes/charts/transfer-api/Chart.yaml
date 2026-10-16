@@ -1,7 +1,0 @@
-apiVersion: v2
-name: transfer-api
-description: PillGaze encrypted medication transfer API
-type: application
-version: 0.1.0
-appVersion: "0.1.0"
-home: https://github.com/olexamatej/rakathon

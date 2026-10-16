@@ -1,20 +1,20 @@
 # PillGaze Architecture
 
-**Status:** local transfer API and browser end-to-end demo; AKS GitOps is the selected Azure deployment target and remains future work
+**Status:** transfer API and browser demo on the VPS; synthetic-data prototype
 **Backend language:** Rust
-**Deployment target:** Azure
+**Deployment target:** Docker Compose on the Hetzner VPS
 
 This document defines the first shared system boundary for parallel work. The
 current Expo application remains at the repository root while it is actively
-being developed. New backend, doctor web, API contract, and Azure work belongs
+being developed. New backend, doctor web, and API contract work belongs
 in the directories listed below. Moving the existing application is a separate
 coordinated change because the current scripts and CI expect its root entry
 points.
 
 The transfer API now has a local Rust/Axum implementation backed by SQLite.
-Azure Database for PostgreSQL Flexible Server remains the production storage
-target and has a matching initial schema, but its storage adapter and Azure
-resources are not implemented yet.
+A PostgreSQL schema is retained for possible future storage work, but its adapter
+is not implemented. The abandoned Azure/Kubernetes infrastructure is not a
+deployment target.
 The API serves a small patient-and-doctor browser demo at `/demo/patient` and
 `/demo/doctor`. It accepts a medication-list JSON document; the photo-to-list
 and OCR flow is not implemented yet.
@@ -78,7 +78,7 @@ and require patient confirmation before transfer.
 | `apps/doctor-web/` | Doctor-facing browser client; enters a retrieval code, obtains the separate key, decrypts locally, and reviews the list. |
 | `services/transfer-api/` | Rust HTTP API, persistence, expiry, redemption, revocation, and health endpoints. |
 | `packages/api-contract/` | OpenAPI contract shared by patient client, doctor web, and backend. |
-| `infra/azure/` | Azure deployment notes and, as deployment work begins, versioned infrastructure definitions. |
+| `infra/vps/` | Existing Docker Compose deployment notes and generic frontend image inputs. |
 
 Agree on folder ownership in the related PR before touching another team's
 active files. API changes should update the OpenAPI document first and keep all
@@ -110,10 +110,9 @@ This is an integration prototype, not a production patient or doctor app.
 
 ## Persistence and lifecycle
 
-Use SQLite in local development, with a persistent database file outside
-source control. Use Azure Database for PostgreSQL Flexible Server for the Azure
-deployment; the service keeps persistence behind a storage module so this
-backend change does not alter the API contract. The Azure schema is in
+Use SQLite in the current VPS prototype, with a persistent database file outside
+source control. A future PostgreSQL adapter requires a separate implementation
+and deployment review; it is not part of the current service. Its initial schema is in
 [`services/transfer-api/migrations/0001_create_transfers.sql`](services/transfer-api/migrations/0001_create_transfers.sql).
 The SQLite schema used for local development is in
 `services/transfer-api/migrations-sqlite/`.
@@ -127,69 +126,32 @@ The SQLite schema used for local development is in
   ciphertext only until its original expiry to support the retry behavior above.
   Set a maximum lifetime and verify backup retention separately; deleting a
   live row does not immediately remove it from retained database backups.
-- Keep the Azure database private to the AKS virtual network. Store the
-  retrieval-code digest pepper and database credentials in Azure Key Vault;
-  grant the workload access through Microsoft Entra Workload ID. Rotate the
-  pepper deliberately and document how active transfers are handled during
-  rotation.
+- Keep the SQLite database and HMAC secret outside Git and container images.
+  Rotate the secret deliberately; changing it affects outstanding retrieval codes.
+  The current API uses the `pillgaze-transfer-data` volume and the protected
+  `/home/rhodes/pillgaze-transfer/.secrets/transfer.env` file.
 
-## Azure Kubernetes deployment shape
+## VPS deployment
 
-Run application workloads in AKS and keep durable state in managed Azure
-services. This gives the team Kubernetes-based deployment and operations
-without making database durability depend on pod or node disks.
+The live address is **https://rakathon.denishromada.com**. The existing Nginx
+gateway terminates HTTPS and routes to a separate Compose frontend, which proxies
+the private Rust API. Only gateway ports 80/443 are public; frontend 8080 and API
+3000 are bound to IPv4 localhost. The independent CI runner is not modified by
+application cleanup or deployment.
 
-- **AKS:** run the Rust transfer API and its same-origin patient and doctor web
-  pages in a `Deployment`, exposed internally by a `ClusterIP` Service. Start
-  with one replica. Add replicas only after PostgreSQL-backed redemption and
-  rate limiting work atomically across instances.
-- **HTTPS ingress:** use Azure Application Gateway for Containers with Gateway
-  API `Gateway` and `HTTPRoute` resources. Terminate TLS at the managed ingress
-  and route only to the API Service. The ingress data plane is Azure-managed;
-  application workloads and routing configuration remain Kubernetes resources.
-- **Azure Container Registry:** store immutable, commit-tagged container images.
-  Allow the AKS kubelet identity to pull images; grant a separate GitHub Actions
-  identity push access only to the registry.
-- **Azure Database for PostgreSQL Flexible Server:** private VNet access and
-  private DNS. Store encrypted transfer records and shared rate-limit buckets
-  here; do not use a shared SQLite file or a pod volume for replicated state.
-- **Azure Key Vault:** keep the retrieval-code digest pepper, database
-  credentials, and the read-only GitOps repository credential out of Git,
-  images, and workflow logs. Let application and Flux identities read only the
-  secrets each needs, using Workload ID and the Key Vault CSI provider.
-- **Flux v2 GitOps extension:** reconcile the cluster from versioned
-  `infra/azure/` manifests. GitHub Actions builds and pushes an image after CI,
-  then records its immutable tag in the deployment configuration. Flux pulls
-  that change and rolls it out; Actions does not store a Kubernetes admin
-  credential or need direct network access to a private cluster API.
-- **GitHub Actions OIDC:** authenticate the image-publishing job to Azure with
-  a federated identity, not a long-lived service-principal secret. Use a
-  GitHub-hosted runner for container image builds; the existing isolated
-  Hetzner runner has no Docker build support. The GitOps controller performs
-  cluster deployment from inside AKS.
-- **Azure Monitor / Application Insights:** collect health, latency, failures,
-  and dependency metrics with request-body and secret scrubbing enabled.
+Operational configuration lives in `/home/rhodes/rakathon-site`,
+`/home/rhodes/pillgaze-transfer`, and the shared `/home/rhodes/webserver` gateway.
+The manual frontend refresh builds from an explicit `origin/main` revision and
+retains a previous image for rollback. Repository pushes do not automatically
+deploy the frontend or API. See [the VPS guide](infra/vps/README.md).
 
-Provision Azure resources with Bicep under `infra/azure/`. Keep AKS, PostgreSQL,
-and Key Vault in a private network boundary; the only public application path is
-the HTTPS ingress. Use a dev namespace for automatic deployment from `main`.
-Promote a tested image digest to staging or production through separate GitHub
-Environments and an approval gate when those environments are introduced.
+No Kubernetes cluster was installed. AKS, k3s, Helm, Flux, Bicep, and their
+unused deployment workflows were removed from this checkout. Do not reintroduce
+them as a prerequisite for the existing Compose service.
 
-Do not add a public database endpoint, public development ports, a blob store,
-or a separately managed cache in the first implementation without a measured
-need. The local SQLite database is for development only; do not mount a shared
-SQLite file into AKS replicas. The local implementation persists rate-limit
-buckets in SQLite; the PostgreSQL adapter must move these counters to shared
-storage. Move periodic cleanup to a single Kubernetes `CronJob` before scaling
-the API beyond one replica. Keep backups and telemetry inside the same
-data-handling review as the primary database.
-
-The repository currently has no PostgreSQL storage adapter, container image,
-Helm chart, Bicep deployment, or Azure deployment workflow. Implement these in
-that order so CI can validate each layer before any Azure resources are created.
-AKS, PostgreSQL, ACR, Key Vault, and managed ingress have ongoing costs; choose
-the Azure region and resource sizes before provisioning.
+SQLite uses a single API instance. Scaling, shared rate limits, consistent
+backups, telemetry scrubbing, and production approval need separate work. Keep
+real patient data out of this prototype.
 
 ## Initial non-goals
 
@@ -199,11 +161,3 @@ the Azure region and resource sizes before provisioning.
 - The server decrypting, indexing, searching, or modifying medication lists.
 - Production deployment or public exposure before authentication boundaries,
   rate limits, cleanup, monitoring scrubbing, and recovery have been reviewed.
-# Deployment decision update
-
-The deployment target has changed from Azure to **local ARM64 k3s on the Hetzner
-VPS**, serving the frontend and transfer API at `rakathon.denishromada.cz`.
-Code is based on current `main`; `master` pushes trigger complete image rebuilds
-and releases. See [the active VPS guide](infra/vps/README.md). Azure-specific
-deployment sections below are historical proposals, not active infrastructure.
-Application boundaries and SQLite/prototype limitations remain unchanged.

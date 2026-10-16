@@ -1,6 +1,0 @@
-.thumbs
-.git
-*.md
-Dockerfile
-README.*
-values-dev.yaml
