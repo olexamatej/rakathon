@@ -134,7 +134,8 @@ mod tests {
             .await.unwrap_or_else(|_| panic!("list rejected"));
         let json = serde_json::to_value(&list).unwrap();
         assert_eq!(list.items.len(), 2);
-        assert_eq!(list.items[0].size_bytes, 20);
+        assert_eq!(list.items[0].pin_digest, "02".repeat(32));
+        assert_eq!(list.items[0].size_bytes, 4);
         assert_eq!(json["items"][0].as_object().unwrap().len(), 2);
         assert!(json["items"][0].get("payload").is_none());
         let digest = list.items[0].pin_digest.clone();
