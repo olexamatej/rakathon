@@ -68,7 +68,15 @@ def main():
             assert set(item["sukl"]["nameCandidateCodes"]) <= sukl
             assert set(item["sukl"]["preferredCandidateCodes"]) <= set(item["sukl"]["candidateCodes"])
             assert set(item["sukl"]["packTextMatchingCodes"]) <= set(item["sukl"]["candidateCodes"])
-            assert item["sukl"]["selectedCode"] is None
+            selected = item["sukl"]["selectedCode"]
+            if selected is not None:
+                assert record["kind"] == "medication_package"
+                assert item["sukl"]["resolution"] == "unique_metadata_candidate"
+                assert item["sukl"]["status"] == "candidates"
+                assert item["sukl"]["preferredCandidateCodes"] == [selected]
+                assert item["sukl"]["selectionMethod"] == "automatic_unique_metadata_candidate"
+            else:
+                assert item["sukl"]["selectionMethod"] is None
             if item["sukl"]["resolution"] == "unique_metadata_candidate":
                 assert item["sukl"]["status"] == "candidates"
                 assert len(item["sukl"]["preferredCandidateCodes"]) == 1

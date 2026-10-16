@@ -184,7 +184,7 @@ class Matcher:
         elif candidates:
             base['resolution'] = 'needs_review'
         base['preferredCandidateCodes'] = narrowed
-        # Selection is reserved for adjudication; metadata uniqueness is not review.
+        # Package-only promotion is applied by refine; lookup alone never selects.
         return base
 
 
@@ -203,14 +203,22 @@ def refine(data, rows):
         for region, items in observations(record):
             for item in items:
                 item['sukl'] = matcher.match(item)
+                match = item['sukl']
+                match['selectionMethod'] = None
+                if region == 'package' and match['resolution'] == 'unique_metadata_candidate':
+                    match['selectedCode'] = match['preferredCandidateCodes'][0]
+                    match['selectionMethod'] = 'automatic_unique_metadata_candidate'
                 counts[region][item['sukl']['status']] += 1
-    data['schemaVersion'] = '1.1.0'
+    data['schemaVersion'] = '1.2.0'
     data['annotationPolicy']['suklMatching'] = (
         'Rebuilt by data/ground-truth/refine_matching.py. Explicit branding/spelling aliases; '
         'mass conversion and shared trailing units supported. Component order and concentration '
         'denominators preserved. No substitution of active substances or printed values for visual labels. '
         'Name-only and inferred-notation candidates require review. Pack-text matching narrows candidates; '
-        'dosage form is not inferred from the reference catalogue. selectedCode remains null pending adjudication.'
+        'dosage form is not inferred from the reference catalogue. For packages only, a single preferred '
+        'candidate with status candidates is promoted to selectedCode with selectionMethod '
+        'automatic_unique_metadata_candidate. This does not mark the annotation as human reviewed. '
+        'All other selectedCode values remain null.'
     )
     data['suklMatchingSummary'] = {group: dict(counts[group]) for group in sorted(counts)}
     return data

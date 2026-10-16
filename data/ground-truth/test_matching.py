@@ -1,6 +1,6 @@
 """Synthetic regression cases for identity matching; no patient data or images."""
 import unittest
-from refine_matching import Matcher, strength_key
+from refine_matching import Matcher, refine, strength_key
 
 
 def row(code, name, strength, pack='30'):
@@ -37,6 +37,36 @@ class StrengthTests(unittest.TestCase):
     def test_unit_error_not_corrected(self):
         self.assertNotEqual(strength_key('0.5mg'), strength_key('0.5g'))
         self.assertNotEqual(strength_key('250LSU'), strength_key('250SU'))
+
+
+class PromotionTests(unittest.TestCase):
+    def test_only_unique_packages_promoted(self):
+        package = observation('Example', '5mg', '30')
+        printed = observation('Example', '5mg', '30')
+        data = {'annotationPolicy': {}, 'images': {
+            'package.jpg': {'kind': 'medication_package', 'humanReviewed': False,
+                            'observations': [package]},
+            'list.jpg': {'kind': 'medication_list', 'regions': {
+                'printed': {'observations': [printed]}}},
+        }}
+        refine(data, [row('01', 'Example', '5MG')])
+        self.assertEqual(package['sukl']['selectedCode'], '01')
+        self.assertEqual(package['sukl']['selectionMethod'], 'automatic_unique_metadata_candidate')
+        self.assertFalse(data['images']['package.jpg']['humanReviewed'])
+        self.assertIsNone(printed['sukl']['selectedCode'])
+
+    def test_ambiguous_partial_and_pack_mismatch_not_promoted(self):
+        cases = [observation('Example', '5mg', '30'),
+                 observation('Example', '5mg', '90'),
+                 observation('Example', '5mg', uncertain=True),
+                 observation('Lagosa', None, '30'),
+                 observation('Kreon', '25000', '30')]
+        data = {'annotationPolicy': {}, 'images': {
+            str(i): {'kind': 'medication_package', 'observations': [item]}
+            for i, item in enumerate(cases)}}
+        refine(data, [row('01', 'Example', '5MG'), row('02', 'Example', '5MG'),
+                      row('03', 'Lagosa', None), row('04', 'Kreon', '25000U')])
+        self.assertTrue(all(item['sukl']['selectedCode'] is None for item in cases))
 
 
 class MatcherTests(unittest.TestCase):

@@ -44,11 +44,11 @@ list**, not a combined regimen.
 
 `catalogue.rowIds` contains name-and-strength matches only. `nameOnlyRowIds`
 requires review. Duplicate catalogue rows are preserved rather than arbitrarily
-choosing one. SÚKL codes are **candidates**, not adjudicated product identifiers;
-`selectedCode` is deliberately null. Do not treat source aliases, handwriting
+choosing one. SÚKL codes are candidates, with automatic selections for packages
+having one preferred metadata candidate. Do not treat source aliases, handwriting
 substitutions, or name-only matches as evidence of therapeutic equivalence.
 
-## Refined SÚKL matching (schema 1.1)
+## Refined SÚKL matching (schema 1.2)
 
 `refine_matching.py` rebuilds only the SÚKL links from the saved visual fields.
 It uses a separate SÚKL alias table (fixing the Helicid catalogue-alias bug),
@@ -71,7 +71,8 @@ The `sukl` object contains:
 | `matchBasis` | Evidence used, such as normalized name and strength. |
 | `reviewReasons` | Explicit missing-data, alias, notation, conflict or pack-mismatch reasons. |
 | `resolution` | Whether metadata gives one candidate, multiple candidates, a pack mismatch, or needs review/is unresolved. |
-| `selectedCode` | Reserved for adjudication; remains null. |
+| `selectedCode` | Automatically populated for packages with status `candidates` and resolution `unique_metadata_candidate`; otherwise null. |
+| `selectionMethod` | `automatic_unique_metadata_candidate` when promoted, otherwise null. |
 
 Status meanings:
 
@@ -87,6 +88,9 @@ Status meanings:
   this local snapshot. This is not a claim about every SÚKL resource or date.
 
 `unique_metadata_candidate` is a resolution, not a human-confirmed identity.
+Automatic promotion leaves `humanReviewed` false. Rebuilding applies the same
+selection rule; list entries, review-only matches and ambiguous packages are not
+promoted.
 For strict matching metrics, use `status == "candidates"`; review-only/name-only
 candidate lists must not be counted as confirmed product matches.
 `suklMatchingSummary` counts these statuses separately for each image region.
