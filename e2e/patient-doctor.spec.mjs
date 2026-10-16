@@ -32,7 +32,7 @@ test('patient sends a list and doctor opens it with the same PIN', async ({ page
     await doctor.locator('#pin').fill(pin);
     await doctor.locator('#pin-submit').click();
     await expect(doctor.locator('#main table')).toBeVisible();
-    await expect(doctor.locator('#main .name')).toHaveText(itemName);
+    await expect(doctor.locator('#main [data-field="name"]')).toHaveValue(itemName);
     await expect(doctor.locator('#main tbody tr')).toHaveCount(1);
   } finally {
     await doctorContext.close();

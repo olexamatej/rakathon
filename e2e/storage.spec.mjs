@@ -68,10 +68,10 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
     await doctor.locator('#pin').fill(pin);
     await doctor.locator('#pin-submit').click();
     await expect(doctor.locator('#main table')).toBeVisible();
-    await expect(doctor.locator('#main .name')).toHaveText(draft.items[0].name);
+    await expect(doctor.locator('#main [data-field="name"]')).toHaveValue(draft.items[0].name);
     await expect(doctor.locator('#main tbody tr')).toHaveCount(1);
     await doctor.reload();
-    await expect(doctor.locator('#main .name')).toHaveText(draft.items[0].name);
+    await expect(doctor.locator('#main [data-field="name"]')).toHaveValue(draft.items[0].name);
   } finally {
     await doctorContext.close();
   }
