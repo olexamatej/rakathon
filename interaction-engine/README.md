@@ -121,12 +121,14 @@ response always uses the canonical domain.
 
 Responses contain `drugs`, `site`, `checkedAt`, `status`, `url`, and `summary`:
 
-- `found`: a dedicated page for that pair was retrieved (or a validated Medscape
-  checker API response); `url`
-  contains its HTTPS address on the selected site. The short Czech summary
-  describes the interaction, severity, and precautions where the page provides
-  them. A page explicitly reporting no known interaction can also qualify.
-- `not_found`: no dedicated pair page was found; `url` is null. This does not
+- `found`: the selected site provides explicit evidence for that pair, from a
+  dedicated pair page, monograph, interaction article, sufficiently explicit live
+  search snippet, or validated Medscape checker API response. `url` contains the
+  actual HTTPS source address. The short Czech summary describes the supported
+  finding, severity, and precautions where available. Snippet-only findings are
+  explicitly labeled for physician verification. An explicit no-known-interaction
+  result can also qualify; `found` is an evidence match, not clinical confirmation.
+- `not_found`: no qualifying pair evidence was found; `url` is null. This does not
   establish safety or absence of an interaction.
 - `inconclusive`: access restrictions, ambiguous names, or insufficient
   accessible evidence prevented a reliable answer; `url` is null.
@@ -149,7 +151,12 @@ has a 15-second limit and a 1 MiB response limit, and the overall operation shar
 the configured research deadline.
 
 For other sites, generic checkers and homepages do not qualify as result URLs. The agent is
-instructed to retrieve the actual pair page and use only its clinical claims;
+instructed to prioritize recall for physician review: try generic/brand equivalents
+and monograph/article searches before returning no match. It attempts source
+retrieval but may use a live search snippet that explicitly establishes both drugs
+and the interaction, labeling that limitation in the summary. Merely mentioning
+both drugs or giving a class warning does not qualify. Clinical claims must come
+from the source;
 the server validates URL structure, host, status consistency, summary length,
 and that the returned URL appeared in the web tool results.
 These are agent-reported findings, not independent clinical verification.

@@ -246,13 +246,17 @@ paths:
         Uses the Medscape checker JSON APIs directly for reference.medscape.com;
         other sites use a fresh agent with live web search restricted to the site. Accepts precisely two drug names and either a canonical domain or
         the exact checker URL from the site enum. Returned site is canonical.
-        found means a dedicated pair page or validated Medscape pair API response
-        was retrieved, even if the source reports no known interaction. Generic checkers, homepages and single-drug articles
-        do not qualify. not_found means the search found no dedicated page, not
-        proof of safety. inconclusive means access restrictions, ambiguous names
-        or insufficient accessible evidence prevented a reliable result.
-        The summary is in Czech and limited to 1–3 short sentences. Clinical
-        claims must come from the retrieved source. Medscape requires exact name
+        found means explicit evidence for the pair was found in a dedicated pair
+        page, monograph, interaction article, sufficiently explicit live search
+        snippet, or validated Medscape pair API response, even if the source reports
+        no known interaction. Snippet-only evidence is labeled in the summary for
+        physician verification. Generic checkers, homepages, mere co-mentions and
+        class warnings alone do not qualify. not_found means the search found no
+        qualifying pair evidence, not proof of safety. inconclusive means ambiguous
+        names or insufficient accessible evidence prevented a reliable result.
+        The agent tries generic/brand equivalents and monograph/article searches
+        before returning no match. The summary is in Czech and limited to 1–3 short
+        sentences. Clinical claims must come from the source. Medscape requires exact name
         matches, validates returned pair names, and uses a tool-free model only
         for Czech summarization. Its URL identifies the pair-specific JSON API
         request; access failures or unresolved names return inconclusive.
@@ -395,7 +399,7 @@ components:
           type: [string, 'null']
           format: uri
           maxLength: 4096
-          description: Retrieved HTTPS pair page or Medscape pair-specific JSON API URL, or null.
+          description: Actual HTTPS evidence source URL (including a source identified by a live search snippet), Medscape pair-specific JSON API URL, or null.
         summary:
           type: string
           minLength: 1
