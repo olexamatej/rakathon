@@ -82,3 +82,38 @@ export function formatMedicineLines(items) {
 // Everything on one line: "NAME DOSAGE SCHEDULE, NAME DOSAGE SCHEDULE, ...".
 export const formatMedicineInline = items => items
   .map(item => [medicineText(item), item.schedule?.trim()].filter(Boolean).join(' ')).join(', ');
+
+const fold = value => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const indexes = new WeakMap(); // substances map -> Map(folded name -> substance list)
+
+// Active substances for a typed medicine name: exact catalogue name first, then the longest catalogue
+// name the text starts with ("IBALGIN 400 mg" -> IBALGIN). Returns undefined when nothing matches.
+export function lookupSubstances(map, name) {
+  if (!indexes.has(map)) indexes.set(map, new Map(Object.entries(map).map(([key, list]) => [fold(key), list])));
+  const index = indexes.get(map);
+  const text = fold(name);
+  if (!text) return undefined;
+  if (index.has(text)) return index.get(text);
+  let best;
+  for (const [key, list] of index) {
+    if (text.startsWith(`${key} `) && (!best || key.length > best.key.length)) best = { key, list };
+  }
+  return best?.list;
+}
+
+// Fills `substances` from the catalogue. Items that already have substances (from the API) are kept
+// unless `replace` is set; returns whether anything changed.
+export function applySubstances(items, map, { replace = false } = {}) {
+  let changed = false;
+  for (const item of items) {
+    if (item.substances?.length && !replace) continue;
+    const found = lookupSubstances(map, item.name);
+    if (found) {
+      if (JSON.stringify(item.substances) !== JSON.stringify(found)) { item.substances = [...found]; changed = true; }
+    } else if (replace && item.substances) {
+      delete item.substances;
+      changed = true;
+    }
+  }
+  return changed;
+}

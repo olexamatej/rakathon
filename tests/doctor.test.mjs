@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createDoctorState, loadDoctorState, saveDoctorState, addList, validateItem,
-  normalizePin, isPin, suklLink, formatMedicineLines, formatMedicineInline, HISTORY_LIMIT, DOCTOR_STORAGE_KEY,
+  normalizePin, isPin, suklLink, lookupSubstances, applySubstances, formatMedicineLines, formatMedicineInline, HISTORY_LIMIT, DOCTOR_STORAGE_KEY,
 } from '../apps/patient-web/public/doctor.js';
 import { fetchInteractions } from '../apps/patient-web/public/doctor-services.js';
 
@@ -86,4 +86,22 @@ test('medicine list exports as lines and as one comma-separated line', () => {
   assert.equal(formatMedicineLines([{ name: 'X', dosage: '' }]), 'X   -   -');
   assert.equal(formatMedicineInline(items), 'HELICID 20 ZENTIVA 20 mg 1-0-0, LIPERTANCE 10 mg / 5 mg / 5 mg 1x, Metformin 500 mg');
   assert.equal(formatMedicineLines([]), '');
+});
+
+test('active substances are mapped from the SÚKL catalogue by medicine name', () => {
+  const map = { IBALGIN: ['Ibuprofen'], 'IBALGIN BABY': ['Ibuprofen'], 'WARFARIN ORION': ['Sodná sůl warfarinu'], LOZAP: ['Draselná sůl losartanu'] };
+  assert.deepEqual(lookupSubstances(map, 'ibalgin'), ['Ibuprofen']);
+  assert.deepEqual(lookupSubstances(map, '  Warfarin  Orion '), ['Sodná sůl warfarinu']);
+  assert.deepEqual(lookupSubstances(map, 'IBALGIN 400 mg'), ['Ibuprofen']); // longest name prefix
+  assert.deepEqual(lookupSubstances(map, 'IBALGIN BABY 100 mg'), ['Ibuprofen']);
+  assert.equal(lookupSubstances(map, 'Neznámý lék'), undefined);
+  assert.equal(lookupSubstances(map, ''), undefined);
+  const items = [{ name: 'LOZAP' }, { name: 'IBALGIN', substances: ['Z API'] }, { name: 'Nic' }];
+  assert.ok(applySubstances(items, map));
+  assert.deepEqual(items.map(item => item.substances), [['Draselná sůl losartanu'], ['Z API'], undefined]); // API value kept
+  assert.ok(applySubstances(items, map, { replace: true }));
+  assert.deepEqual(items.map(item => item.substances), [['Draselná sůl losartanu'], ['Ibuprofen'], undefined]);
+  items[0].name = 'Nic';
+  assert.ok(applySubstances([items[0]], map, { replace: true }));
+  assert.equal(items[0].substances, undefined); // stale substances are dropped for an unknown name
 });

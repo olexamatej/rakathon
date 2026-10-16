@@ -61,6 +61,17 @@ export function loadSuklNames() {
   return suklNames;
 }
 
+let suklSubstances;
+
+// Active substances by exact SÚKL medicine name; resolves to {} when unavailable.
+export function loadSuklSubstances() {
+  suklSubstances ??= fetch('/sukl-substances.json').then(response => {
+    if (!response.ok) throw new Error('Katalog léčiv není dostupný.');
+    return response.json();
+  }).catch(() => { suklSubstances = undefined; return {}; });
+  return suklSubstances;
+}
+
 let regimenDrugs;
 
 // Drugs of each oncology regimen by exact regimen name; resolves to {} when unavailable.

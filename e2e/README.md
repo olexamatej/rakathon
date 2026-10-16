@@ -6,10 +6,11 @@ server-issued PIN and exact JSON read back through that PIN, loads the same list
 by PIN in a separate doctor browser context, then reloads admin and requires
 **exactly one additional record**.
 
-`patient-doctor.spec.mjs` covers the focused handoff: a patient submits a unique
-synthetic draft, sees the server-issued PIN, and a clean doctor browser context
-uses that same PIN to display the submitted list. Both scenarios use the real
-Rust storage API; uploads and PINs are not mocked. OCR is outside these scenarios.
+`patient-doctor.spec.mjs` covers the focused handoff: a patient uploads a tiny
+synthetic image, the app's mock recognizer creates two sample medicines, and the
+patient submits them to the real Rust storage API. A clean doctor browser context
+uses the server-issued PIN and verifies the same medicine names, dosages, and
+schedule from storage. The recognizer is mocked; uploads, storage, and PINs are not.
 
 `.github/workflows/storage-e2e.yml` runs automatically on pushes and PRs to
 main/pillgaze, and can also be started manually without inputs or secrets.
