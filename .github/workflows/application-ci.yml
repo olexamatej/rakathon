@@ -43,8 +43,12 @@ jobs:
           sparse-checkout: |
             /apps/transfer-demo/
             /services/transfer-api/
+      - name: Prepare executable temporary directory for Rustup
+        run: mkdir -p "$RUNNER_TEMP/rust-tmp"
       - name: Set up Rust stable
         uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1.16.1
+        env:
+          TMPDIR: ${{ runner.temp }}/rust-tmp
         with:
           cache-workspaces: services/transfer-api -> services/transfer-api/target
       - name: Compile all Rust targets
