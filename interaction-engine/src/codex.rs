@@ -179,6 +179,12 @@ fn command(config: &Config) -> Command {
     if let Some(model) = &config.model {
         cmd.arg("--model").arg(model);
     }
+    if let Some(tier) = &config.service_tier {
+        cmd.arg("-c").arg(format!(
+            "service_tier={}",
+            serde_json::to_string(tier).unwrap()
+        ));
+    }
     cmd
 }
 

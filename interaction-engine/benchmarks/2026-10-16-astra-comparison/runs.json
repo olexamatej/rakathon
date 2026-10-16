@@ -1,0 +1,122 @@
+[
+  {
+    "model": "gpt-6-astra",
+    "mode": "fast",
+    "repeat": 1,
+    "ordinal": 1,
+    "elapsedSeconds": 28.496256874997925,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13693",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:17:34 GMT"
+    },
+    "responseFile": "gpt-6-astra.fast.1.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "standard",
+    "repeat": 1,
+    "ordinal": 2,
+    "elapsedSeconds": 38.91027162499813,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13969",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:18:13 GMT"
+    },
+    "responseFile": "gpt-6-astra.standard.1.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "fast",
+    "repeat": 2,
+    "ordinal": 3,
+    "elapsedSeconds": 27.013790124998195,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13888",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:18:40 GMT"
+    },
+    "responseFile": "gpt-6-astra.fast.2.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "standard",
+    "repeat": 2,
+    "ordinal": 4,
+    "elapsedSeconds": 38.091566457995214,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13723",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:19:19 GMT"
+    },
+    "responseFile": "gpt-6-astra.standard.2.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "standard",
+    "repeat": 3,
+    "ordinal": 5,
+    "elapsedSeconds": 36.98795291600254,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13833",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:19:56 GMT"
+    },
+    "responseFile": "gpt-6-astra.standard.3.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "fast",
+    "repeat": 3,
+    "ordinal": 6,
+    "elapsedSeconds": 27.21045687500009,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13764",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:20:23 GMT"
+    },
+    "responseFile": "gpt-6-astra.fast.3.response.json",
+    "error": null
+  }
+]

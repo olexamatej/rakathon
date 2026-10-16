@@ -1,0 +1,7 @@
+model,mode,repeat,elapsedSeconds,httpStatus,responseFile
+gpt-6-astra,fast,1,28.496256874997925,200,gpt-6-astra.fast.1.response.json
+gpt-6-astra,standard,1,38.91027162499813,200,gpt-6-astra.standard.1.response.json
+gpt-6-astra,fast,2,27.013790124998195,200,gpt-6-astra.fast.2.response.json
+gpt-6-astra,standard,2,38.091566457995214,200,gpt-6-astra.standard.2.response.json
+gpt-6-astra,standard,3,36.98795291600254,200,gpt-6-astra.standard.3.response.json
+gpt-6-astra,fast,3,27.21045687500009,200,gpt-6-astra.fast.3.response.json

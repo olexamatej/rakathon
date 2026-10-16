@@ -1,4 +1,5 @@
 mod codex;
+pub mod links;
 pub mod model;
 pub mod report;
 
@@ -21,6 +22,7 @@ pub struct Config {
     pub bind: SocketAddr,
     pub codex_bin: PathBuf,
     pub model: Option<String>,
+    pub service_tier: Option<String>,
     pub timeout: Duration,
     pub max_concurrent: usize,
 }
@@ -37,6 +39,11 @@ impl Config {
             .context("MAX_CONCURRENT_CHECKS must be an integer")?;
         ensure!(timeout > 0, "CODEX_TIMEOUT_SECONDS must be positive");
         ensure!(max_concurrent > 0, "MAX_CONCURRENT_CHECKS must be positive");
+        let service_tier = env::var("CODEX_SERVICE_TIER")
+            .ok()
+            .map(|tier| normalize_service_tier(&tier))
+            .transpose()?
+            .or_else(|| Some("priority".into()));
         Ok(Self {
             bind: env::var("BIND_ADDR")
                 .unwrap_or_else(|_| "127.0.0.1:3000".into())
@@ -45,10 +52,24 @@ impl Config {
             codex_bin: env::var_os("CODEX_BIN")
                 .map(PathBuf::from)
                 .unwrap_or_else(|| "codex".into()),
-            model: env::var("CODEX_MODEL").ok().filter(|s| !s.is_empty()),
+            model: Some(
+                env::var("CODEX_MODEL")
+                    .ok()
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or_else(|| "gpt-6.1-sol".into()),
+            ),
+            service_tier,
             timeout: Duration::from_secs(timeout),
             max_concurrent,
         })
+    }
+}
+
+fn normalize_service_tier(tier: &str) -> anyhow::Result<String> {
+    match tier {
+        "default" => Ok("default".into()),
+        "priority" | "fast" => Ok("priority".into()),
+        _ => anyhow::bail!("CODEX_SERVICE_TIER must be default, priority, or fast"),
     }
 }
 
@@ -60,6 +81,9 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(mut config: Config) -> anyhow::Result<Self> {
+        if let Some(tier) = &config.service_tier {
+            config.service_tier = Some(normalize_service_tier(tier)?);
+        }
         ensure!(
             config.max_concurrent > 0 && !config.timeout.is_zero(),
             "concurrency and timeout must be positive"

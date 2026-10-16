@@ -1,0 +1,209 @@
+[
+  {
+    "responseFile": "gpt-5.6-terra.fast.1.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Core checklist covered; wording and INR discussion less precise than Sol; occasional Czech grammar issues.",
+      "Some canonical names do not exactly match the local Drugs.com ID aliases, so those links correctly fall back to manual entry."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-luna.fast.1.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 4,
+    "confirmedChecklistEffects": 5,
+    "extraPairsObserved": [],
+    "notes": [
+      "Missing fluconazole–ibuprofen in this response."
+    ]
+  },
+  {
+    "responseFile": "gpt-5.6-terra.standard.1.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Core checklist covered; wording and INR discussion less precise than Sol; occasional Czech grammar issues.",
+      "Some canonical names do not exactly match the local Drugs.com ID aliases, so those links correctly fall back to manual entry."
+    ]
+  },
+  {
+    "responseFile": "gpt-6.1-sol.standard.1.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; mechanisms and conditional recommendations align with the reviewed sources."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-luna.standard.1.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 3,
+    "confirmedChecklistEffects": 3,
+    "extraPairsObserved": [],
+    "notes": [
+      "Missing fluconazole–ibuprofen in this response.",
+      "Also missing aspirin–ibuprofen, including both its GI and antiplatelet effects."
+    ]
+  },
+  {
+    "responseFile": "gpt-6.1-sol.fast.1.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Some recommendations for a non-warfarin pair mention warfarin elsewhere in the regimen. Pair identity remains two drugs; stricter pair isolation would require removing this contextual wording."
+    ]
+  },
+  {
+    "responseFile": "gpt-5.6-terra.fast.2.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Core checklist covered; wording and INR discussion less precise than Sol; occasional Czech grammar issues."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-luna.standard.2.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 3,
+    "confirmedChecklistEffects": 3,
+    "extraPairsObserved": [],
+    "notes": [
+      "Missing fluconazole–ibuprofen in this response.",
+      "Also missing aspirin–ibuprofen, including both its GI and antiplatelet effects."
+    ]
+  },
+  {
+    "responseFile": "gpt-5.6-terra.standard.2.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Core checklist covered; wording and INR discussion less precise than Sol; occasional Czech grammar issues.",
+      "Some canonical names do not exactly match the local Drugs.com ID aliases, so those links correctly fall back to manual entry."
+    ]
+  },
+  {
+    "responseFile": "gpt-6.1-sol.standard.2.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; mechanisms and conditional recommendations align with the reviewed sources."
+    ]
+  },
+  {
+    "responseFile": "gpt-6.1-sol.fast.2.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; mechanisms and conditional recommendations align with the reviewed sources."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-luna.fast.2.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 4,
+    "confirmedChecklistEffects": 5,
+    "extraPairsObserved": [],
+    "notes": [
+      "Missing fluconazole–ibuprofen in this response."
+    ]
+  },
+  {
+    "responseFile": "gpt-5.6-terra.fast.3.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Core checklist covered; wording and INR discussion less precise than Sol; occasional Czech grammar issues.",
+      "Some canonical names do not exactly match the local Drugs.com ID aliases, so those links correctly fall back to manual entry."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-luna.fast.3.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 4,
+    "confirmedChecklistEffects": 5,
+    "extraPairsObserved": [],
+    "notes": [
+      "Missing fluconazole–ibuprofen in this response.",
+      "Some canonical names do not exactly match the local Drugs.com ID aliases, so those links correctly fall back to manual entry."
+    ]
+  },
+  {
+    "responseFile": "gpt-5.6-terra.standard.3.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Core checklist covered; wording and INR discussion less precise than Sol; occasional Czech grammar issues.",
+      "Some canonical names do not exactly match the local Drugs.com ID aliases, so those links correctly fall back to manual entry."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-luna.standard.3.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 4,
+    "confirmedChecklistEffects": 4,
+    "extraPairsObserved": [],
+    "notes": [
+      "Missing fluconazole–ibuprofen in this response.",
+      "Aspirin–ibuprofen bleeding/GI risk included, but aspirin antiplatelet interference omitted."
+    ]
+  },
+  {
+    "responseFile": "gpt-6.1-sol.standard.3.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; mechanisms and conditional recommendations align with the reviewed sources."
+    ]
+  },
+  {
+    "responseFile": "gpt-6.1-sol.fast.3.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Some recommendations for a non-warfarin pair mention warfarin elsewhere in the regimen. Pair identity remains two drugs; stricter pair isolation would require removing this contextual wording."
+    ]
+  }
+]

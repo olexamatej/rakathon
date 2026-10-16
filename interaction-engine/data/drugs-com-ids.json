@@ -1,0 +1,26 @@
+[
+  {
+    "names": ["warfarin"],
+    "id": "2311-0",
+    "sourceUrl": "https://www.drugs.com/interactions-check.php?drug_list=2311-0%2C1310-0&professional=1",
+    "verifiedAt": "2026-10-16"
+  },
+  {
+    "names": ["ibuprofen"],
+    "id": "1310-0",
+    "sourceUrl": "https://www.drugs.com/interactions-check.php?drug_list=2311-0%2C1310-0&professional=1",
+    "verifiedAt": "2026-10-16"
+  },
+  {
+    "names": ["aspirin", "acetylsalicylic acid", "kyselina acetylsalicylová"],
+    "id": "243-0",
+    "sourceUrl": "https://www.drugs.com/interactions-check.php?drug_list=243-0%2C2311-0&professional=1",
+    "verifiedAt": "2026-10-16"
+  },
+  {
+    "names": ["fluconazole", "flukonazol"],
+    "id": "1096-0",
+    "sourceUrl": "https://www.drugs.com/interactions-check.php?drug_list=1096-0%2C2311-0&professional=1",
+    "verifiedAt": "2026-10-16"
+  }
+]

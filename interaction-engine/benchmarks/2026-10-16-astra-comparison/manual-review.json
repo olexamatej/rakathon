@@ -1,0 +1,73 @@
+[
+  {
+    "responseFile": "gpt-6-astra.fast.1.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; conditional recommendations and mechanisms align with the review checklist.",
+      "Aspirin–ibuprofen recommendation mentions warfarin elsewhere in the regimen; pair identity remains two drugs but prose is not fully isolated."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-astra.standard.1.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; conditional recommendations and mechanisms align with the review checklist.",
+      "Aspirin–ibuprofen recommendation mentions warfarin elsewhere in the regimen; pair identity remains two drugs but prose is not fully isolated."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-astra.fast.2.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; conditional recommendations and mechanisms align with the review checklist."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-astra.standard.2.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; conditional recommendations and mechanisms align with the review checklist.",
+      "Warfarin–ibuprofen text uses normal INR; therapeutic INR would be more precise for treated patients."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-astra.standard.3.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; conditional recommendations and mechanisms align with the review checklist.",
+      "Warfarin–ibuprofen text uses normal INR; therapeutic INR would be more precise for treated patients."
+    ]
+  },
+  {
+    "responseFile": "gpt-6-astra.fast.3.response.json",
+    "reviewer": "Codex assistant qualitative review; not clinician validation",
+    "czechExplanatoryProse": true,
+    "confirmedExpectedPairs": 5,
+    "confirmedChecklistEffects": 6,
+    "extraPairsObserved": [],
+    "notes": [
+      "Full checklist covered; readable Czech; conditional recommendations and mechanisms align with the review checklist.",
+      "Aspirin–ibuprofen recommendation mentions warfarin elsewhere in the regimen; pair identity remains two drugs but prose is not fully isolated."
+    ]
+  }
+]

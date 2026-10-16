@@ -1,0 +1,296 @@
+[
+  {
+    "model": "gpt-6-astra",
+    "mode": "fast",
+    "repeat": 1,
+    "elapsedSeconds": 28.496256874997925,
+    "httpStatus": 200,
+    "responseFile": "gpt-6-astra.fast.1.response.json",
+    "responseBytes": 13693,
+    "expectedPairsFound": 5,
+    "missingExpectedPairs": [],
+    "extraPairs": [],
+    "reportedPairs": 5,
+    "status": "complete",
+    "coverage": {
+      "evaluatedPairs": 6,
+      "interactingPairs": 5,
+      "uniqueResolvedDrugs": 4
+    },
+    "drugNames": [
+      "warfarin",
+      "ibuprofen",
+      "aspirin",
+      "fluconazole"
+    ],
+    "severityByPair": {
+      "ibuprofen + warfarin": "major",
+      "aspirin + warfarin": "major",
+      "fluconazole + warfarin": "major",
+      "aspirin + ibuprofen": "major",
+      "fluconazole + ibuprofen": "moderate"
+    },
+    "returnedDrugNames": [
+      "warfarin",
+      "ibuprofen",
+      "kyselina acetylsalicylová",
+      "fluconazole"
+    ],
+    "drugsComPrefilledPairs": 5,
+    "patientPrefilledPairs": 5,
+    "heuristicEffectIndicators": {
+      "warfarin_ibuprofen_bleeding": true,
+      "warfarin_aspirin_bleeding": true,
+      "warfarin_fluconazole_effect": true,
+      "aspirin_ibuprofen_gi": true,
+      "aspirin_ibuprofen_antiplatelet": true,
+      "ibuprofen_fluconazole_exposure": true
+    },
+    "heuristicEffectCount": 6
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "standard",
+    "repeat": 1,
+    "elapsedSeconds": 38.91027162499813,
+    "httpStatus": 200,
+    "responseFile": "gpt-6-astra.standard.1.response.json",
+    "responseBytes": 13969,
+    "expectedPairsFound": 5,
+    "missingExpectedPairs": [],
+    "extraPairs": [],
+    "reportedPairs": 5,
+    "status": "complete",
+    "coverage": {
+      "evaluatedPairs": 6,
+      "interactingPairs": 5,
+      "uniqueResolvedDrugs": 4
+    },
+    "drugNames": [
+      "warfarin",
+      "ibuprofen",
+      "aspirin",
+      "fluconazole"
+    ],
+    "severityByPair": {
+      "ibuprofen + warfarin": "major",
+      "aspirin + warfarin": "major",
+      "fluconazole + warfarin": "major",
+      "aspirin + ibuprofen": "major",
+      "fluconazole + ibuprofen": "moderate"
+    },
+    "returnedDrugNames": [
+      "warfarin",
+      "ibuprofen",
+      "kyselina acetylsalicylová",
+      "fluconazole"
+    ],
+    "drugsComPrefilledPairs": 5,
+    "patientPrefilledPairs": 5,
+    "heuristicEffectIndicators": {
+      "warfarin_ibuprofen_bleeding": true,
+      "warfarin_aspirin_bleeding": true,
+      "warfarin_fluconazole_effect": true,
+      "aspirin_ibuprofen_gi": true,
+      "aspirin_ibuprofen_antiplatelet": true,
+      "ibuprofen_fluconazole_exposure": true
+    },
+    "heuristicEffectCount": 6
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "fast",
+    "repeat": 2,
+    "elapsedSeconds": 27.013790124998195,
+    "httpStatus": 200,
+    "responseFile": "gpt-6-astra.fast.2.response.json",
+    "responseBytes": 13888,
+    "expectedPairsFound": 5,
+    "missingExpectedPairs": [],
+    "extraPairs": [],
+    "reportedPairs": 5,
+    "status": "complete",
+    "coverage": {
+      "evaluatedPairs": 6,
+      "interactingPairs": 5,
+      "uniqueResolvedDrugs": 4
+    },
+    "drugNames": [
+      "warfarin",
+      "ibuprofen",
+      "aspirin",
+      "fluconazole"
+    ],
+    "severityByPair": {
+      "ibuprofen + warfarin": "major",
+      "aspirin + warfarin": "major",
+      "fluconazole + warfarin": "major",
+      "aspirin + ibuprofen": "major",
+      "fluconazole + ibuprofen": "moderate"
+    },
+    "returnedDrugNames": [
+      "warfarin",
+      "ibuprofen",
+      "kyselina acetylsalicylová",
+      "flukonazol"
+    ],
+    "drugsComPrefilledPairs": 5,
+    "patientPrefilledPairs": 5,
+    "heuristicEffectIndicators": {
+      "warfarin_ibuprofen_bleeding": true,
+      "warfarin_aspirin_bleeding": true,
+      "warfarin_fluconazole_effect": true,
+      "aspirin_ibuprofen_gi": true,
+      "aspirin_ibuprofen_antiplatelet": true,
+      "ibuprofen_fluconazole_exposure": true
+    },
+    "heuristicEffectCount": 6
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "standard",
+    "repeat": 2,
+    "elapsedSeconds": 38.091566457995214,
+    "httpStatus": 200,
+    "responseFile": "gpt-6-astra.standard.2.response.json",
+    "responseBytes": 13723,
+    "expectedPairsFound": 5,
+    "missingExpectedPairs": [],
+    "extraPairs": [],
+    "reportedPairs": 5,
+    "status": "complete",
+    "coverage": {
+      "evaluatedPairs": 6,
+      "interactingPairs": 5,
+      "uniqueResolvedDrugs": 4
+    },
+    "drugNames": [
+      "warfarin",
+      "ibuprofen",
+      "aspirin",
+      "fluconazole"
+    ],
+    "severityByPair": {
+      "ibuprofen + warfarin": "major",
+      "aspirin + warfarin": "major",
+      "fluconazole + warfarin": "major",
+      "aspirin + ibuprofen": "moderate",
+      "fluconazole + ibuprofen": "moderate"
+    },
+    "returnedDrugNames": [
+      "warfarin",
+      "ibuprofen",
+      "kyselina acetylsalicylová",
+      "flukonazol"
+    ],
+    "drugsComPrefilledPairs": 5,
+    "patientPrefilledPairs": 5,
+    "heuristicEffectIndicators": {
+      "warfarin_ibuprofen_bleeding": true,
+      "warfarin_aspirin_bleeding": true,
+      "warfarin_fluconazole_effect": true,
+      "aspirin_ibuprofen_gi": true,
+      "aspirin_ibuprofen_antiplatelet": true,
+      "ibuprofen_fluconazole_exposure": true
+    },
+    "heuristicEffectCount": 6
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "standard",
+    "repeat": 3,
+    "elapsedSeconds": 36.98795291600254,
+    "httpStatus": 200,
+    "responseFile": "gpt-6-astra.standard.3.response.json",
+    "responseBytes": 13833,
+    "expectedPairsFound": 5,
+    "missingExpectedPairs": [],
+    "extraPairs": [],
+    "reportedPairs": 5,
+    "status": "complete",
+    "coverage": {
+      "evaluatedPairs": 6,
+      "interactingPairs": 5,
+      "uniqueResolvedDrugs": 4
+    },
+    "drugNames": [
+      "warfarin",
+      "ibuprofen",
+      "aspirin",
+      "fluconazole"
+    ],
+    "severityByPair": {
+      "ibuprofen + warfarin": "major",
+      "aspirin + warfarin": "major",
+      "fluconazole + warfarin": "major",
+      "aspirin + ibuprofen": "major",
+      "fluconazole + ibuprofen": "moderate"
+    },
+    "returnedDrugNames": [
+      "warfarin",
+      "ibuprofen",
+      "kyselina acetylsalicylová",
+      "fluconazole"
+    ],
+    "drugsComPrefilledPairs": 5,
+    "patientPrefilledPairs": 5,
+    "heuristicEffectIndicators": {
+      "warfarin_ibuprofen_bleeding": true,
+      "warfarin_aspirin_bleeding": true,
+      "warfarin_fluconazole_effect": true,
+      "aspirin_ibuprofen_gi": true,
+      "aspirin_ibuprofen_antiplatelet": true,
+      "ibuprofen_fluconazole_exposure": true
+    },
+    "heuristicEffectCount": 6
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "fast",
+    "repeat": 3,
+    "elapsedSeconds": 27.21045687500009,
+    "httpStatus": 200,
+    "responseFile": "gpt-6-astra.fast.3.response.json",
+    "responseBytes": 13764,
+    "expectedPairsFound": 5,
+    "missingExpectedPairs": [],
+    "extraPairs": [],
+    "reportedPairs": 5,
+    "status": "complete",
+    "coverage": {
+      "evaluatedPairs": 6,
+      "interactingPairs": 5,
+      "uniqueResolvedDrugs": 4
+    },
+    "drugNames": [
+      "warfarin",
+      "ibuprofen",
+      "aspirin",
+      "fluconazole"
+    ],
+    "severityByPair": {
+      "ibuprofen + warfarin": "major",
+      "aspirin + warfarin": "major",
+      "fluconazole + warfarin": "major",
+      "aspirin + ibuprofen": "major",
+      "fluconazole + ibuprofen": "moderate"
+    },
+    "returnedDrugNames": [
+      "warfarin",
+      "ibuprofen",
+      "kyselina acetylsalicylová",
+      "flukonazol"
+    ],
+    "drugsComPrefilledPairs": 5,
+    "patientPrefilledPairs": 5,
+    "heuristicEffectIndicators": {
+      "warfarin_ibuprofen_bleeding": true,
+      "warfarin_aspirin_bleeding": true,
+      "warfarin_fluconazole_effect": true,
+      "aspirin_ibuprofen_gi": true,
+      "aspirin_ibuprofen_antiplatelet": true,
+      "ibuprofen_fluconazole_exposure": true
+    },
+    "heuristicEffectCount": 6
+  }
+]

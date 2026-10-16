@@ -1,0 +1,52 @@
+[
+  {
+    "model": "gpt-6-astra",
+    "mode": "fast",
+    "runs": 3,
+    "successful": 3,
+    "medianSeconds": 27.21045687500009,
+    "minSeconds": 27.013790124998195,
+    "maxSeconds": 28.496256874997925,
+    "meanSeconds": 27.573501291665405,
+    "expectedPairsPerSuccessfulRun": [
+      5,
+      5,
+      5
+    ],
+    "heuristicEffectCounts": [
+      6,
+      6,
+      6
+    ],
+    "extraPairsPerSuccessfulRun": [
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "model": "gpt-6-astra",
+    "mode": "standard",
+    "runs": 3,
+    "successful": 3,
+    "medianSeconds": 38.091566457995214,
+    "minSeconds": 36.98795291600254,
+    "maxSeconds": 38.91027162499813,
+    "meanSeconds": 37.99659699966529,
+    "expectedPairsPerSuccessfulRun": [
+      5,
+      5,
+      5
+    ],
+    "heuristicEffectCounts": [
+      6,
+      6,
+      6
+    ],
+    "extraPairsPerSuccessfulRun": [
+      0,
+      0,
+      0
+    ]
+  }
+]

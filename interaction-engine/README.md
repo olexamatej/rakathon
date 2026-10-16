@@ -27,7 +27,8 @@ it does not make a model call or verify Codex authentication.
 | --- | --- | --- |
 | `BIND_ADDR` | `127.0.0.1:3000` | HTTP listener |
 | `CODEX_BIN` | `codex` on PATH | Codex executable |
-| `CODEX_MODEL` | CLI default | Optional model override |
+| `CODEX_MODEL` | `gpt-6.1-sol` | Optional model override |
+| `CODEX_SERVICE_TIER` | `priority` (Fast) | `default` for Standard; `fast` or `priority` to request Fast mode |
 | `CODEX_TIMEOUT_SECONDS` | `90` | Per-process deadline |
 | `MAX_CONCURRENT_CHECKS` | `4` | Maximum simultaneous Codex processes |
 | `RUST_LOG` | `info` | Server logging filter |
@@ -58,7 +59,55 @@ with `Retry-After`. Bodies are limited to 64 KiB.
 - Success responses include `X-Interaction-Source: model-knowledge` and
   `X-Sources-Verified: false`. Clinical effects and evidence labels come from
   model knowledge and are not verified against current sources. References stay
-  empty. Checker links are fixed general entry points requiring manual input.
+  empty. Checker links are generated after inference as described below.
+
+## External checker links
+
+Each detected pair has links for Drugs.com, WebMD, Patient.info, RxList, and
+Medscape. Link generation runs in Rust after the model result is validated;
+it makes no model calls or network requests. Clinical references remain empty.
+
+| Provider | Pair prefill |
+| --- | --- |
+| Drugs.com | `interactions-check.php?drug_list=<id>,<id>` for drugs in the verified local catalog |
+| Patient.info | Its official embedded app, `https://rxinteractions.patient.info/?medicines=<name>,<name>` |
+| WebMD | General checker with explicit manual-entry fallback |
+| RxList | General checker with explicit manual-entry fallback |
+| Medscape | General checker with explicit manual-entry fallback |
+
+`prefilled: true` and `scope: pair` indicate an actual pair URL. Fallbacks use
+`prefilled: false`, `scope: general`, a machine-readable `manualEntryReason`,
+the intended `drugNames`, and a Czech `message`. Top-level links are general
+entry points; pair-specific URLs live under each interaction.
+
+The bundled [Drugs.com ID catalog](data/drugs-com-ids.json) currently covers the
+four example generics (warfarin, ibuprofen, aspirin, fluconazole), including the
+listed Czech/English aliases. Add entries with a verified provider ID, source
+URL, and verification date, then rebuild to support more drugs. Unknown names
+never receive guessed IDs. Brand/product IDs must be verified separately.
+
+Patient.info's app splits names on commas, newlines, and the word `and`. Names
+containing these delimiters receive a manual fallback to preserve pair identity.
+Query values are URL-encoded, including Czech diacritics and reserved characters.
+
+Provider formats were checked on 2026-10-16 against the public checker UIs and
+their shipped scripts. Patient.info's **Share results** feature uses its embedded
+app's `medicines` parameter. WebMD stores selections in local storage, Medscape
+restores selections from a cookie, and RxList maintains its selection in page
+state; no URL-based prefill was verified for those three. Their links therefore
+remain manual-entry fallbacks. Supporting sources:
+[Patient.info checker](https://patient.info/treatment-medication/interaction-checker),
+[WebMD checker implementation](https://img.lb.wbmdstatic.com/webmd_v1_static_vue/091e9c5e8189e707/client/js/app-core.a0c9b5be.js),
+[RxList checker implementation](https://images.rxlist.com/javascript/rxlist/drugchecker.js),
+[Medscape checker implementation](https://img.medscapestatic.com/medscape-core/reference/js/drug/mdic.js?v=20260806).
+Drugs.com catalog entries link to the source reports confirming their IDs.
+
+Refresh just the external links in the saved Czech response, preserving the
+clinical findings and original `checkedAt`, with:
+
+```sh
+cargo run --example refresh_example_links
+```
 
 ## Codex restrictions
 
@@ -113,3 +162,28 @@ cargo test --test api live_codex_smoke -- --ignored --nocapture
 
 Print the internal Structured Outputs schema with
 `cargo run --example model_schema`.
+
+## Model benchmark
+
+The [2026-10-16 benchmark report](benchmarks/2026-10-16-model-comparison/REPORT.md)
+compares Luna, Terra, and Sol in Standard and Fast modes on the four-drug sample.
+It includes actual response files, latency ranges, OpenAPI checks, and qualitative
+review against a [source-backed checklist](benchmarks/REFERENCE.md).
+The [Astra follow-up](benchmarks/2026-10-16-astra-comparison/REPORT.md) adds
+`gpt-6-astra` in both modes and compares it with the earlier results.
+
+To reproduce with a new output directory:
+
+```sh
+cargo build --release
+python3 scripts/benchmark.py --output benchmarks/<new-run-name>
+python3 scripts/review_benchmark.py benchmarks/<new-run-name>
+cargo run --example validate_benchmark -- benchmarks/<new-run-name>
+```
+
+To benchmark only Astra, add `--models gpt-6-astra` to the benchmark command.
+
+The runner uses three repetitions per model/mode by default and measures real
+HTTP calls sequentially. These commands use the configured Codex login and make
+real model calls. Fast is requested through the Codex `service_tier` setting;
+the CLI does not confirm the actual served tier in its event output.

@@ -19,6 +19,10 @@ info:
     JSON property names and enum values remain as defined. Drug, ingredient,
     and provider names and URLs retain their identity. Input names are echoed
     exactly as submitted. Accept-Language does not change the output language.
+    External checker links are generated deterministically after inference.
+    The model does not search, retrieve provider IDs, or generate URLs.
+    A link with prefilled=true contains the selected pair. General fallback
+    links include the intended drugNames and a Czech manual-entry explanation.
 servers:
   - url: /
     description: Relative to the deployment host; no hosted service is specified yet.
@@ -135,8 +139,22 @@ paths:
                               references: []
                         externalLinks:
                           - provider: Drugs.com
-                            url: https://www.drugs.com/drug_interactions.html
+                            url: https://www.drugs.com/interactions-check.php?drug_list=2311-0%2C1310-0
+                            scope: pair
+                            prefilled: true
+                            drugNames: [warfarin, ibuprofen]
+                          - provider: Patient.info
+                            url: https://rxinteractions.patient.info/?medicines=warfarin%2Cibuprofen
+                            scope: pair
+                            prefilled: true
+                            drugNames: [warfarin, ibuprofen]
+                          - provider: WebMD
+                            url: https://www.webmd.com/interaction-checker/default.htm
                             scope: general
+                            prefilled: false
+                            drugNames: [warfarin, ibuprofen]
+                            manualEntryReason: url_prefill_unavailable
+                            message: Pro tento ověřovač nebyl ověřen podporovaný formát předvyplnění pomocí URL. Uvedenou dvojici léčiv zadejte ručně.
                     externalLinks:
                       - provider: Medscape
                         url: https://reference.medscape.com/drug-interactionchecker
@@ -507,11 +525,38 @@ components:
     ExternalLink:
       type: object
       required: [provider, url, scope]
+      allOf:
+        - if:
+            required: [prefilled]
+            properties:
+              prefilled:
+                const: true
+          then:
+            additionalProperties: true
+            required: [drugNames]
+            properties:
+              scope:
+                enum: [pair, regimen]
+              drugNames:
+                minItems: 2
+        - if:
+            required: [prefilled]
+            properties:
+              prefilled:
+                const: false
+          then:
+            additionalProperties: true
+            required: [manualEntryReason, message]
+            properties:
+              scope:
+                const: general
+              manualEntryReason: {}
+              message: {}
       properties:
         provider:
           type: string
           minLength: 1
-          examples: [Drugs.com, Medscape]
+          examples: [Drugs.com, WebMD, Patient.info, RxList, Medscape]
         url:
           type: string
           format: uri
@@ -525,6 +570,36 @@ components:
             results prefilled for all resolved drugs; general opens a checker
             requiring manual drug entry. A link does not imply integration,
             endorsement, or that the provider supplied the returned findings.
+        prefilled:
+          type: boolean
+          description: |
+            True only for a verified provider URL format containing the named
+            drugs. False for manual-entry fallback links. If absent, clients
+            must not assume that the URL preselects any drug.
+        drugNames:
+          type: array
+          maxItems: 50
+          description: |
+            Canonical names of the intended drugs. For a pair link, these match
+            the enclosing pair's resolved drug names. On a general fallback,
+            these names are provided for manual entry and are not prefilled.
+            Top-level general links use an empty array.
+          items:
+            type: string
+            minLength: 1
+        manualEntryReason:
+          type: string
+          enum: [url_prefill_unavailable, drug_id_unavailable, unsupported_drug_name, pair_required]
+          description: |
+            url_prefill_unavailable means no supported URL format was verified;
+            drug_id_unavailable means a required provider identifier is absent
+            from the verified local mapping; unsupported_drug_name means the
+            provider would misparse a name; pair_required identifies a general
+            top-level link. Present on manual-entry fallback links.
+        message:
+          type: string
+          minLength: 1
+          description: Czech explanation of why manual drug entry is required.
     Problem:
       type: object
       description: RFC 9457 problem details. HTTP status and status must agree.

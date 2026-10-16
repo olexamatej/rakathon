@@ -1,0 +1,362 @@
+[
+  {
+    "model": "gpt-5.6-terra",
+    "mode": "fast",
+    "repeat": 1,
+    "ordinal": 1,
+    "elapsedSeconds": 41.539639417002036,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "14089",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 19:59:48 GMT"
+    },
+    "responseFile": "gpt-5.6-terra.fast.1.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-luna",
+    "mode": "fast",
+    "repeat": 1,
+    "ordinal": 2,
+    "elapsedSeconds": 7.373845333000645,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "10469",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 19:59:56 GMT"
+    },
+    "responseFile": "gpt-6-luna.fast.1.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-5.6-terra",
+    "mode": "standard",
+    "repeat": 1,
+    "ordinal": 3,
+    "elapsedSeconds": 43.97294754199538,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13777",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:00:40 GMT"
+    },
+    "responseFile": "gpt-5.6-terra.standard.1.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "mode": "standard",
+    "repeat": 1,
+    "ordinal": 4,
+    "elapsedSeconds": 33.71984433400212,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13839",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:01:14 GMT"
+    },
+    "responseFile": "gpt-6.1-sol.standard.1.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-luna",
+    "mode": "standard",
+    "repeat": 1,
+    "ordinal": 5,
+    "elapsedSeconds": 7.431074624997564,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "8177",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:01:21 GMT"
+    },
+    "responseFile": "gpt-6-luna.standard.1.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "mode": "fast",
+    "repeat": 1,
+    "ordinal": 6,
+    "elapsedSeconds": 19.41126545899897,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13647",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:01:41 GMT"
+    },
+    "responseFile": "gpt-6.1-sol.fast.1.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-5.6-terra",
+    "mode": "fast",
+    "repeat": 2,
+    "ordinal": 7,
+    "elapsedSeconds": 36.08923679199506,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "12857",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:02:17 GMT"
+    },
+    "responseFile": "gpt-5.6-terra.fast.2.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-luna",
+    "mode": "standard",
+    "repeat": 2,
+    "ordinal": 8,
+    "elapsedSeconds": 6.804176541001652,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "8138",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:02:24 GMT"
+    },
+    "responseFile": "gpt-6-luna.standard.2.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-5.6-terra",
+    "mode": "standard",
+    "repeat": 2,
+    "ordinal": 9,
+    "elapsedSeconds": 48.16680966700369,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "14584",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:03:12 GMT"
+    },
+    "responseFile": "gpt-5.6-terra.standard.2.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "mode": "standard",
+    "repeat": 2,
+    "ordinal": 10,
+    "elapsedSeconds": 37.11787029200059,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "14049",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:03:49 GMT"
+    },
+    "responseFile": "gpt-6.1-sol.standard.2.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "mode": "fast",
+    "repeat": 2,
+    "ordinal": 11,
+    "elapsedSeconds": 20.698335540997505,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13851",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:04:10 GMT"
+    },
+    "responseFile": "gpt-6.1-sol.fast.2.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-luna",
+    "mode": "fast",
+    "repeat": 2,
+    "ordinal": 12,
+    "elapsedSeconds": 7.921553958003642,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "10311",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:04:18 GMT"
+    },
+    "responseFile": "gpt-6-luna.fast.2.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-5.6-terra",
+    "mode": "fast",
+    "repeat": 3,
+    "ordinal": 13,
+    "elapsedSeconds": 15.329799624996667,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13525",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:04:33 GMT"
+    },
+    "responseFile": "gpt-5.6-terra.fast.3.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-luna",
+    "mode": "fast",
+    "repeat": 3,
+    "ordinal": 14,
+    "elapsedSeconds": 9.852494042002945,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "10984",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:04:43 GMT"
+    },
+    "responseFile": "gpt-6-luna.fast.3.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-5.6-terra",
+    "mode": "standard",
+    "repeat": 3,
+    "ordinal": 15,
+    "elapsedSeconds": 39.249827375002496,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13766",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:05:22 GMT"
+    },
+    "responseFile": "gpt-5.6-terra.standard.3.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6-luna",
+    "mode": "standard",
+    "repeat": 3,
+    "ordinal": 16,
+    "elapsedSeconds": 8.523815250002372,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "10277",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:05:31 GMT"
+    },
+    "responseFile": "gpt-6-luna.standard.3.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "mode": "standard",
+    "repeat": 3,
+    "ordinal": 17,
+    "elapsedSeconds": 33.251345417003904,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13881",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:06:04 GMT"
+    },
+    "responseFile": "gpt-6.1-sol.standard.3.response.json",
+    "error": null
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "mode": "fast",
+    "repeat": 3,
+    "ordinal": 18,
+    "elapsedSeconds": 21.232432124998013,
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "model-knowledge",
+      "x-sources-verified": "false",
+      "content-length": "13647",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 20:06:26 GMT"
+    },
+    "responseFile": "gpt-6.1-sol.fast.3.response.json",
+    "error": null
+  }
+]

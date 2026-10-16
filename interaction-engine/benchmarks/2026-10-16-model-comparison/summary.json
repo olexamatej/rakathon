@@ -1,0 +1,152 @@
+[
+  {
+    "model": "gpt-5.6-terra",
+    "mode": "fast",
+    "runs": 3,
+    "successful": 3,
+    "medianSeconds": 36.08923679199506,
+    "minSeconds": 15.329799624996667,
+    "maxSeconds": 41.539639417002036,
+    "meanSeconds": 30.98622527799792,
+    "expectedPairsPerSuccessfulRun": [
+      5,
+      5,
+      5
+    ],
+    "heuristicEffectCounts": [
+      6,
+      6,
+      6
+    ],
+    "extraPairsPerSuccessfulRun": [
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "model": "gpt-5.6-terra",
+    "mode": "standard",
+    "runs": 3,
+    "successful": 3,
+    "medianSeconds": 43.97294754199538,
+    "minSeconds": 39.249827375002496,
+    "maxSeconds": 48.16680966700369,
+    "meanSeconds": 43.79652819466719,
+    "expectedPairsPerSuccessfulRun": [
+      5,
+      5,
+      5
+    ],
+    "heuristicEffectCounts": [
+      6,
+      6,
+      6
+    ],
+    "extraPairsPerSuccessfulRun": [
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "model": "gpt-6-luna",
+    "mode": "fast",
+    "runs": 3,
+    "successful": 3,
+    "medianSeconds": 7.921553958003642,
+    "minSeconds": 7.373845333000645,
+    "maxSeconds": 9.852494042002945,
+    "meanSeconds": 8.38263111100241,
+    "expectedPairsPerSuccessfulRun": [
+      4,
+      4,
+      4
+    ],
+    "heuristicEffectCounts": [
+      5,
+      5,
+      5
+    ],
+    "extraPairsPerSuccessfulRun": [
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "model": "gpt-6-luna",
+    "mode": "standard",
+    "runs": 3,
+    "successful": 3,
+    "medianSeconds": 7.431074624997564,
+    "minSeconds": 6.804176541001652,
+    "maxSeconds": 8.523815250002372,
+    "meanSeconds": 7.5863554720005295,
+    "expectedPairsPerSuccessfulRun": [
+      3,
+      3,
+      4
+    ],
+    "heuristicEffectCounts": [
+      3,
+      3,
+      4
+    ],
+    "extraPairsPerSuccessfulRun": [
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "mode": "fast",
+    "runs": 3,
+    "successful": 3,
+    "medianSeconds": 20.698335540997505,
+    "minSeconds": 19.41126545899897,
+    "maxSeconds": 21.232432124998013,
+    "meanSeconds": 20.447344374998163,
+    "expectedPairsPerSuccessfulRun": [
+      5,
+      5,
+      5
+    ],
+    "heuristicEffectCounts": [
+      6,
+      6,
+      6
+    ],
+    "extraPairsPerSuccessfulRun": [
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "mode": "standard",
+    "runs": 3,
+    "successful": 3,
+    "medianSeconds": 33.71984433400212,
+    "minSeconds": 33.251345417003904,
+    "maxSeconds": 37.11787029200059,
+    "meanSeconds": 34.69635334766887,
+    "expectedPairsPerSuccessfulRun": [
+      5,
+      5,
+      5
+    ],
+    "heuristicEffectCounts": [
+      6,
+      6,
+      6
+    ],
+    "extraPairsPerSuccessfulRun": [
+      0,
+      0,
+      0
+    ]
+  }
+]

@@ -13,13 +13,6 @@ fn nonblank(value: &str) -> bool {
     !value.trim().is_empty()
 }
 
-pub fn external_links() -> Value {
-    json!([
-        {"provider": "Drugs.com", "url": "https://www.drugs.com/drug_interactions.html", "scope": "general"},
-        {"provider": "Medscape", "url": "https://reference.medscape.com/drug-interactionchecker", "scope": "general"}
-    ])
-}
-
 pub fn build_report(input: &[String], result: ModelResult) -> anyhow::Result<Value> {
     ensure!(
         result.evaluation_complete,
@@ -190,7 +183,7 @@ pub fn build_report(input: &[String], result: ModelResult) -> anyhow::Result<Val
             "drugIds": [drugs[a]["id"], drugs[b]["id"]],
             "severity": pair_severity[&(a,b)],
             "findings": findings,
-            "externalLinks": external_links()
+            "externalLinks": []
         }));
     }
     let count = drugs.len();
@@ -198,7 +191,7 @@ pub fn build_report(input: &[String], result: ModelResult) -> anyhow::Result<Val
     if interactions.len() > evaluated_pairs {
         bail!("interaction count exceeds evaluated pairs");
     }
-    Ok(json!({
+    let mut report = json!({
         "status": if partial { "partial" } else { "complete" },
         "checkedAt": Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
         "resolutions": resolutions,
@@ -209,6 +202,8 @@ pub fn build_report(input: &[String], result: ModelResult) -> anyhow::Result<Val
             "interactingPairs": interactions.len()
         },
         "interactions": interactions,
-        "externalLinks": external_links()
-    }))
+        "externalLinks": []
+    });
+    crate::links::enrich_report(&mut report)?;
+    Ok(report)
 }

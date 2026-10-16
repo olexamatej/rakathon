@@ -1,0 +1,32 @@
+[
+  {
+    "errors": [],
+    "responseFile": "gpt-6-astra.fast.1.response.json",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "responseFile": "gpt-6-astra.standard.1.response.json",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "responseFile": "gpt-6-astra.fast.2.response.json",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "responseFile": "gpt-6-astra.standard.2.response.json",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "responseFile": "gpt-6-astra.standard.3.response.json",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "responseFile": "gpt-6-astra.fast.3.response.json",
+    "valid": true
+  }
+]

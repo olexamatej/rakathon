@@ -1,3 +1,4 @@
 /target/
 .env
 knowledge-base/
+__pycache__/

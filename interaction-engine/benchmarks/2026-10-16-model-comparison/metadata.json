@@ -1,0 +1,119 @@
+{
+  "startedAt": "2026-10-16T19:59:06.290558+00:00",
+  "codexVersion": "codex-cli 0.163.0",
+  "request": {
+    "drugs": [
+      "warfarin",
+      "ibuprofen",
+      "aspirin",
+      "fluconazole"
+    ]
+  },
+  "reasoningEffort": "low",
+  "repeats": 3,
+  "scheduleSeed": 42,
+  "sequential": true,
+  "timeoutSeconds": 90,
+  "requestedServiceTiers": {
+    "standard": "default",
+    "fast": "priority"
+  },
+  "servedServiceTierVerified": false,
+  "method": "Real localhost HTTP requests; timing excludes Rust process startup and includes ephemeral Codex startup, inference, validation, and link generation. No separate warm-up. Order randomized within each repetition block. Shared CLI/model prompt caches may affect timings.",
+  "schedule": [
+    {
+      "model": "gpt-5.6-terra",
+      "mode": "fast",
+      "repeat": 1
+    },
+    {
+      "model": "gpt-6-luna",
+      "mode": "fast",
+      "repeat": 1
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "mode": "standard",
+      "repeat": 1
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "mode": "standard",
+      "repeat": 1
+    },
+    {
+      "model": "gpt-6-luna",
+      "mode": "standard",
+      "repeat": 1
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "mode": "fast",
+      "repeat": 1
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "mode": "fast",
+      "repeat": 2
+    },
+    {
+      "model": "gpt-6-luna",
+      "mode": "standard",
+      "repeat": 2
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "mode": "standard",
+      "repeat": 2
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "mode": "standard",
+      "repeat": 2
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "mode": "fast",
+      "repeat": 2
+    },
+    {
+      "model": "gpt-6-luna",
+      "mode": "fast",
+      "repeat": 2
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "mode": "fast",
+      "repeat": 3
+    },
+    {
+      "model": "gpt-6-luna",
+      "mode": "fast",
+      "repeat": 3
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "mode": "standard",
+      "repeat": 3
+    },
+    {
+      "model": "gpt-6-luna",
+      "mode": "standard",
+      "repeat": 3
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "mode": "standard",
+      "repeat": 3
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "mode": "fast",
+      "repeat": 3
+    }
+  ],
+  "finishedAt": "2026-10-16T20:06:26.087085+00:00",
+  "serverBinarySha256": "520bb30a348eea17ef90fccaa4f951ada2f03f5bb1f86abc3f62d0cd3fe06658",
+  "openapiSha256": "f8769c3bdab0ebbf0b212500d9a23ad2b33ee6e5daee8b93eddec101b4114d32",
+  "promptSha256": "870a2fa1854c3d1a1fac0ab846260208f9716632abd3b3e132c1d81d4d85922c"
+}
