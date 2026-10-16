@@ -441,7 +441,6 @@ $('#main').addEventListener('click', event => {
       if (!row) break;
       detailsTarget = { list, row };
       $('#details-title').textContent = `${row.a} + ${row.b}`;
-      $('#details-severity').textContent = (SEVERITY[row.severity] || SEVERITY.unknown).label;
       detailsDialog.showModal();
       runResearch(list, row.names);
       renderDetails();
