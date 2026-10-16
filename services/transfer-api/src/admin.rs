@@ -143,8 +143,8 @@ mod tests {
             .await.unwrap_or_else(|_| panic!("delete rejected")), StatusCode::NO_CONTENT);
         assert!(matches!(delete_blob(State(state.clone()), ConnectInfo(address), Path(digest), headers()).await, Err(ApiError::NotFound)));
         assert!(matches!(delete_blob(State(state.clone()), ConnectInfo(address), Path("invalid".to_owned()), headers()).await, Err(ApiError::BadRequest)));
-        assert!(state.store.get_blob(&[1; 32]).await.unwrap().is_none());
-        assert_eq!(state.store.get_blob(&[2; 32]).await.unwrap().unwrap(), b"null");
+        assert_eq!(state.store.get_blob(&[1; 32]).await.unwrap().unwrap(), b" {\"synthetic\":true} ");
+        assert!(state.store.get_blob(&[2; 32]).await.unwrap().is_none());
         assert_eq!(state.store.list_blobs(0).await.unwrap().len(), 1);
     }
 
