@@ -1,0 +1,63 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "transfer-api.fullname" . }}
+  labels:
+    {{- include "transfer-api.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "transfer-api.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if or .Values.ingress.enabled .Values.networkPolicy.ingressNamespaceLabels }}
+    - from:
+        - namespaceSelector:
+            {{- if .Values.networkPolicy.ingressNamespaceLabels }}
+            {{- toYaml .Values.networkPolicy.ingressNamespaceLabels | nindent 12 }}
+            {{- else }}
+            matchLabels:
+              # Application Gateway for Containers injects its managed
+              # traffic controller with this label in every cluster.
+              azure.applicationgatewayforcontainers: "true"
+            {{- end }}
+      ports:
+        - port: 3000
+          protocol: TCP
+    {{- else }}
+    []
+    {{- end }}
+  egress:
+    {{- if .Values.networkPolicy.egress.dns.enabled }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.egress.dns.namespace | default "kube-system" | quote }}
+          podSelector:
+            matchLabels:
+              {{- with .Values.networkPolicy.egress.dns.labels }}
+              {{- toYaml . | nindent 14 }}
+              {{- end }}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.postgres.enabled }}
+    - to:
+        {{- if .Values.networkPolicy.egress.postgres.ipBlock }}
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.egress.postgres.ipBlock }}
+        {{- else }}
+        []
+        {{- end }}
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- end }}
+{{- end -}}

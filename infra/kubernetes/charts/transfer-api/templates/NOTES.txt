@@ -1,0 +1,20 @@
+{{- if .Values.secretProvider.enabled }}
+The SecretProviderClass materializes TRANSFER_HMAC_SECRET from Azure Key Vault
+into the Kubernetes Secret "{{ .Values.secretRef.name }}".
+{{- else }}
+The Deployment reads TRANSFER_HMAC_SECRET from the existing Kubernetes Secret
+"{{ .Values.secretRef.name }}". Create it outside this chart (CI never stores
+secret literals); see infra/kubernetes/README.md.
+{{- end }}
+
+Service is exposed at {{ include "transfer-api.fullname" . }}:{{ .Values.service.port }}.
+
+Health endpoints:
+  - {{ .Values.probes.liveness.path }}
+  - {{ .Values.probes.readiness.path }}
+
+{{- if .Values.ingress.enabled }}
+Public HTTPS entry: https://{{ .Values.ingress.fqdn }} via Gateway {{ .Values.ingress.gatewayName }}.
+{{- else }}
+No public ingress is deployed; connect over SSH tunnel or port-forward for dev.
+{{- end }}

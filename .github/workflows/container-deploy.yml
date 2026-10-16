@@ -1,0 +1,225 @@
+name: PillGaze container CI/CD
+
+# Builds the transfer API container image, scans it, pushes it to the
+# team ACR with an immutable commit tag, and updates the Flux GitOps
+# reference so the dev AKS cluster reconciles the change.
+#
+# Backend infra prerequisite — infra/kubernetes + infra/azure scripts —
+# must be provisioned first (see infra/azure/README.md). The image-push
+# job is skipped until BOTH repo variables are set:
+#   vars.AKS_DEPLOY_ENABLED == 'true'
+#   vars.ACR_FEDERATED_CLIENT == <client id of id-github-acr-push UAMI>
+#   vars.ACR_LOGIN_SERVER      == <acr login server from Bicep output>
+#   vars.AZURE_TENANT_ID       == tenant id
+#   vars.AZURE_SUBSCRIPTION_ID == subscription id
+#
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/transfer-api/**'
+      - 'infra/kubernetes/**'
+      - '.github/workflows/container-deploy.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/transfer-api/**'
+      - '.github/workflows/container-deploy.yml'
+      - 'infra/kubernetes/charts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ACR_FEDERATED_CLIENT: ${{ vars.ACR_FEDERATED_CLIENT }}
+  IMAGE_REPOSITORY: transfer-api
+  IMAGE_TAG: ${{ github.sha }}
+  HELM_CHART_DIR: infra/kubernetes/charts/transfer-api
+
+jobs:
+  chart-lint:
+    name: Validate Helm chart and rendered manifest
+    # Never execute fork PRs on the persistent self-hosted runner.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, ARM64, hetzner-sandbox]
+    timeout-minutes: 20
+    env:
+      # Pinned tooling version; SHA-256 verified on every download.
+      HELM_VERSION: v3.16.4
+      HELM_SHA256: d3f8f15b3d9ec8c8678fbf3280c3e5902efabe5912e2f9fcf29107efbc8ead69
+    steps:
+      - name: Check out chart sources
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /infra/kubernetes/
+            /services/transfer-api/
+      - name: Install pinned helm client
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/helm.tgz" \
+            "https://get.helm.sh/helm-${HELM_VERSION}-linux-arm64.tar.gz"
+          printf '%s  %s\n' "${HELM_SHA256}" "$RUNNER_TEMP/helm.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/helm.tgz" -C "$RUNNER_TEMP" linux-arm64/helm
+          "$RUNNER_TEMP/helm" version --short
+      - name: Helm lint and template the chart
+        run: |
+          "$RUNNER_TEMP/helm" lint "$HELM_CHART_DIR"
+          "$RUNNER_TEMP/helm" template \
+            --set secretProvider.enabled=false \
+            --set secretRef.name=transfer-api-ci-hmac \
+            --set image.repository=ci-test/transfer-api \
+            --set ingress.enabled=false \
+            "$HELM_CHART_DIR" > "$RUNNER_TEMP/rendered.yaml"
+      - name: Assert container hardening and no secret literals
+        run: |
+          R="$RUNNER_TEMP/rendered.yaml"
+          grep -q 'kind: Deployment' "$R"
+          grep -q 'runAsNonRoot: true' "$R"
+          grep -q 'runAsUser: 1000' "$R"
+          grep -q 'readOnlyRootFilesystem: true' "$R"
+          grep -A1 'capabilities:' "$R" | grep -q 'ALL'
+          grep -q 'allowPrivilegeEscalation: false' "$R"
+          # The HMAC secret must come from a secretKeyRef, never a literal.
+          grep -q 'secretKeyRef:' "$R"
+          ! grep -qE 'TRANSFER_HMAC_SECRET: ' "$R"
+          # No raw tokens anywhere in the render.
+          ! grep -qE '(ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,})' "$R"
+
+  build-and-push:
+    name: Build, scan and publish image
+    needs: chart-lint
+    # Runs on a GitHub-hosted x64 runner: the self-hosted sandbox cannot
+    # build container images (no Docker socket). Also skipped entirely
+    # until the infra special variables are provisioned.
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      !startsWith(github.event.head_commit.message, 'chore(api): image update') &&
+      vars.AKS_DEPLOY_ENABLED == 'true' &&
+      vars.ACR_FEDERATED_CLIENT != '' &&
+      vars.ACR_LOGIN_SERVER != '' &&
+      vars.AZURE_TENANT_ID != '' &&
+      vars.AZURE_SUBSCRIPTION_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Check out Docker build context
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Azure login with the push-only federated identity
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ env.ACR_FEDERATED_CLIENT }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      - name: Log in to the team container registry
+        run: |
+          az acr login --name "$ACR_LOGIN_SERVER"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          install: false
+      - name: Build and push the commit-tagged image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: services/transfer-api
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+      - name: Guard the pushed image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: "${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  deploy-gitops-tag:
+    name: Update dev image tag in Git
+    needs: build-and-push
+    if: >-
+      github.event_name == 'push' &&
+      !startsWith(github.event.head_commit.message, 'chore(api): image update')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out GitOps source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /infra/kubernetes/clusters/pillgaze-dev/
+      - name: Update the HelmRelease image tag
+        run: |
+          FILE=infra/kubernetes/clusters/pillgaze-dev/transfer-api-helmrelease.yaml
+          python3 - "$FILE" "${IMAGE_TAG}" <<'PY'
+          import pathlib, re, sys
+          path, tag = pathlib.Path(sys.argv[1]), sys.argv[2]
+          text = path.read_text()
+          pattern = re.compile(r"    # \{\"\$imagepolicy\"[^}]+\}\n    image:\n      tag: [^\n]+\n")
+          replacement = (
+              f"    # {{\"$imagepolicy\": \"flux-system:transfer-api:tag\"}}\n"
+              "    image:\n"
+              f"      tag: {tag}\n"
+          )
+          if not pattern.search(text):
+              raise SystemExit("HelmRelease tag block not found; check the file layout.")
+          path.write_text(pattern.sub(replacement, text))
+          PY
+          grep -q "tag: ${IMAGE_TAG}" "$FILE"
+      - name: Commit and push the tag update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add infra/kubernetes/clusters/pillgaze-dev/transfer-api-helmrelease.yaml
+          git commit -m "chore(api): image update for transfer-api ${IMAGE_TAG}"
+          git push origin HEAD:${{ github.ref_name }}
+
+  record-status:
+    name: Record deployment status
+    needs: [build-and-push, deploy-gitops-tag]
+    if: always() && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Summarize the workflow result
+        env:
+          BUILD: ${{ needs.build-and-push.result }}
+          TAG: ${{ needs.deploy-gitops-tag.result }}
+        run: |
+          {
+            echo '### PillGaze container CI/CD'
+            echo ''
+            echo '| Stage | Result |'
+            echo '| --- | --- |'
+            echo "| build-and-push | ${BUILD} |"
+            echo "| deploy-gitops-tag | ${TAG} |"
+            echo ''
+            echo 'Flux reconciles this tag into the dev AKS cluster automatically;'
+            echo 'see infra/azure/README.md for the manual review steps.'
+          } >> "$GITHUB_STEP_SUMMARY"
