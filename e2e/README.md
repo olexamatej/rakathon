@@ -1,10 +1,15 @@
-# Patient → storage admin browser test
+# Patient and doctor browser tests
 
-The Chromium scenario logs into storage admin, counts every page, submits a unique
+`storage.spec.mjs` logs into storage admin, counts every page, submits a unique
 synthetic patient draft by clicking **Odeslat seznam**, verifies the displayed
-server-issued PIN and exact JSON read back through that PIN, loads the same list by PIN in a separate doctor browser context, then reloads admin
-and requires **exactly one additional record**. The real Rust storage API handles
-all requests; nothing mocks uploads or PINs. OCR is outside this scenario.
+server-issued PIN and exact JSON read back through that PIN, loads the same list
+by PIN in a separate doctor browser context, then reloads admin and requires
+**exactly one additional record**.
+
+`patient-doctor.spec.mjs` covers the focused handoff: a patient submits a unique
+synthetic draft, sees the server-issued PIN, and a clean doctor browser context
+uses that same PIN to display the submitted list. Both scenarios use the real
+Rust storage API; uploads and PINs are not mocked. OCR is outside these scenarios.
 
 `.github/workflows/storage-e2e.yml` runs automatically on pushes and PRs to
 main/pillgaze, and can also be started manually without inputs or secrets.
