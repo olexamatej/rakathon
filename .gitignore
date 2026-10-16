@@ -1,3 +1,5 @@
+knowledge-base/
+
 # Python bytecode and virtual environments
 __pycache__/
 *.py[cod]
@@ -47,8 +49,21 @@ htmlcov/
 *.key
 *.pem
 
-# Frontend dependencies, if added later; lockfiles remain versioned
+# Frontend dependencies and generated outputs; lockfiles remain versioned
 node_modules/
+.expo/
+dist/
+web-build/
+/android/
+/ios/
+/.next/
+/.nuxt/
+/.output/
+/.svelte-kit/
+/.astro/
+/out/
+.turbo/
+*.tsbuildinfo
 
 # Editor and OS files
 .idea/
@@ -64,4 +79,3 @@ node_modules/
 ._*
 Thumbs.db
 Desktop.ini
-

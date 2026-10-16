@@ -1,68 +1,85 @@
-# Vývoj
+# Working on Pillgaze
 
-## Orientace v projektu
+Keep changes small and scoped. When another agent is developing the application,
+use a separate Git worktree and avoid changing its checkout or uncommitted files.
+Fetch `origin/master` before pushing and integrate concurrent changes without
+force-pushing the shared branch.
 
-| Cesta | Obsah |
-| --- | --- |
-| `app.py` | Lokální HTTP server, hodnocení v SQLite a CSV export |
-| `data.py` | Načítání a validace vstupů, odvození pozorovaných charakteristik |
-| `analysis.py` | Model, intervaly, řazení kandidátů a skupiny |
-| `web/` | Statické HTML, CSS a JavaScript bez frontendového buildu |
-| `tests/` | Syntetické jednotkové a HTTP integrační testy |
-| `assets/datapackage.json` | Verzované schéma vstupních tabulek potřebné i pro testy |
-| `.github/workflows/` | CI a ruční kontrola runneru |
+## Repository conventions
 
-## Lokální prostředí
+- Follow `.editorconfig`; source files use UTF-8 and LF line endings.
+- Commit dependency manifests and lockfiles together when the application adds them.
+- Keep `.env` files, credentials, virtual environments, dependencies, caches,
+  generated builds, local databases, and exports out of Git. Share configuration
+  through `.env.example` with placeholder values.
+- `knowledge-base/` stays local as described in `AGENTS.md`.
+- Treat `assets/` as reference/input material. Preserve its original bytes and
+  avoid bulk formatting or line-ending conversion. Use synthetic fixtures for
+  tests and review new inputs before committing them.
+- `.gitignore` does not remove files already tracked in Git or its history.
 
-Použijte Python 3.10 nebo novější; CI ověřuje 3.10, 3.12 a 3.14. Pro kontrolu
-JavaScriptu je v CI Node.js 24. Vývojové nástroje jsou připnuté
-v `requirements-dev.txt`, který zahrnuje i aplikační závislosti.
+## Application boundaries and small changes
 
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements-dev.txt
+- Keep Expo's entry points (`App.tsx`, `index.ts`) at the root. Reuse `src/ui.tsx`
+  for shared UI and keep medication rules independent of UI in `src/medication.ts`.
+  Add focused modules and tests as features grow, rather than reorganizing files
+  while someone else is editing them.
+- Add regression tests for changes to validation, export, and handoff behavior.
+  Keep fixtures synthetic; do not read patient documents or photographs in tests.
+- Use npm and `npm ci`; do not introduce another package manager or regenerate
+  the lockfile for unrelated cleanup. Review runtime upgrades separately.
+- Follow surrounding style. No repository-wide formatting, mass renames, or
+  dependency upgrades during concurrent application work.
+- Explain scope and verification in commits/PRs. Keep infrastructure and CI
+  changes separate from application features. The branch's
+  `.github/pull_request_template.md` is a short checklist; copy it manually if
+  GitHub does not offer it (automatic templates come from the default branch).
+
+Before pushing application changes, use Node.js 24 and run:
+
+```sh
+npm ci
+npm run typecheck
+npm test
+npm run export:web -- --max-workers 1
 ```
 
-Rychlá kontrola změn:
+On this VPS, run repository installation, tests, and builds only in the sandbox,
+not as the Docker-enabled host account. Use a separate preview directory, never
+the live Actions checkout. A web export checks bundling, not native device behavior.
 
-```bash
-.venv/bin/ruff check .
-OPENBLAS_NUM_THREADS=1 .venv/bin/python -m unittest discover -s tests -v
-node --check web/app.js
-```
+## Continuous integration
 
-Příkazy pro pokrytí a bezpečnostní kontroly jsou v [README](README.md).
-Změny výpočtů, validace nebo HTTP chování doplňte odpovídajícím syntetickým
-testem. Testy vytvářejí vlastní dočasné vstupy a SQLite; skutečná pacientská CSV
-pro jejich běh nejsou potřeba. CI nic veřejně nenasazuje.
+`.github/workflows/repository-checks.yml` runs on pushes and pull requests targeting
+`master` or `pillgaze`. It checks the agent configuration's JSON syntax, repository configuration
+whitespace, accidentally tracked ignored files, and GitHub Actions workflows with
+actionlint. The ignored-file check covers filenames and patterns, not secret
+contents; review commits for credentials as well.
 
-## Styl a verzování
+`.github/workflows/application-ci.yml` runs on the same branch events. It uses
+Node.js 24, installs the committed lockfile with `npm ci`, checks TypeScript, runs
+the existing unit tests, and exports the Expo web bundle with one Metro worker.
+No application lint rules or formatter are imposed on the active development work.
 
-- EditorConfig nastavuje UTF-8 a LF, čtyři mezery pro Python a dvě pro frontend
-  a strukturovanou konfiguraci. Podporu EditorConfig zapněte ve svém editoru.
-- Ruff kontroluje správnost Pythonu a importů podle `ruff.toml`.
-- Zdrojový kód, schéma, konfigurace, testy a případné dependency lockfiles patří
-  do Gitu. Virtuální prostředí, cache, sestavené balíčky a lokální stav pokrývá
-  `.gitignore`.
-- Sdílené VS Code konfigurace `settings.json`, `extensions.json`, `tasks.json`
-  a `launch.json` lze verzovat; osobní nastavení patří do uživatelského profilu
-  editoru. Sdílené konfigurace nesmějí obsahovat přihlašovací údaje.
-- Pro ukázkovou konfiguraci používejte `.env.example` nebo `.env.*.example`
-  s prázdnými či demonstračními hodnotami.
-- Změny rozdělujte do malých commitů s konkrétním popisem, například
-  `fix: close review database connections` nebo `ci: validate workflows`.
+The full `npm audit --audit-level=high` report is deliberately **non-blocking**
+while Expo's upstream tooling findings are being reviewed. An audit failure emits
+a workflow warning and job summary, including when the audit service is unavailable.
+A green application build is not a clean security audit. Review the audit output
+on dependency changes and before deployment; do not run `npm audit fix --force`,
+which currently proposes incompatible framework downgrades. See README for the
+dated findings. Making the audit blocking needs a deliberate review of upstream
+fixes or narrowly scoped, documented exceptions, not silently ignoring advisories.
 
-## Vstupní data a lokální soubory
+Both workflows use the existing ARM64 sandbox runner, read-only repository
+permissions, SHA-pinned actions, checkout without persisted credentials, and
+cancellation of older runs on the same branch or pull request. Repository checks
+have a five-minute timeout and configuration-only checkout; application checks
+have a fifteen-minute timeout and exclude all reference `assets/` and the local
+knowledge base. The current app does not import those files. If runtime assets
+are added, explicitly include only the necessary reviewed files in CI checkout.
+Neither workflow uploads artifacts, publishes the prototype, or uses secrets.
+Fork pull requests are excluded from this persistent runner. It has no Docker
+socket or access to the VPS application networks.
 
-Pravidla pro skutečná data jsou v části **Uložení a pravidla dat** v README.
-CSV v `assets/` už jsou součástí starší historie soukromého repozitáře;
-`.gitignore` brání přidání nových souborů, ale neodstraní dříve verzované vstupy
-ani jejich historii. Jejich odstranění nebo změnu pravidel sdílení je potřeba
-řešit samostatně podle podmínek datasetu.
-
-`.gitattributes` zachovává CSV beze změn konců řádků: otisk datasetu se počítá
-z přesných bajtů. Vstupní CSV neupravujte formátovačem. Schéma
-`assets/datapackage.json` je běžný verzovaný zdrojový soubor.
-
-Hodnocení zůstávají v `.local/`, exporty v `exports/`. Do commitů nepatří tyto
-výstupy, databáze, logy, soukromé klíče ani skutečné hodnoty z `.env`.
+Deployment automation needs a defined target and credentials scoped to that target;
+neither workflow deploys the application.

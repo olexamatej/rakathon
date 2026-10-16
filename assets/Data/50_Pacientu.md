@@ -1,0 +1,761 @@
+Pacient 1
+
+AGEN, 5 mg, 1-0-0 (Amlodipin Sandoz)
+
+AERIUS, 5 mg, 0-0-1 (Desloratadin Teva)
+
+MAGNESII LACTICI 0,5 TBL. MEDICAMENTA, 0,5 g, 1-0-1
+
+Pacient 2
+
+EUTHYROX, 50 mikrogramů, 1-0-0
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 0-0-1
+
+FAMOSAN, 20 mg, 0-0-1
+
+Pacient 3
+
+BIOFENAC, 100 mg, 1-0-1
+
+MYDOCALM, 150 mg, 1-0-1 (Tolperison)
+
+CONTROLOC, 20 mg, 1-0-0 (Nolpaza)
+
+Pacient 4
+
+PRENESSA, 4 mg, 1-0-0
+
+CODEIN SLOVAKOFARMA, 15 mg, 1-1-1
+
+ASCORUTIN, 100 mg / 20 mg, 1-1-1
+
+Pacient 5
+
+PROSTAMOL UNO, 320 mg, 1-0-0
+
+TAMSULOSIN HCL SANDOZ, 0,4 mg, 1-0-0 (Omnic Tocas)
+
+VIDEMEL, 600 mg / 400 IU, 0-0-1
+
+Pacient 6
+
+DEVENAL, 500 mg, 1-0-1
+
+ESPUMISAN, 40 mg, 2-2-2
+
+REPARIL DRAGÉES, 20 mg, 2-2-2
+
+Pacient 7
+
+LOKREN, 20 mg, 1-0-0 (Betaxolol Teva)
+
+ROSUCARD, 10 mg, 0-0-1 (Sorvasta)
+
+ANOPYRIN, 100 mg, 1-0-0 (Stacyl)
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0 (Omeprazol)
+
+Pacient 8
+
+SKUDEXA, 75 mg / 25 mg, 1-0-1
+
+MYDOCALM, 150 mg, 1-1-1
+
+PANTOMYL, 40 mg, 1-0-0
+
+DIAZEPAM STADA, 5 mg, 0-0-1 (Apaurin)
+
+Pacient 9
+
+KEPPRA, 500 mg, 1-0-1
+
+TIMONIL RETARD, 300 mg, 1-0-1
+
+BECALEN, 1,5 mg, 1-0-1
+
+MAGNESII LACTICI 0,5 TBL. MEDICAMENTA, 0,5 g, 1-0-1
+
+Pacient 10
+
+ETRUZIL, 2,5 mg, 1-0-0
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 1-0-1
+
+VIDEMEL, 600 mg / 400 IU, 0-0-1
+
+PROBIOLACT, 10 mld. probiotik + vit. C, 1-0-0
+
+Pacient 11
+
+SIOFOR, 500 mg, 1-0-1 (Glucophage)
+
+PREGABALIN ACCORD, 75 mg, 1-0-1 (Lyrica)
+
+DHC CONTINUS, 60 mg, 1-0-1
+
+CONTROLOC, 20 mg, 1-0-0
+
+Pacient 12
+
+LAMICTAL, 100 mg, 1-0-1
+
+CITALEC, 20 mg, 1-0-0
+
+ZOPITIN, 7,5 mg, 0-0-1
+
+PYRIDOXIN GENERICA, 20 mg, 1-0-0
+
+Pacient 13
+
+BISOPROLOL PMCS, 5 mg, 1-0-0 (Concor)
+
+ADENURIC, 80 mg, 1-0-0 (Febuxostat)
+
+HYDROCHLOROTHIAZID LÉČIVA, 25 mg, 1-0-0
+
+ZOLPIDEM VIATRIS, 10 mg, 0-0-1 (Hypnogen)
+
+KALIUM CHLORATUM BIOMEDICA, 500 mg, 1-0-1
+
+Pacient 14
+
+PENTASA, 1 g, 0-0-1
+
+SORBIFER DURULES, 320 mg / 60 mg, 1-0-1
+
+PREDNISONE OLIKLA, 20 mg, 1-0-0
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+PROBIOLACT, 10 mld. probiotik + vit. C, 1-0-1
+
+Pacient 15
+
+MONTELUKAST TEVA, 10 mg, 0-0-1
+
+AERIUS, 5 mg, 1-0-0
+
+EUPHYLLIN CR N 200, 200 mg, 1-0-1
+
+TENAXUM, 1 mg, 1-0-0
+
+ERDOMED, 300 mg, 1-0-1
+
+Pacient 16
+
+PALGOTAL, 75 mg / 650 mg, 1-0-1 (Zaldiar)
+
+RECOXA, 15 mg, 1-0-0
+
+PANTOMYL, 40 mg, 1-0-0 (Controloc)
+
+BACLOFEN POLPHARMA, 25 mg, 0-0-1
+
+MAGNESII LACTICI 0,5 TBL. MEDICAMENTA, 0,5 g, 1-0-1
+
+Pacient 17
+
+ELIQUIS, 5 mg, 1-0-1
+
+EGILOK, 25 mg, 1-0-1
+
+DIGOXIN LÉČIVA, 0,125 mg, 1-0-0
+
+RAMIPRIL H ACTAVIS, 2,5 mg / 12,5 mg, 1-0-0
+
+ATENOLOL AL 50, 50 mg, 0-1-0
+
+Pacient 18
+
+REMOOD, 20 mg, 1-0-0
+
+GAPULSID, 1 mg, 1-1-1
+
+ITOPRID PMCS, 50 mg, 1-1-1
+
+ESPUMISAN, 40 mg, 1-1-1
+
+TRITTICO AC, 75 mg, 0-0-1
+
+Pacient 19
+
+TROMBEX, 75 mg, 1-0-0
+
+ANOPYRIN, 100 mg, 1-0-0
+
+BETALOC ZOK, 50 mg, 1-0-0
+
+TORVACARD NEO, 20 mg, 0-0-1 (Atoris)
+
+TRITACE, 5 mg, 1-0-0 (Piramil)
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+Pacient 20
+
+SIOFOR PROLONG, 750 mg, 0-0-2
+
+JARDIANCE, 10 mg, 1-0-0
+
+GLIMEPIRID SANDOZ, 2 mg, 1-0-0
+
+TEZEO, 80 mg, 1-0-0
+
+SORVASTA, 15 mg, 0-0-1
+
+HYDROCHLOROTHIAZID LÉČIVA, 25 mg, 1-0-0
+
+Pacient 21
+
+FENTALIS, 25 µg/h, 1 náplast po 72 hodinách (Durogesic)
+
+SEVREDOL, 20 mg, 1-0-1
+
+MOVENTIG, 25 mg, 1-0-0
+
+TORECAN, 6,5 mg, 1-0-1
+
+CONTROLOC, 20 mg, 1-0-0
+
+MAGNESII LACTICI, 0,5 g, 0-0-1
+
+Pacient 22
+
+AKINETON, 2 mg, 1-1-1
+
+NEBILET, 5 mg, 1-0-0
+
+CAVINTON FORTE, 10 mg, 1-1-1
+
+BACLOFEN POLPHARMA, 25 mg, 1-0-1
+
+CERUCAL, 10 mg, 1-0-0
+
+DITHIADEN, 2 mg, 0-0-1
+
+Pacient 23
+
+TREXAN NEO, 10 mg, 1× týdně
+
+ACIDUM FOLICUM LÉČIVA, 10 mg, 1-0-0
+
+MEDROL, 4 mg, 1-0-0
+
+PANTOMYL, 40 mg, 1-0-0
+
+PRENESSA, 8 mg, 1-0-0
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 0-0-1
+
+Pacient 24
+
+LAGOSA, obalené tablety, 1-1-1
+
+URSOSAN FORTE, 500 mg, 1-0-1
+
+SPASMED 15, 15 mg, 1-0-1
+
+FURORESE 40, 40 mg, 1-0-0
+
+KALNORMIN, 1 g, 1-0-0
+
+FAMOSAN, 40 mg, 0-0-1
+
+Pacient 25
+
+PLAQUENIL, 200 mg, 1-0-1
+
+PREDNISONE OLIKLA, 5 mg, 1-0-0
+
+ACLEXA, 100 mg, 1-0-1
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+AMPRILAN H, 5 mg / 25 mg, 1-0-0
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 0-0-1
+
+PROBIOLACT, 10 mld. probiotik + vit. C, 1-0-0
+
+Pacient 26
+
+FENTALIS, 75 µg/h, 1 náplast po 72 hodinách
+
+EFFENTORA, 100 µg, 1 bukální tableta při atace bolesti
+
+MOVENTIG, 25 mg, 1-0-0
+
+TORECAN, 6,5 mg, 1-1-1
+
+MEGAPLEX, 160 mg, 1-0-0
+
+DEVENAL, 500 mg, 1-0-1
+
+CONTROLOC, 20 mg, 1-0-0
+
+Pacient 27
+
+ENTRESTO, 49 mg / 51 mg, 1-0-1
+
+BETALOC ZOK, 100 mg, 1-0-0 (Egilok 100)
+
+VEROSPIRON, 25 mg, 1-0-0 (Spironolacton)
+
+FURORESE 40, 40 mg, 1-0-0
+
+WARFARIN ORION, 5 mg, 0-0-1
+
+KALNORMIN, 1 g, 1-0-0
+
+CARDILAN, 175 mg / 175 mg, 1-1-1
+
+Pacient 28
+
+OLWEXYA, 150 mg, 1-0-0
+
+PREGABALIN ACCORD, 150 mg, 1-0-1
+
+KVENTIAX, 25 mg, 0-0-1
+
+OXAZEPAM LÉČIVA, 10 mg, 0-0-1
+
+PROTHAZIN, 25 mg, 0-0-1
+
+MAGRILAN, 20 mg, 1-0-0
+
+PYRIDOXIN GENERICA, 20 mg, 1-0-0
+
+Pacient 29
+
+LIPERTANCE, 20 mg / 10 mg / 5 mg, 1-0-0
+
+PREDUCTAL MR, 35 mg, 1-0-1
+
+MONOSAN, 20 mg, 1-0-1
+
+ANOPYRIN, 100 mg, 1-0-0
+
+LORADUR MITE, 2,5 mg / 25 mg, 1-0-0
+
+PURINOL, 100 mg, 1-0-0
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+Pacient 30
+
+EXEMESTAN MYLAN, 25 mg, 1-0-0
+
+TRAMAL RETARD, 100 mg, 1-0-1
+
+TRALGIT, 50 mg, 1-0-0
+
+TORECAN, 6,5 mg, 1-0-1
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 1-0-1
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+ZOPITIN, 7,5 mg, 0-0-1
+
+Pacient 31
+
+TONANDA, 8 mg / 10 mg / 2,5 mg, 1-0-0
+
+SIOFOR, 850 mg, 1-0-1
+
+ZETOVAR, 10 mg / 40 mg, 0-0-1
+
+MILURIT, 200 mg, 1-0-0
+
+ANOPYRIN, 100 mg, 1-0-0
+
+LUSOPRESS, 20 mg, 0-0-1
+
+LIPANTHYL S, 215 mg, 0-0-1
+
+CONTROLOC, 20 mg, 1-0-0
+
+Pacient 32
+
+PALEXIA RETARD, 200 mg, 1-0-1
+
+PALEXIA, 50 mg, 1 tableta při akutní bolesti
+
+NEURONTIN, 300 mg, 1-1-1 (Gabapentin)
+
+BACLOFEN POLPHARMA, 25 mg, 1-0-1
+
+VERAL RETARD, 100 mg, 0-0-1
+
+PANTOMYL, 40 mg, 1-0-0
+
+TRITTICO AC, 75 mg, 0-0-1
+
+ESPUMISAN, 40 mg, 1-1-1
+
+Pacient 33
+
+CORDARONE, 200 mg, 1-0-0
+
+SOTAHEXAL 80, 80 mg, 1-0-1
+
+CARZAP HCT, 16 mg / 12,5 mg, 1-0-0
+
+ROZETIN, 40 mg / 10 mg, 0-0-1
+
+VESSEL DUE F, 250 LSU, 1-0-1
+
+CARDILAN, 175 mg / 175 mg, 1-1-1
+
+DIGOXIN LÉČIVA, 0,125 mg, 1-0-0
+
+CONTROLOC, 20 mg, 1-0-0
+
+Pacient 34
+
+TONARSSA, 4 mg / 10 mg, 1-0-0
+
+DUODART, 0,5 mg / 0,4 mg, 0-0-1
+
+VESICARE, 5 mg, 1-0-0
+
+ZOXON 4, 4 mg, 0-0-1
+
+SOTAHEXAL 80, 80 mg, 1-0-0
+
+TORVACARD NEO, 10 mg, 0-0-1
+
+ZOLPIDEM VIATRIS, 10 mg, 0-0-1
+
+ASCORUTIN, 100 mg / 20 mg, 1-1-1
+
+Pacient 35
+
+SALAZOPYRIN EN, 500 mg, 2-2-2
+
+PREDNISONE OLIKLA, 10 mg, 1-0-0
+
+MYFENAX, 500 mg, 1-0-1
+
+MALTOFER, 100 mg, 1-0-1
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+LOPACUT, 2 mg, 1-0-0
+
+PROBIOLACT, 10 mld. probiotik + vit. C, 1-0-1
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 0-0-1
+
+Pacient 36
+
+TISERCIN, 25 mg, 0-0-1
+
+KETILEPT, 100 mg, 0-0-1
+
+OLANZAPIN ACTAVIS, 5 mg, 0-0-1
+
+RISPERIDON VIPHARM, 2 mg, 1-0-1
+
+AKINETON, 2 mg, 1-0-1
+
+BURONIL, 25 mg, 0-0-1
+
+PRENESSA, 4 mg, 1-0-0
+
+MAGNESII LACTICI 0,5 TBL. MEDICAMENTA, 0,5 g, 1-0-1
+
+Pacient 37
+
+STADAMET, 1000 mg, 1-0-1
+
+JANUVIA, 100 mg, 1-0-0
+
+ENYGLID, 2 mg, 1-1-1
+
+TRIPLIXAM, 5 mg / 1,25 mg / 5 mg, 1-0-0
+
+SORVASTA PLUS, 10 mg / 10 mg, 0-0-1
+
+ANOPYRIN, 100 mg, 1-0-0
+
+VESSEL DUE F, 250 LSU, 1-0-1
+
+NEURONTIN, 100 mg, 1-1-1
+
+CONTROLOC, 20 mg, 1-0-0
+
+Pacient 38
+
+OXYCOMP, 40 mg / 20 mg, 1-0-1
+
+SEVREDOL, 20 mg, 1 tableta při bolesti
+
+TORECAN, 6,5 mg, 1-0-1
+
+MOVENTIG, 25 mg, 1-0-0
+
+PREDNISONE OLIKLA, 20 mg, 1-0-0
+
+MEGAPLEX, 160 mg, 1-0-0
+
+CONTROLOC, 20 mg, 1-0-0
+
+DITHIADEN, 2 mg, 0-0-1
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 0-0-1
+
+Pacient 39
+
+ENTRESTO, 24 mg / 26 mg, 1-0-1
+
+FURORESE 125, 125 mg, 1-0-0
+
+EPLERENON SANDOZ, 50 mg, 1-0-0
+
+BETALOC ZOK, 25 mg, 1-0-0
+
+WARFARIN ORION, 5 mg, 0-0-1
+
+KALNORMIN, 1 g, 1-0-1
+
+PURINOL, 300 mg, 1-0-0
+
+DIGOXIN LÉČIVA, 0,125 mg, 1-0-0
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+Pacient 40
+
+VENDAL RETARD, 30 mg, 1-0-1
+
+APREPITANT SANDOZ, 125 mg + 80 mg
+
+NOVETRON, 8 mg, 1-0-1
+
+EFFENTORA, 100 µg, 1 bukální tableta při atace bolesti
+
+MOVENTIG, 25 mg, 1-0-0
+
+DEVENAL, 500 mg, 1-0-1
+
+PANTOMYL, 40 mg, 1-0-0
+
+PROBIOLACT, 10 mld. probiotik + vit. C, 1-0-1
+
+ZOPITIN, 7,5 mg, 0-0-1
+
+Pacient 41
+
+TROMBEX, 75 mg, 1-0-0
+
+PIRAMIL, 5 mg, 1-0-0
+
+MARIXINO, 10 mg, 1-0-1
+
+CAVINTON FORTE, 10 mg, 1-1-1
+
+BACLOFEN POLPHARMA, 25 mg, 1-0-1
+
+TRALGIT, 50 mg, 1-0-1
+
+TORVACARD NEO, 20 mg, 0-0-1
+
+PREDUCTAL MR, 35 mg, 1-0-1
+
+CONTROLOC, 20 mg, 1-0-0
+
+Pacient 42
+
+TEZEFORT, 80 mg / 10 mg, 1-0-0
+
+INDAP, 2,5 mg, 1-0-0
+
+ROSUCARD, 10 mg, 0-0-1
+
+PURINOL, 100 mg, 1-0-0
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 1-0-1
+
+VIDEMEL, 600 mg / 400 IU, 0-0-1
+
+KODEIN FMK, 30 mg, 1-0-0
+
+PROSTAMOL UNO, 320 mg, 1-0-0
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+Pacient 43
+
+OXYCOMP, 20 mg / 10 mg, 1-0-1
+
+PREGABALIN ACCORD, 150 mg, 1-0-1
+
+VELAXIN, 75 mg, 1-0-0
+
+MIRTAZAPIN SANDOZ, 45 mg, 0-0-1
+
+TENAXUM, 1 mg, 1-0-0
+
+ZELIFTAN, 6 mg / 0,4 mg, 1-0-0
+
+PANTOMYL, 40 mg, 1-0-0
+
+MOVENTIG, 25 mg, 1-0-0
+
+PYRIDOXIN GENERICA, 20 mg, 1-0-0
+
+Pacient 44
+
+SIOFOR PROLONG, 750 mg, 0-0-2 (Glucophage XR)
+
+XIGDUO, 5 mg / 1 000 mg, 1-0-0
+
+JUZINA, 100 mg, 1-0-0
+
+COSYREL, 10 mg / 10 mg, 1-0-0
+
+ZETOVAR, 10 mg / 80 mg, 0-0-1
+
+ANOPYRIN, 100 mg, 1-0-0
+
+FURORESE 40, 40 mg, 1-0-0 (Furosemid)
+
+PURINOL, 100 mg, 1-0-0 (Milurit)
+
+VESSEL DUE F, 250 LSU, 1-0-1
+
+CONTROLOC, 20 mg, 1-0-0
+
+Pacient 45
+
+FENTALIS, 12,5 µg/h, 1 náplast po 72 hodinách
+
+OXYCOMP, 10 mg / 5 mg, 1-0-1
+
+SEVREDOL, 20 mg, 1 tableta při atace bolesti
+
+MEDROL, 16 mg, 1-0-0
+
+TORECAN, 6,5 mg, 1-0-1
+
+MOVENTIG, 25 mg, 1-0-0
+
+PANTOMYL, 40 mg, 1-0-0
+
+ASENTRA, 50 mg, 1-0-0
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 0-0-1
+
+DITHIADEN, 2 mg, 0-0-1
+
+Pacient 46
+
+TREXAN NEO, 10 mg, 1× týdně
+
+ACIDUM FOLICUM LÉČIVA, 10 mg, 1-0-0
+
+DICLOFENAC DUO PHARMASWISS, 75 mg, 1-0-1
+
+ZALDIAR, 37,5 mg / 325 mg, 1-1-1
+
+HELICID 20 ZENTIVA, 20 mg, 1-0-0
+
+LORISTA H, 100 mg / 12,5 mg, 1-0-0
+
+ROSUCARD, 10 mg, 0-0-1
+
+CALCICHEW D3 LEMON, 500 mg / 400 IU, 1-0-1
+
+MYDOCALM, 150 mg, 1-0-1
+
+TRITTICO AC, 75 mg, 0-0-1
+
+Pacient 47
+
+XARELTO, 20 mg, 1-0-0
+
+EUPHYLLIN CR N 100, 100 mg, 1-0-1
+
+ERDOMED, 300 mg, 1-0-1
+
+PRENEWEL, 4 mg / 1,25 mg, 1-0-0
+
+CONCOR COMBI, 5 mg / 10 mg, 1-0-0
+
+FURORESE 40, 40 mg, 1-0-0
+
+VEROSPIRON, 50 mg, 1-0-0
+
+KALNORMIN, 1 g, 1-0-0
+
+CONTROLOC, 20 mg, 1-0-0
+
+DEVENAL, 500 mg, 1-0-1
+
+Pacient 48
+
+TRAMAL RETARD, 150 mg, 1-0-1
+
+TRAMAL, 50 mg, 1 tobolka při akutní bolesti
+
+NEURONTIN, 300 mg, 1-1-1
+
+BACLOFEN POLPHARMA, 25 mg, 1-0-1
+
+VELAXIN, 50 mg, 1-0-1
+
+TIAPRIDAL, 100 mg, 1-1-1
+
+CONTROLOC, 20 mg, 1-0-0
+
+MOVENTIG, 25 mg, 1-0-0
+
+DIAZEPAM STADA, 10 mg, 0-0-1
+
+ESPUMISAN, 40 mg, 1-1-1
+
+Pacient 49
+
+ZAXORAN, 50 mg / 1000 mg, 1-0-1
+
+TRAJENTA, 5 mg, 1-0-0
+
+VATINID, 2 mg, 1-1-1
+
+VALSACOMBI, 160 mg / 25 mg, 1-0-0
+
+AMESOS, 10 mg / 5 mg, 0-0-1
+
+PURINOL, 300 mg, 1-0-0
+
+TORVACARD NEO, 20 mg, 0-0-1
+
+ANOPYRIN, 100 mg, 1-0-0
+
+PANTOMYL, 40 mg, 1-0-0
+
+KALIUM CHLORATUM BIOMEDICA, 500 mg, 1-0-0
+
+Pacient 50
+
+VALTRICOM, 10 mg / 160 mg / 25 mg, 1-0-0
+
+STADAMET, 1000 mg, 1-0-1
+
+ZETOVAR, 10 mg / 40 mg, 0-0-1
+
+ZELIFTAN, 6 mg / 0,4 mg, 1-0-0
+
+ZEVESIN, 5 mg, 0-0-1 (Vesicare)
+
+VESSEL DUE F, 250 LSU, 1-0-1
+
+WARFARIN ORION, 5 mg, 0-0-1
+
+PURINOL, 100 mg, 1-0-0 (Milurit)
+
+CONTROLOC, 20 mg, 1-0-0 (Nolpaza)
+
+VIDEMEL, 600 mg / 400 IU, 0-0-1 (Caltrate 600/400 D3)

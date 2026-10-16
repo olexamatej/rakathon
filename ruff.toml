@@ -1,5 +1,0 @@
-target-version = "py310"
-
-[lint]
-# Catch correctness issues and import errors without reformatting the prototype.
-select = ["E4", "E9", "F"]

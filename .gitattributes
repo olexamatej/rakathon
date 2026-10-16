@@ -2,7 +2,15 @@
 * text=auto
 *.py text eol=lf
 *.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.vue text eol=lf
+*.svelte text eol=lf
 *.css text eol=lf
+*.scss text eol=lf
 *.html text eol=lf
 *.json text eol=lf
 *.md text eol=lf
@@ -15,14 +23,18 @@
 .gitattributes text eol=lf
 .gitignore text eol=lf
 
-# Dataset fingerprints depend on the exact CSV bytes: never normalize them.
-assets/*.csv -text
-
 # Binary reference material and images.
 *.pdf binary
 *.docx binary
+*.xlsx binary
+*.pptx binary
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.webp binary
 *.ico binary
+*.heic binary
+bun.lockb binary
+
+# Preserve every reference/input file byte-for-byte, including text extracts.
+assets/** -text

@@ -1,6 +1,6 @@
 root = true
 
-[*.{py,js,css,html,json,md,toml,yml,yaml,txt,sh}]
+[*.{py,js,jsx,ts,tsx,mjs,cjs,css,scss,html,vue,svelte,json,jsonc,md,toml,yml,yaml,txt,sh}]
 charset = utf-8
 end_of_line = lf
 insert_final_newline = true
@@ -8,9 +8,18 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
-[*.{js,css,html,json,toml,yml,yaml}]
+[*.{js,jsx,ts,tsx,mjs,cjs,css,scss,html,vue,svelte,json,jsonc,toml,yml,yaml}]
 indent_size = 2
 
 [*.md]
 # Two trailing spaces can be an intentional Markdown line break.
 trim_trailing_whitespace = false
+
+# Reference/input files keep their original formatting.
+[assets/**]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset
