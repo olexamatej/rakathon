@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>PillGaze · přístup lékaře</title>
+    <link rel="stylesheet" href="/demo/styles.css" />
+    <script src="/demo/app.js" defer></script>
+  </head>
+  <body data-view="doctor">
+    <header class="topbar">
+      <a class="brand" href="/demo/patient" aria-label="PillGaze, pacient">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>PillGaze <span class="brand-light">/ bezpečné sdílení</span></span>
+      </a>
+      <nav aria-label="Režim aplikace">
+        <a class="nav-link" href="/demo/patient">Pacient</a>
+        <a class="nav-link active" href="/demo/doctor">Lékař</a>
+      </nav>
+    </header>
+
+    <main class="page-shell doctor-shell">
+      <section class="intro">
+        <p class="eyebrow">Přístup lékaře</p>
+        <h1>Otevřít sdílený seznam.</h1>
+        <p class="lede">Zadejte pacientem předaný PIN a samostatný dešifrovací klíč. Dešifrování proběhne v tomto prohlížeči.</p>
+      </section>
+
+      <section class="card" aria-labelledby="redeem-title">
+        <div class="card-heading">
+          <span class="step">01</span>
+          <div>
+            <h2 id="redeem-title">Zadat přístupové údaje</h2>
+            <p>PIN slouží k vyzvednutí obalu. Dešifrovací klíč musí přijít samostatným kanálem.</p>
+          </div>
+        </div>
+        <label class="field-label" for="retrieval-code">Jednorázový PIN</label>
+        <input id="retrieval-code" class="text-input pin-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="one-time-code" maxlength="12" placeholder="12 znaků" />
+        <label class="field-label" for="decryption-key">Dešifrovací klíč</label>
+        <input id="decryption-key" class="text-input" type="password" autocomplete="off" spellcheck="false" placeholder="Vložte klíč od pacienta" />
+        <p class="field-hint">Klíč se neposílá na server ani se neukládá do úložiště prohlížeče.</p>
+        <button id="redeem-button" class="button primary" type="button">Vyzvednout a rozšifrovat</button>
+        <p id="doctor-status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="medication-result" class="card result-card" hidden aria-labelledby="medication-title">
+        <div class="card-heading">
+          <span class="step success-step">02</span>
+          <div>
+            <h2 id="medication-title">Sdílený seznam léků</h2>
+            <p id="result-expiry" class="field-hint"></p>
+          </div>
+        </div>
+        <div id="medication-content" class="medication-content"></div>
+        <button id="clear-result" class="button secondary" type="button">Zavřít a vymazat zobrazení</button>
+      </section>
+
+      <footer class="privacy-note">
+        <span class="lock-icon" aria-hidden="true">▣</span>
+        <p>Server při vyzvednutí vrací pouze šifrovaný obal. PIN lze použít jen s odpovídajícím klíčem; po úspěšném vyzvednutí je přenos jednorázový.</p>
+      </footer>
+    </main>
+  </body>
+</html>

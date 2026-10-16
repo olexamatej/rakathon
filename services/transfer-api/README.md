@@ -9,6 +9,12 @@ PostgreSQL; both implementations must preserve the same HTTP contract and
 single-use redemption behavior. SQLite is not suitable for a shared file across
 scaled service replicas.
 
+The service also serves the two-sided prototype at `/demo/patient` and
+`/demo/doctor`. It embeds the static files from
+[`../../apps/transfer-demo/`](../../apps/transfer-demo/README.md), so the browser
+clients and API use the same origin. This demo accepts a medication-list JSON
+document; photo capture and OCR are not implemented yet.
+
 The shared endpoint and request/response definitions are in
 [`../../packages/api-contract/openapi.yaml`](../../packages/api-contract/openapi.yaml).
 The initial PostgreSQL schema is in `migrations/0001_create_transfers.sql`.
@@ -21,6 +27,12 @@ Install a current Rust toolchain, then from the repository root:
 export TRANSFER_HMAC_SECRET='replace-with-a-random-secret-of-at-least-32-bytes'
 cargo run --manifest-path services/transfer-api/Cargo.toml
 ```
+
+Then open `http://127.0.0.1:3000/demo/patient` and, in another tab or browser
+profile, `http://127.0.0.1:3000/demo/doctor`. Use only synthetic data. The patient
+page encrypts the JSON before sending it; give the doctor the retrieval PIN and
+the decryption key through separate channels. The doctor page sends only the PIN
+to the API and decrypts the returned envelope locally.
 
 The service listens on `127.0.0.1:3000` by default and creates
 `services/transfer-api/data/transfers.sqlite3` when started from the repository

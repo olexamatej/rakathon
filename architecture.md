@@ -1,6 +1,6 @@
 # PillGaze Architecture
 
-**Status:** initial local backend implementation; Azure deployment remains future work
+**Status:** local transfer API and browser end-to-end demo; Azure deployment remains future work
 **Backend language:** Rust
 **Deployment target:** Azure
 
@@ -14,6 +14,9 @@ points.
 The transfer API now has a local Rust/Axum implementation backed by SQLite.
 Azure PostgreSQL remains the deployment target and has a matching initial
 schema, but its storage adapter and Azure resources are not implemented yet.
+The API serves a small patient-and-doctor browser demo at `/demo/patient` and
+`/demo/doctor`. It accepts a medication-list JSON document; the photo-to-list
+and OCR flow is not implemented yet.
 
 ## Product flow
 
@@ -96,6 +99,13 @@ The initial payload is a compact JSON medication-list document encrypted by the
 client. The API stores the ciphertext, nonce, and format version. Do not put
 images, OCR intermediates, patient identifiers, or unencrypted medication names
 in the transfer record.
+
+For the local browser demo, the patient page creates an AES-256-GCM key with Web
+Crypto, encrypts the supplied JSON, and uploads only the envelope. The doctor
+page submits the retrieval code, receives the ciphertext, and decrypts it in the
+browser with the separately provided key. The demo pages are embedded in the
+Rust binary and served from the API's origin to avoid local CORS configuration.
+This is an integration prototype, not a production patient or doctor app.
 
 ## Persistence and lifecycle
 

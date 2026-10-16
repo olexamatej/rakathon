@@ -41,6 +41,7 @@ jobs:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
+            /apps/transfer-demo/
             /services/transfer-api/
       - name: Set up Rust stable
         uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1.16.1
@@ -70,6 +71,8 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
+      - name: Check transfer demo JavaScript syntax
+        run: node --check apps/transfer-demo/app.js
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Report dependency vulnerabilities (non-blocking)

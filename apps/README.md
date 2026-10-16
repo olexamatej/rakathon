@@ -7,3 +7,7 @@ second patient app here or move the root app without coordinating that migration
 
 `doctor-web/` is the home for the separate doctor-facing browser client. The
 repository layout and data boundaries are described in [`../architecture.md`](../architecture.md).
+
+`transfer-demo/` contains a small local end-to-end prototype for both sides of
+the transfer. The Rust service serves these static pages from the same origin;
+they do not replace the patient Expo app or the future doctor web application.

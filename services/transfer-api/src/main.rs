@@ -14,7 +14,7 @@ use axum::{
     extract::{ConnectInfo, DefaultBodyLimit, Path, Request, State},
     http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
     middleware::{self, Next},
-    response::{IntoResponse, Response},
+    response::{Html, IntoResponse, Redirect, Response},
     routing::{delete, get, post},
     Json, Router,
 };
@@ -147,6 +147,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]);
 
     let app = Router::new()
+        .route("/", get(demo_index))
+        .route("/demo", get(demo_index))
+        .route("/demo/patient", get(patient_page))
+        .route("/demo/doctor", get(doctor_page))
+        .route("/demo/app.js", get(demo_script))
+        .route("/demo/styles.css", get(demo_styles))
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))
         .route("/v1/transfers", post(create_transfer))
@@ -207,6 +213,36 @@ async fn liveness() -> StatusCode {
     StatusCode::OK
 }
 
+async fn demo_index() -> Redirect {
+    Redirect::temporary("/demo/patient")
+}
+
+async fn patient_page() -> Html<&'static str> {
+    Html(include_str!("../../../apps/transfer-demo/patient.html"))
+}
+
+async fn doctor_page() -> Html<&'static str> {
+    Html(include_str!("../../../apps/transfer-demo/doctor.html"))
+}
+
+async fn demo_script() -> Response {
+    let mut response = include_str!("../../../apps/transfer-demo/app.js").into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/javascript; charset=utf-8"),
+    );
+    response
+}
+
+async fn demo_styles() -> Response {
+    let mut response = include_str!("../../../apps/transfer-demo/styles.css").into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/css; charset=utf-8"),
+    );
+    response
+}
+
 async fn response_security_headers(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     response.headers_mut().insert(
@@ -216,6 +252,16 @@ async fn response_security_headers(request: Request, next: Next) -> Response {
     response.headers_mut().insert(
         header::X_CONTENT_TYPE_OPTIONS,
         HeaderValue::from_static("nosniff"),
+    );
+    response.headers_mut().insert(
+        HeaderName::from_static("content-security-policy"),
+        HeaderValue::from_static(
+            "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        ),
+    );
+    response.headers_mut().insert(
+        HeaderName::from_static("referrer-policy"),
+        HeaderValue::from_static("no-referrer"),
     );
     response
 }
