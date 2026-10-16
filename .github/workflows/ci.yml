@@ -37,7 +37,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out source and synthetic test schema
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout-cone-mode: false
@@ -50,7 +50,7 @@ jobs:
             /web/
             /assets/datapackage.json
       - name: Set up Python and uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.1"
           python-version: "3.12"
@@ -73,7 +73,7 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q analysis.py app.py data.py tests
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
       - name: Check JavaScript syntax
@@ -91,7 +91,7 @@ jobs:
         python: ["3.10", "3.12", "3.14"]
     steps:
       - name: Check out source and synthetic test schema
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout-cone-mode: false
@@ -104,7 +104,7 @@ jobs:
             /web/
             /assets/datapackage.json
       - name: Set up Python and uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.1"
           python-version: ${{ matrix.python }}
@@ -129,7 +129,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out source and synthetic test schema
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout-cone-mode: false
@@ -142,7 +142,7 @@ jobs:
             /web/
             /assets/datapackage.json
       - name: Set up Python and uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.1"
           python-version: "3.12"
