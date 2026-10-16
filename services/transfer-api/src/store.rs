@@ -32,7 +32,7 @@ impl TransferStore {
         // Select metadata only; never load payloads into the admin response.
         sqlx::query_as::<_, BlobMetadata>(
             "SELECT hex(pin_digest) AS pin_digest, length(payload) AS size_bytes \
-             FROM blob_transfers ORDER BY pin_digest LIMIT 101 OFFSET ?",
+             FROM blob_transfers ORDER BY created_at DESC, pin_digest DESC LIMIT 101 OFFSET ?",
         )
         .bind(i64::from(offset))
         .fetch_all(&self.pool)
@@ -127,6 +127,20 @@ mod tests {
         assert_eq!(store.get_blob(&digest).await.unwrap().unwrap(), payload);
         assert_eq!(store.get_blob(&digest).await.unwrap().unwrap(), payload);
         assert!(store.get_blob(&[8; 32]).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn admin_listing_puts_newest_blob_first() {
+        let pool = SqlitePoolOptions::new().max_connections(1)
+            .connect("sqlite::memory:").await.unwrap();
+        crate::migrate(&pool).await.unwrap();
+        let store = TransferStore::new(pool);
+        store.create_blob(&[1; 32], b"old", 10).await.unwrap();
+        store.create_blob(&[2; 32], b"new", 20).await.unwrap();
+
+        let rows = store.list_blobs(0).await.unwrap();
+        assert_eq!(rows[0].pin_digest, "02".repeat(32));
+        assert_eq!(rows[1].pin_digest, "01".repeat(32));
     }
 
     #[tokio::test]
