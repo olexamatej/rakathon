@@ -88,9 +88,11 @@ pub fn app(state: AppState) -> Router {
             }),
         )
         .route("/healthz", get(|| async { Json(json!({"status": "ok"})) }))
-        .fallback(|| async { Problem::new(StatusCode::NOT_FOUND, "Route not found.") })
+        .fallback(|| async {
+            Problem::new(StatusCode::NOT_FOUND, "Požadovaná cesta nebyla nalezena.")
+        })
         .method_not_allowed_fallback(|| async {
-            Problem::new(StatusCode::METHOD_NOT_ALLOWED, "Method not allowed.")
+            Problem::new(StatusCode::METHOD_NOT_ALLOWED, "Tato metoda není povolena.")
         })
         .layer(DefaultBodyLimit::max(64 * 1024))
         .with_state(state)
@@ -112,26 +114,23 @@ async fn check(
             StatusCode::PAYLOAD_TOO_LARGE => StatusCode::PAYLOAD_TOO_LARGE,
             _ => StatusCode::BAD_REQUEST,
         };
-        Problem::new(status, "Expected a JSON object containing only drugs: an array of 2 to 50 nonblank drug names, each at most 200 characters.")
+        Problem::new(status, "Očekává se objekt JSON pouze s polem drugs: seznamem 2 až 50 neprázdných názvů léčiv, každý o délce nejvýše 200 znaků.")
     })?;
     if !(2..=50).contains(&request.drugs.len()) {
-        return Err(Problem::invalid(
-            "/drugs",
-            "Supply between 2 and 50 drug names.",
-        ));
+        return Err(Problem::invalid("/drugs", "Zadejte 2 až 50 názvů léčiv."));
     }
     for (index, name) in request.drugs.iter().enumerate() {
         if name.trim().is_empty() || name.chars().count() > 200 {
             return Err(Problem::invalid(
                 &format!("/drugs/{index}"),
-                "Drug names must be nonblank and at most 200 characters.",
+                "Názvy léčiv nesmějí být prázdné a mohou obsahovat nejvýše 200 znaků.",
             ));
         }
     }
     let permit = state.permits.clone().try_acquire_owned().map_err(|_| {
         Problem::new(
             StatusCode::TOO_MANY_REQUESTS,
-            "All interaction check workers are busy. Retry shortly.",
+            "Kapacita pro kontrolu interakcí je nyní vyčerpána. Zkuste to za chvíli znovu.",
         )
     })?;
 
@@ -146,6 +145,7 @@ async fn check(
         Ok(Ok(report)) => Ok((
             [
                 (header::CACHE_CONTROL, "no-store"),
+                (header::CONTENT_LANGUAGE, "cs"),
                 (
                     header::HeaderName::from_static("x-interaction-source"),
                     "model-knowledge",
@@ -163,12 +163,12 @@ async fn check(
             tracing::warn!(error = %error, "interaction inference failed");
             Err(Problem::new(
                 StatusCode::SERVICE_UNAVAILABLE,
-                "The inference service could not complete a valid interaction check. Retry later.",
+                "Služba nedokázala dokončit kontrolu interakcí s platným výsledkem. Zkuste to později znovu.",
             ))
         }
         Err(_) => Err(Problem::new(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "The interaction check worker failed.",
+            "Při zpracování kontroly interakcí došlo k vnitřní chybě.",
         )),
     }
 }
@@ -197,8 +197,18 @@ impl Problem {
 
 impl IntoResponse for Problem {
     fn into_response(self) -> Response {
+        let title = match self.status {
+            StatusCode::BAD_REQUEST => "Neplatný požadavek",
+            StatusCode::NOT_FOUND => "Nenalezeno",
+            StatusCode::METHOD_NOT_ALLOWED => "Nepovolená metoda",
+            StatusCode::PAYLOAD_TOO_LARGE => "Příliš velký požadavek",
+            StatusCode::UNSUPPORTED_MEDIA_TYPE => "Nepodporovaný typ obsahu",
+            StatusCode::TOO_MANY_REQUESTS => "Překročena kapacita služby",
+            StatusCode::SERVICE_UNAVAILABLE => "Služba je dočasně nedostupná",
+            _ => "Vnitřní chyba serveru",
+        };
         let mut body = json!({
-            "type": "about:blank", "title": self.status.canonical_reason().unwrap_or("Error"),
+            "type": "about:blank", "title": title,
             "status": self.status.as_u16(), "detail": self.detail
         });
         if let Some(errors) = self.errors {
@@ -212,6 +222,9 @@ impl IntoResponse for Problem {
         response
             .headers_mut()
             .insert(header::CACHE_CONTROL, "no-store".parse().unwrap());
+        response
+            .headers_mut()
+            .insert(header::CONTENT_LANGUAGE, "cs".parse().unwrap());
         if matches!(
             self.status,
             StatusCode::TOO_MANY_REQUESTS | StatusCode::SERVICE_UNAVAILABLE

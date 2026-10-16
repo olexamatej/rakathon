@@ -20,7 +20,7 @@ fn model_result() -> Value {
             {"inputIndex": 0, "status": "resolved", "canonicalName": "Drug A", "activeIngredients": ["A"], "message": null, "candidates": []},
             {"inputIndex": 1, "status": "resolved", "canonicalName": "Drug B", "activeIngredients": ["B"], "message": null, "candidates": []},
             {"inputIndex": 2, "status": "resolved", "canonicalName": "Drug A", "activeIngredients": ["A"], "message": null, "candidates": []},
-            {"inputIndex": 3, "status": "unrecognized", "canonicalName": null, "activeIngredients": [], "message": "No matching drug.", "candidates": []}
+            {"inputIndex": 3, "status": "unrecognized", "canonicalName": null, "activeIngredients": [], "message": "Nebylo nalezeno odpovídající léčivo.", "candidates": []}
         ],
         "interactions": [
             {"drugIndices": [0, 1], "findings": [finding("moderate")]},
@@ -31,7 +31,7 @@ fn model_result() -> Value {
 
 fn finding(severity: &str) -> Value {
     json!({
-        "summary": "Illustrative finding", "severity": severity, "mechanism": null,
+        "summary": "Ukázková interakce", "severity": severity, "mechanism": null,
         "clinicalEffects": [], "recommendations": [], "evidenceLevel": "unknown"
     })
 }
@@ -234,6 +234,8 @@ async fn rejects_invalid_requests_without_starting_codex() {
         let (status, headers, body) = send(router.clone(), body, content_type).await;
         assert_eq!(status, expected);
         assert_eq!(headers["content-type"], "application/problem+json");
+        assert_eq!(headers["content-language"], "cs");
+        assert!(body["detail"].as_str().unwrap().contains("léčiv"));
         assert_matches_openapi(&body, "Problem");
     }
 }
@@ -282,6 +284,15 @@ async fn subprocess_uses_ephemeral_restricted_mode_and_stdin_then_cleans_up() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(headers["x-sources-verified"], "false");
+    assert_eq!(headers["content-language"], "cs");
+    assert_eq!(
+        body["interactions"][0]["findings"][0]["summary"],
+        "Ukázková interakce"
+    );
+    assert_eq!(
+        body["resolutions"][3]["message"],
+        "Nebylo nalezeno odpovídající léčivo."
+    );
     assert_matches_openapi(&body, "InteractionCheckResponse");
     let invocation: Value =
         serde_json::from_slice(&fs::read(fixture.path().join("invocation.json")).unwrap()).unwrap();

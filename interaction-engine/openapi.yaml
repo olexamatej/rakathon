@@ -13,6 +13,12 @@ info:
     retrieval from a curated interaction database. Clinical findings and evidence
     labels are unverified; source references are empty. Coverage reports pairs
     considered by the model rather than a verified database search.
+    Human-readable response explanations are always in Czech (cs), including
+    summaries, mechanisms, clinical effects, recommendation descriptions,
+    resolution issue messages, and problem titles/details/validation messages.
+    JSON property names and enum values remain as defined. Drug, ingredient,
+    and provider names and URLs retain their identity. Input names are echoed
+    exactly as submitted. Accept-Language does not change the output language.
 servers:
   - url: /
     description: Relative to the deployment host; no hosted service is specified yet.
@@ -63,6 +69,11 @@ paths:
             Check completed for all distinct resolved drugs. Inspect status,
             resolutions, and coverage to determine which inputs were assessed.
           headers:
+            Content-Language:
+              description: Language of human-readable explanations, fixed to Czech.
+              schema:
+                type: string
+                const: cs
             X-Interaction-Source:
               description: Origin of the interaction findings in this implementation.
               schema:
@@ -96,7 +107,7 @@ paths:
                       - inputIndex: 2
                         inputName: unknown-drug-name
                         status: unrecognized
-                        message: No matching drug was found.
+                        message: Nebylo nalezeno odpovídající léčivo.
                         candidates: []
                     drugs:
                       - id: drug-1
@@ -113,12 +124,12 @@ paths:
                       - drugIds: [drug-1, drug-2]
                         severity: major
                         findings:
-                          - summary: Potential increased bleeding risk.
+                          - summary: Možné zvýšení rizika krvácení.
                             severity: major
-                            clinicalEffects: [Increased bleeding risk]
+                            clinicalEffects: [Zvýšené riziko krvácení]
                             recommendations:
                               - action: use_alternative
-                                description: Review the combination with a clinician.
+                                description: Vhodnost této kombinace konzultujte s lékařem.
                             evidence:
                               level: unknown
                               references: []

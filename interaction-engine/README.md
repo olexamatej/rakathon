@@ -40,6 +40,10 @@ with `Retry-After`. Bodies are limited to 64 KiB.
 
 ## Inference and response handling
 
+- Explanations are always in Czech (`cs`): summaries, mechanisms, clinical
+  effects, recommendations, name-resolution messages, and API error messages.
+  JSON property names and enum values keep their specified English identifiers;
+  drug names retain their identity. Responses declare `Content-Language: cs`.
 - Input is 2–50 drug name strings, each nonblank and at most 200 Unicode characters.
 - Unrecognized, ambiguous, and unsupported names are returned alongside results.
 - The internal model schema is generated from Rust types. The model supplies

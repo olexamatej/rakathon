@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-16T19:07:28Z",
+  "checkedAt": "2026-10-16T19:18:53Z",
   "coverage": {
     "evaluatedPairs": 6,
     "interactingPairs": 5,
@@ -22,17 +22,17 @@
     },
     {
       "activeIngredients": [
-        "aspirin"
+        "kyselina acetylsalicylová"
       ],
       "id": "drug-3",
-      "name": "aspirin"
+      "name": "kyselina acetylsalicylová"
     },
     {
       "activeIngredients": [
-        "fluconazole"
+        "flukonazol"
       ],
       "id": "drug-4",
-      "name": "fluconazole"
+      "name": "flukonazol"
     }
   ],
   "externalLinks": [
@@ -68,26 +68,21 @@
       "findings": [
         {
           "clinicalEffects": [
-            "Gastrointestinal bleeding",
-            "Other serious bleeding"
+            "Zvýšené riziko krvácení, zejména do trávicího traktu."
           ],
           "evidence": {
             "level": "established",
             "references": []
           },
-          "mechanism": "Ibuprofen causes gastrointestinal mucosal injury and inhibits platelet function, adding to warfarin's anticoagulant effect.",
+          "mechanism": "Ibuprofen poškozuje sliznici trávicího traktu a tlumí funkci krevních destiček; tyto účinky se přidávají k antikoagulačnímu účinku warfarinu.",
           "recommendations": [
             {
               "action": "avoid_combination",
-              "description": "Avoid when possible; ask the prescriber about an alternative pain reliever."
-            },
-            {
-              "action": "monitor",
-              "description": "If combined under supervision, monitor for bleeding; a therapeutic INR does not eliminate the risk."
+              "description": "Kombinaci pokud možno vynechat a s lékařem zvolit vhodnou alternativu proti bolesti. Samotné sledování INR nevylučuje riziko krvácení."
             }
           ],
           "severity": "major",
-          "summary": "Ibuprofen increases bleeding risk with warfarin."
+          "summary": "Ibuprofen významně zvyšuje riziko krvácení při léčbě warfarinem."
         }
       ],
       "severity": "major"
@@ -112,26 +107,25 @@
       "findings": [
         {
           "clinicalEffects": [
-            "Gastrointestinal bleeding",
-            "Other serious bleeding"
+            "Zvýšené riziko závažného krvácení včetně krvácení do trávicího traktu."
           ],
           "evidence": {
             "level": "established",
             "references": []
           },
-          "mechanism": "Aspirin inhibits platelet function and can damage gastrointestinal mucosa, adding to warfarin's anticoagulant effect.",
+          "mechanism": "Kyselina acetylsalicylová nevratně tlumí funkci krevních destiček a poškozuje žaludeční sliznici, čímž zvyšuje krvácivé riziko warfarinu.",
           "recommendations": [
             {
               "action": "consult_clinician",
-              "description": "Use together only when the prescriber determines that the benefit warrants the bleeding risk."
+              "description": "Kombinaci užívat pouze při jasné indikaci a pod dohledem lékaře. Předepsanou protidestičkovou léčbu nevysazovat bez domluvy."
             },
             {
               "action": "monitor",
-              "description": "Monitor for bleeding; a therapeutic INR does not eliminate the risk."
+              "description": "Sledovat známky krvácení; ani INR v cílovém rozmezí nevylučuje zvýšené riziko."
             }
           ],
           "severity": "major",
-          "summary": "Aspirin substantially increases bleeding risk with warfarin."
+          "summary": "Warfarin a kyselina acetylsalicylová mají souběžné účinky zvyšující riziko krvácení."
         }
       ],
       "severity": "major"
@@ -156,26 +150,26 @@
       "findings": [
         {
           "clinicalEffects": [
-            "Elevated INR",
-            "Serious bleeding"
+            "Zvýšení INR.",
+            "Zvýšené riziko závažného krvácení."
           ],
           "evidence": {
             "level": "established",
             "references": []
           },
-          "mechanism": "Fluconazole inhibits CYP2C9-mediated metabolism of S-warfarin, increasing its anticoagulant effect.",
+          "mechanism": "Flukonazol inhibuje zejména CYP2C9, zpomaluje metabolismus warfarinu a zesiluje jeho antikoagulační účinek.",
           "recommendations": [
             {
               "action": "monitor",
-              "description": "Monitor INR closely when fluconazole is started, changed, or stopped."
+              "description": "Při zahájení i ukončení flukonazolu zajistit častější kontroly INR."
             },
             {
               "action": "adjust_dose",
-              "description": "The prescriber may need to adjust warfarin according to INR."
+              "description": "Lékař může podle INR upravit dávku warfarinu."
             }
           ],
           "severity": "major",
-          "summary": "Fluconazole can markedly increase warfarin's anticoagulant effect."
+          "summary": "Flukonazol může výrazně zesílit účinek warfarinu."
         }
       ],
       "severity": "major"
@@ -200,47 +194,42 @@
       "findings": [
         {
           "clinicalEffects": [
-            "Gastrointestinal ulceration",
-            "Gastrointestinal bleeding"
+            "Zvýšené riziko žaludečních a dvanáctníkových vředů a krvácení do trávicího traktu."
           ],
           "evidence": {
             "level": "established",
             "references": []
           },
-          "mechanism": "Combined gastrointestinal injury and platelet inhibition increase bleeding risk.",
+          "mechanism": "Obě léčiva tlumí cyklooxygenázu a mají souběžné nežádoucí účinky na sliznici trávicího traktu a krevní destičky.",
           "recommendations": [
             {
               "action": "avoid_combination",
-              "description": "Avoid concurrent use unless specifically advised by a clinician."
+              "description": "Souběžnému užívání se pokud možno vyhnout; vhodnou léčbu bolesti projednat s lékařem nebo lékárníkem."
             }
           ],
-          "severity": "major",
-          "summary": "Combining aspirin and ibuprofen increases gastrointestinal toxicity and bleeding."
+          "severity": "moderate",
+          "summary": "Ibuprofen s kyselinou acetylsalicylovou zvyšuje riziko poškození a krvácení trávicího traktu."
         },
         {
           "clinicalEffects": [
-            "Reduced cardioprotective antiplatelet effect of aspirin"
+            "Možné snížení ochrany před infarktem myokardu a ischemickou cévní mozkovou příhodou."
           ],
           "evidence": {
             "level": "established",
             "references": []
           },
-          "mechanism": "Ibuprofen can competitively block aspirin's access to platelet cyclooxygenase-1, reducing irreversible platelet inhibition depending on timing and formulation.",
+          "mechanism": "Ibuprofen může obsazením destičkové cyklooxygenázy bránit nevratnému protidestičkovému účinku nízkých dávek kyseliny acetylsalicylové; význam závisí na načasování a způsobu užívání.",
           "recommendations": [
             {
               "action": "use_alternative",
-              "description": "If aspirin is used for cardiovascular protection, discuss an alternative to ibuprofen."
-            },
-            {
-              "action": "consult_clinician",
-              "description": "If both are necessary, ask a clinician or pharmacist about formulation-specific timing; repeated ibuprofen use may still interfere."
+              "description": "Při užívání kyseliny acetylsalicylové k prevenci cévních příhod upřednostnit po konzultaci jiné analgetikum, zejména při opakovaném užívání."
             }
           ],
           "severity": "moderate",
-          "summary": "Ibuprofen may reduce aspirin's antiplatelet effect."
+          "summary": "Ibuprofen může oslabit protidestičkový účinek nízkodávkové kyseliny acetylsalicylové."
         }
       ],
-      "severity": "major"
+      "severity": "moderate"
     },
     {
       "drugIds": [
@@ -262,26 +251,25 @@
       "findings": [
         {
           "clinicalEffects": [
-            "Increased ibuprofen exposure",
-            "Potential increase in gastrointestinal bleeding and kidney injury"
+            "Možné zesílení nežádoucích účinků ibuprofenu včetně krvácení do trávicího traktu a poškození ledvin."
           ],
           "evidence": {
             "level": "established",
             "references": []
           },
-          "mechanism": "Fluconazole inhibits CYP2C9, reducing metabolism of ibuprofen.",
+          "mechanism": "Flukonazol inhibuje CYP2C9 a zvyšuje expozici účinnému enantiomeru ibuprofenu.",
           "recommendations": [
             {
               "action": "monitor",
-              "description": "Monitor for ibuprofen adverse effects, particularly with repeated use."
+              "description": "Sledovat nežádoucí účinky ibuprofenu, zejména při opakovaném užívání nebo onemocnění ledvin."
             },
             {
               "action": "adjust_dose",
-              "description": "A clinician may recommend reducing ibuprofen exposure or using an alternative."
+              "description": "Podle klinického stavu může být nutné snížení dávky ibuprofenu."
             }
           ],
           "severity": "moderate",
-          "summary": "Fluconazole increases ibuprofen exposure and may increase its adverse effects."
+          "summary": "Flukonazol může zvýšit koncentraci ibuprofenu a riziko jeho nežádoucích účinků."
         }
       ],
       "severity": "moderate"
