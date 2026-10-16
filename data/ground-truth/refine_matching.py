@@ -78,6 +78,29 @@ def pack_key(value):
     return re.sub(r'\s+', '', (value or '').upper().replace('×', 'X'))
 
 
+def equivalent_pack_key(value):
+    """Normalize explicit arithmetic; preserve qualifiers and unit-dose X1."""
+    text = pack_key(value)
+    expanded = re.fullmatch(r'(\d+)\((\d+)X(\d+)\)([A-Z]*)', text)
+    if expanded:
+        total, count, size, qualifier = expanded.groups()
+        if int(count) * int(size) == int(total) and int(size) > 1:
+            return total + qualifier
+    # A combination pack keeps its component order and '+' separator.
+    if '+' in text:
+        parts = text.split('+')
+        if all(re.fullmatch(r'(?:1X)?\d+', part) for part in parts):
+            return '+'.join(re.sub(r'^1X', '', part) for part in parts)
+    return text
+
+
+def pack_matches(candidate, observed):
+    # Explicit blister grouping on the image is evidence, so retain it.
+    if '(' in pack_key(observed):
+        return pack_key(candidate) == pack_key(observed)
+    return equivalent_pack_key(candidate) == equivalent_pack_key(observed)
+
+
 class Matcher:
     def __init__(self, rows):
         self.by_name = defaultdict(list)
@@ -119,6 +142,7 @@ class Matcher:
             'candidateCodes': [],
             'preferredCandidateCodes': [],
             'packTextMatchingCodes': [],
+            'packEquivalentMatchingCodes': [],
             'selectedCode': None,
             'nameCandidateCodes': sorted(r['suklCode'] for r in rows),
             'normalizedName': normalized,
@@ -173,7 +197,12 @@ class Matcher:
         base['candidateCodes'] = sorted(r['suklCode'] for r in candidates)
         pack = observation['packSize']
         base['packTextMatchingCodes'] = sorted(r['suklCode'] for r in candidates if pack and pack_key(r['packSize']) == pack_key(pack))
-        narrowed = base['packTextMatchingCodes'] if pack else base['candidateCodes']
+        base['packEquivalentMatchingCodes'] = sorted(
+            r['suklCode'] for r in candidates
+            if pack and pack_matches(r['packSize'], pack))
+        narrowed = base['packEquivalentMatchingCodes'] if pack else base['candidateCodes']
+        if narrowed and pack and narrowed != base['packTextMatchingCodes']:
+            base['matchBasis'].append('equivalent_pack_notation')
         if pack and candidates and not narrowed:
             base['resolution'] = 'pack_mismatch'
             base['reviewReasons'].append('no_candidate_with_matching_pack_text')
@@ -209,12 +238,13 @@ def refine(data, rows):
                     match['selectedCode'] = match['preferredCandidateCodes'][0]
                     match['selectionMethod'] = 'automatic_unique_metadata_candidate'
                 counts[region][item['sukl']['status']] += 1
-    data['schemaVersion'] = '1.2.0'
+    data['schemaVersion'] = '1.3.0'
     data['annotationPolicy']['suklMatching'] = (
         'Rebuilt by data/ground-truth/refine_matching.py. Explicit branding/spelling aliases; '
         'mass conversion and shared trailing units supported. Component order and concentration '
         'denominators preserved. No substitution of active substances or printed values for visual labels. '
-        'Name-only and inferred-notation candidates require review. Pack-text matching narrows candidates; '
+        'Name-only and inferred-notation candidates require review. Pack matching normalizes explicit '
+        'arithmetic while preserving qualifiers, component order and unit-dose X1 notation; '
         'dosage form is not inferred from the reference catalogue. For packages only, a single preferred '
         'candidate with status candidates is promoted to selectedCode with selectionMethod '
         'automatic_unique_metadata_candidate. This does not mark the annotation as human reviewed. '

@@ -1,12 +1,12 @@
 {
-  "schemaVersion": "1.2.0",
+  "schemaVersion": "1.3.0",
   "createdOn": "2026-10-16",
   "status": "ai_visual_annotations_pending_human_review",
   "scope": "All JPEGs in assets/Data/Leky_foto and assets/Data/Seznamy_foto. Package identity and list medication fields, not exhaustive OCR, bounding boxes, clinical validation, or personal data transcription.",
   "annotationPolicy": {
     "method": "Images visually inspected by assistant; no OCR engine or evaluated mobile model used to generate labels. Python used only for image contact sheets, reference parsing, deterministic candidate lookup, and integrity checks.",
     "nullMeaning": "Not visible, absent, or not confidently transcribed. Never an inferred zero.",
-    "suklMatching": "Rebuilt by data/ground-truth/refine_matching.py. Explicit branding/spelling aliases; mass conversion and shared trailing units supported. Component order and concentration denominators preserved. No substitution of active substances or printed values for visual labels. Name-only and inferred-notation candidates require review. Pack-text matching narrows candidates; dosage form is not inferred from the reference catalogue. For packages only, a single preferred candidate with status candidates is promoted to selectedCode with selectionMethod automatic_unique_metadata_candidate. This does not mark the annotation as human reviewed. All other selectedCode values remain null.",
+    "suklMatching": "Rebuilt by data/ground-truth/refine_matching.py. Explicit branding/spelling aliases; mass conversion and shared trailing units supported. Component order and concentration denominators preserved. No substitution of active substances or printed values for visual labels. Name-only and inferred-notation candidates require review. Pack matching normalizes explicit arithmetic while preserving qualifiers, component order and unit-dose X1 notation; dosage form is not inferred from the reference catalogue. For packages only, a single preferred candidate with status candidates is promoted to selectedCode with selectionMethod automatic_unique_metadata_candidate. This does not mark the annotation as human reviewed. All other selectedCode values remain null.",
     "catalogueMatching": "Name/strength matches preserve duplicate rows. name_only and not_found are not confirmed matches. Catalogue active substances are reference metadata, not visual labels.",
     "calibration": "AI-generated draft reference annotations, not independently human-verified ground truth. Exclude uncertainFields from strict field scoring. Keep all observations from an image and all splitGroup members together; also group linked product images if evaluating unseen products.",
     "handwriting": "Tentative readings may contain source errors. Keep printed, handwritten, and catalogue values separate. No clinical correction or dosing inference.",
@@ -2854,6 +2854,9 @@
             "packTextMatchingCodes": [
               "0196141"
             ],
+            "packEquivalentMatchingCodes": [
+              "0196141"
+            ],
             "selectedCode": "0196141",
             "nameCandidateCodes": [
               "0196139",
@@ -2924,6 +2927,10 @@
               "0243014",
               "0260953"
             ],
+            "packEquivalentMatchingCodes": [
+              "0243014",
+              "0260953"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0076064",
@@ -2975,6 +2982,9 @@
               "0207930"
             ],
             "packTextMatchingCodes": [
+              "0207930"
+            ],
+            "packEquivalentMatchingCodes": [
               "0207930"
             ],
             "selectedCode": "0207930",
@@ -3035,6 +3045,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0167680",
@@ -3118,6 +3129,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0002944",
@@ -3200,6 +3212,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0002944",
@@ -3298,6 +3311,13 @@
               "0132862",
               "0221197"
             ],
+            "packEquivalentMatchingCodes": [
+              "0057396",
+              "0107234",
+              "0132841",
+              "0132862",
+              "0221197"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0057395",
@@ -3367,6 +3387,9 @@
               "0252223"
             ],
             "packTextMatchingCodes": [
+              "0252223"
+            ],
+            "packEquivalentMatchingCodes": [
               "0252223"
             ],
             "selectedCode": "0252223",
@@ -3445,6 +3468,10 @@
               "0051405"
             ],
             "packTextMatchingCodes": [
+              "0051403",
+              "0051405"
+            ],
+            "packEquivalentMatchingCodes": [
               "0051403",
               "0051405"
             ],
@@ -3536,6 +3563,9 @@
             "packTextMatchingCodes": [
               "0021887"
             ],
+            "packEquivalentMatchingCodes": [
+              "0021887"
+            ],
             "selectedCode": "0021887",
             "nameCandidateCodes": [
               "0021887",
@@ -3615,6 +3645,12 @@
               "0132853"
             ],
             "packTextMatchingCodes": [
+              "0012892",
+              "0132650",
+              "0132723",
+              "0132853"
+            ],
+            "packEquivalentMatchingCodes": [
               "0012892",
               "0132650",
               "0132723",
@@ -3712,6 +3748,9 @@
             "packTextMatchingCodes": [
               "0026329"
             ],
+            "packEquivalentMatchingCodes": [
+              "0026329"
+            ],
             "selectedCode": "0026329",
             "nameCandidateCodes": [
               "0026319",
@@ -3790,6 +3829,9 @@
             "packTextMatchingCodes": [
               "0199671"
             ],
+            "packEquivalentMatchingCodes": [
+              "0199671"
+            ],
             "selectedCode": "0199671",
             "nameCandidateCodes": [
               "0199668",
@@ -3852,6 +3894,9 @@
               "0199675"
             ],
             "packTextMatchingCodes": [
+              "0199675"
+            ],
+            "packEquivalentMatchingCodes": [
               "0199675"
             ],
             "selectedCode": "0199675",
@@ -3918,6 +3963,9 @@
             "packTextMatchingCodes": [
               "0199679"
             ],
+            "packEquivalentMatchingCodes": [
+              "0199679"
+            ],
             "selectedCode": "0199679",
             "nameCandidateCodes": [
               "0199668",
@@ -3979,6 +4027,9 @@
               "0231697"
             ],
             "packTextMatchingCodes": [
+              "0231697"
+            ],
+            "packEquivalentMatchingCodes": [
               "0231697"
             ],
             "selectedCode": "0231697",
@@ -4058,6 +4109,11 @@
               "0260932",
               "0260943"
             ],
+            "packEquivalentMatchingCodes": [
+              "0231701",
+              "0260932",
+              "0260943"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0231689",
@@ -4130,6 +4186,10 @@
               "0231691",
               "0260944"
             ],
+            "packEquivalentMatchingCodes": [
+              "0231691",
+              "0260944"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0231689",
@@ -4198,6 +4258,9 @@
             "packTextMatchingCodes": [
               "0231688"
             ],
+            "packEquivalentMatchingCodes": [
+              "0231688"
+            ],
             "selectedCode": "0231688",
             "nameCandidateCodes": [
               "0231687",
@@ -4249,6 +4312,9 @@
             "packTextMatchingCodes": [
               "0263125"
             ],
+            "packEquivalentMatchingCodes": [
+              "0263125"
+            ],
             "selectedCode": "0263125",
             "nameCandidateCodes": [
               "0263124",
@@ -4298,6 +4364,9 @@
               "0263124"
             ],
             "packTextMatchingCodes": [
+              "0263124"
+            ],
+            "packEquivalentMatchingCodes": [
               "0263124"
             ],
             "selectedCode": "0263124",
@@ -4364,6 +4433,10 @@
               "0266741"
             ],
             "packTextMatchingCodes": [
+              "0260935",
+              "0266741"
+            ],
+            "packEquivalentMatchingCodes": [
               "0260935",
               "0266741"
             ],
@@ -4440,6 +4513,10 @@
               "0199466",
               "0289229"
             ],
+            "packEquivalentMatchingCodes": [
+              "0199466",
+              "0289229"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0199466",
@@ -4489,6 +4566,9 @@
               "0040275"
             ],
             "packTextMatchingCodes": [
+              "0040275"
+            ],
+            "packEquivalentMatchingCodes": [
               "0040275"
             ],
             "selectedCode": "0040275",
@@ -4557,6 +4637,9 @@
               "0254272"
             ],
             "packTextMatchingCodes": [
+              "0254272"
+            ],
+            "packEquivalentMatchingCodes": [
               "0254272"
             ],
             "selectedCode": "0254272",
@@ -4699,6 +4782,9 @@
             "packTextMatchingCodes": [
               "0268831"
             ],
+            "packEquivalentMatchingCodes": [
+              "0268831"
+            ],
             "selectedCode": "0268831",
             "nameCandidateCodes": [
               "0268828",
@@ -4755,6 +4841,9 @@
               "0268828"
             ],
             "packTextMatchingCodes": [
+              "0268828"
+            ],
+            "packEquivalentMatchingCodes": [
               "0268828"
             ],
             "selectedCode": "0268828",
@@ -4819,6 +4908,9 @@
               "0193798"
             ],
             "packTextMatchingCodes": [
+              "0193798"
+            ],
+            "packEquivalentMatchingCodes": [
               "0193798"
             ],
             "selectedCode": "0193798",
@@ -4890,6 +4982,9 @@
             "packTextMatchingCodes": [
               "0243198"
             ],
+            "packEquivalentMatchingCodes": [
+              "0243198"
+            ],
             "selectedCode": "0243198",
             "nameCandidateCodes": [
               "0243196",
@@ -4949,6 +5044,12 @@
               "0261028"
             ],
             "packTextMatchingCodes": [
+              "0191728",
+              "0191729",
+              "0260982",
+              "0261028"
+            ],
+            "packEquivalentMatchingCodes": [
               "0191728",
               "0191729",
               "0260982",
@@ -5025,6 +5126,10 @@
               "0265460"
             ],
             "packTextMatchingCodes": [
+              "0265451",
+              "0265460"
+            ],
+            "packEquivalentMatchingCodes": [
               "0265451",
               "0265460"
             ],
@@ -5111,6 +5216,9 @@
             "packTextMatchingCodes": [
               "0083318"
             ],
+            "packEquivalentMatchingCodes": [
+              "0083318"
+            ],
             "selectedCode": "0083318",
             "nameCandidateCodes": [
               "0003542",
@@ -5160,6 +5268,9 @@
               "0002479"
             ],
             "packTextMatchingCodes": [
+              "0002479"
+            ],
+            "packEquivalentMatchingCodes": [
               "0002479"
             ],
             "selectedCode": "0002479",
@@ -5212,6 +5323,9 @@
               "0260740"
             ],
             "packTextMatchingCodes": [
+              "0260740"
+            ],
+            "packEquivalentMatchingCodes": [
               "0260740"
             ],
             "selectedCode": "0260740",
@@ -5270,6 +5384,9 @@
             "packTextMatchingCodes": [
               "0044997"
             ],
+            "packEquivalentMatchingCodes": [
+              "0044997"
+            ],
             "selectedCode": "0044997",
             "nameCandidateCodes": [
               "0044997",
@@ -5320,6 +5437,9 @@
               "0225506"
             ],
             "packTextMatchingCodes": [
+              "0225506"
+            ],
+            "packEquivalentMatchingCodes": [
               "0225506"
             ],
             "selectedCode": "0225506",
@@ -5401,6 +5521,12 @@
               "0281580"
             ],
             "packTextMatchingCodes": [
+              "0041823",
+              "0041824",
+              "0281579",
+              "0281580"
+            ],
+            "packEquivalentMatchingCodes": [
               "0041823",
               "0041824",
               "0281579",
@@ -5555,6 +5681,7 @@
               "0129444"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0129435",
@@ -5632,6 +5759,9 @@
             "packTextMatchingCodes": [
               "0032503"
             ],
+            "packEquivalentMatchingCodes": [
+              "0032503"
+            ],
             "selectedCode": "0032503",
             "nameCandidateCodes": [
               "0032500",
@@ -5694,6 +5824,9 @@
               "0234441"
             ],
             "packTextMatchingCodes": [
+              "0234441"
+            ],
+            "packEquivalentMatchingCodes": [
               "0234441"
             ],
             "selectedCode": "0234441",
@@ -5774,6 +5907,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0273024",
@@ -5900,6 +6034,9 @@
             "packTextMatchingCodes": [
               "0203055"
             ],
+            "packEquivalentMatchingCodes": [
+              "0203055"
+            ],
             "selectedCode": "0203055",
             "nameCandidateCodes": [
               "0203027",
@@ -6006,6 +6143,9 @@
             "packTextMatchingCodes": [
               "0127961"
             ],
+            "packEquivalentMatchingCodes": [
+              "0127961"
+            ],
             "selectedCode": "0127961",
             "nameCandidateCodes": [
               "0127959",
@@ -6063,6 +6203,9 @@
               "0252395"
             ],
             "packTextMatchingCodes": [
+              "0252395"
+            ],
+            "packEquivalentMatchingCodes": [
               "0252395"
             ],
             "selectedCode": "0252395",
@@ -6167,6 +6310,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0127467",
@@ -6281,6 +6425,10 @@
               "0057585",
               "0086785"
             ],
+            "packEquivalentMatchingCodes": [
+              "0057585",
+              "0086785"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0013388",
@@ -6343,6 +6491,9 @@
               "0500886"
             ],
             "packTextMatchingCodes": [
+              "0500886"
+            ],
+            "packEquivalentMatchingCodes": [
               "0500886"
             ],
             "selectedCode": "0500886",
@@ -6419,6 +6570,9 @@
             "packTextMatchingCodes": [
               "0096696"
             ],
+            "packEquivalentMatchingCodes": [
+              "0096696"
+            ],
             "selectedCode": "0096696",
             "nameCandidateCodes": [
               "0096696",
@@ -6479,6 +6633,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0166774",
@@ -6552,6 +6707,9 @@
               "0164023"
             ],
             "packTextMatchingCodes": [
+              "0164023"
+            ],
+            "packEquivalentMatchingCodes": [
               "0164023"
             ],
             "selectedCode": "0164023",
@@ -6645,6 +6803,9 @@
             "packTextMatchingCodes": [
               "0028740"
             ],
+            "packEquivalentMatchingCodes": [
+              "0028740"
+            ],
             "selectedCode": "0028740",
             "nameCandidateCodes": [
               "0028727",
@@ -6725,6 +6886,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0169620",
@@ -6801,6 +6963,9 @@
             "packTextMatchingCodes": [
               "0064797"
             ],
+            "packEquivalentMatchingCodes": [
+              "0064797"
+            ],
             "selectedCode": "0064797",
             "nameCandidateCodes": [
               "0058133",
@@ -6857,6 +7022,10 @@
               "0076653",
               "0284750"
             ],
+            "packEquivalentMatchingCodes": [
+              "0076653",
+              "0284750"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0076653",
@@ -6910,6 +7079,9 @@
               "0249172"
             ],
             "packTextMatchingCodes": [
+              "0249172"
+            ],
+            "packEquivalentMatchingCodes": [
               "0249172"
             ],
             "selectedCode": "0249172",
@@ -6970,6 +7142,10 @@
               "0296708"
             ],
             "packTextMatchingCodes": [
+              "0145988",
+              "0296708"
+            ],
+            "packEquivalentMatchingCodes": [
               "0145988",
               "0296708"
             ],
@@ -7041,6 +7217,9 @@
               "0001290"
             ],
             "packTextMatchingCodes": [
+              "0001290"
+            ],
+            "packEquivalentMatchingCodes": [
               "0001290"
             ],
             "selectedCode": "0001290",
@@ -7145,6 +7324,10 @@
               "0139394",
               "0260911"
             ],
+            "packEquivalentMatchingCodes": [
+              "0139394",
+              "0260911"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0001244",
@@ -7245,6 +7428,9 @@
             "packTextMatchingCodes": [
               "0248671"
             ],
+            "packEquivalentMatchingCodes": [
+              "0248671"
+            ],
             "selectedCode": "0248671",
             "nameCandidateCodes": [
               "0248671",
@@ -7343,6 +7529,9 @@
             "packTextMatchingCodes": [
               "0248679"
             ],
+            "packEquivalentMatchingCodes": [
+              "0248679"
+            ],
             "selectedCode": "0248679",
             "nameCandidateCodes": [
               "0248671",
@@ -7435,6 +7624,10 @@
               "0260910",
               "0260963"
             ],
+            "packEquivalentMatchingCodes": [
+              "0260910",
+              "0260963"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0221158",
@@ -7500,6 +7693,9 @@
               "0212610"
             ],
             "packTextMatchingCodes": [
+              "0212610"
+            ],
+            "packEquivalentMatchingCodes": [
               "0212610"
             ],
             "selectedCode": "0212610",
@@ -7572,6 +7768,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0243130",
@@ -7674,6 +7871,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0243130",
@@ -7776,6 +7974,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0243130",
@@ -7878,6 +8077,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0243130",
@@ -7986,6 +8186,10 @@
               "0225510",
               "0253478"
             ],
+            "packEquivalentMatchingCodes": [
+              "0225510",
+              "0253478"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0225507",
@@ -8049,6 +8253,10 @@
               "0253476"
             ],
             "packTextMatchingCodes": [
+              "0225508",
+              "0253476"
+            ],
+            "packEquivalentMatchingCodes": [
               "0225508",
               "0253476"
             ],
@@ -8118,6 +8326,9 @@
               "0168326"
             ],
             "packTextMatchingCodes": [
+              "0168326"
+            ],
+            "packEquivalentMatchingCodes": [
               "0168326"
             ],
             "selectedCode": "0168326",
@@ -8194,6 +8405,9 @@
               "0210108"
             ],
             "packTextMatchingCodes": [
+              "0210108"
+            ],
+            "packEquivalentMatchingCodes": [
               "0210108"
             ],
             "selectedCode": "0210108",
@@ -8287,6 +8501,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0189177",
@@ -8368,6 +8583,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0209038",
@@ -8444,6 +8660,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0209038",
@@ -8521,6 +8738,9 @@
             "packTextMatchingCodes": [
               "0254998"
             ],
+            "packEquivalentMatchingCodes": [
+              "0254998"
+            ],
             "selectedCode": "0254998",
             "nameCandidateCodes": [
               "0254998",
@@ -8571,6 +8791,9 @@
               "0000168"
             ],
             "packTextMatchingCodes": [
+              "0000168"
+            ],
+            "packEquivalentMatchingCodes": [
               "0000168"
             ],
             "selectedCode": "0000168",
@@ -8633,6 +8856,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0025361",
@@ -8759,6 +8983,9 @@
             "packTextMatchingCodes": [
               "0247845"
             ],
+            "packEquivalentMatchingCodes": [
+              "0247845"
+            ],
             "selectedCode": "0247845",
             "nameCandidateCodes": [
               "0247845",
@@ -8820,6 +9047,9 @@
               "0210023"
             ],
             "packTextMatchingCodes": [
+              "0210023"
+            ],
+            "packEquivalentMatchingCodes": [
               "0210023"
             ],
             "selectedCode": "0210023",
@@ -8890,6 +9120,9 @@
               "0267042"
             ],
             "packTextMatchingCodes": [
+              "0267042"
+            ],
+            "packEquivalentMatchingCodes": [
               "0267042"
             ],
             "selectedCode": null,
@@ -8968,6 +9201,10 @@
               "0200935",
               "0279264"
             ],
+            "packEquivalentMatchingCodes": [
+              "0200935",
+              "0279264"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0200935",
@@ -9022,6 +9259,9 @@
             "packTextMatchingCodes": [
               "0017189"
             ],
+            "packEquivalentMatchingCodes": [
+              "0017189"
+            ],
             "selectedCode": "0017189",
             "nameCandidateCodes": [
               "0017188",
@@ -9073,6 +9313,9 @@
               "0096303"
             ],
             "packTextMatchingCodes": [
+              "0096303"
+            ],
+            "packEquivalentMatchingCodes": [
               "0096303"
             ],
             "selectedCode": "0096303",
@@ -9130,6 +9373,9 @@
               "0149149"
             ],
             "packTextMatchingCodes": [
+              "0149149"
+            ],
+            "packEquivalentMatchingCodes": [
               "0149149"
             ],
             "selectedCode": "0149149",
@@ -9214,6 +9460,10 @@
               "0002951",
               "0267055"
             ],
+            "packEquivalentMatchingCodes": [
+              "0002951",
+              "0267055"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0002710",
@@ -9282,6 +9532,9 @@
             "packTextMatchingCodes": [
               "0180433"
             ],
+            "packEquivalentMatchingCodes": [
+              "0180433"
+            ],
             "selectedCode": "0180433",
             "nameCandidateCodes": [
               "0127546",
@@ -9337,6 +9590,9 @@
               "0230399"
             ],
             "packTextMatchingCodes": [
+              "0230399"
+            ],
+            "packEquivalentMatchingCodes": [
               "0230399"
             ],
             "selectedCode": "0230399",
@@ -9398,6 +9654,9 @@
             "packTextMatchingCodes": [
               "0191689"
             ],
+            "packEquivalentMatchingCodes": [
+              "0191689"
+            ],
             "selectedCode": "0191689",
             "nameCandidateCodes": [
               "0191688",
@@ -9456,8 +9715,15 @@
               "0207937",
               "0235897"
             ],
-            "preferredCandidateCodes": [],
+            "preferredCandidateCodes": [
+              "0207933",
+              "0235897"
+            ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [
+              "0207933",
+              "0235897"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0087680",
@@ -9474,12 +9740,11 @@
             "normalizedName": "Anopyrin",
             "matchBasis": [
               "normalized_name",
-              "normalized_strength"
+              "normalized_strength",
+              "equivalent_pack_notation"
             ],
-            "reviewReasons": [
-              "no_candidate_with_matching_pack_text"
-            ],
-            "resolution": "pack_mismatch",
+            "reviewReasons": [],
+            "resolution": "multiple_metadata_candidates",
             "selectionMethod": null
           }
         }
@@ -9521,6 +9786,9 @@
               "0253668"
             ],
             "packTextMatchingCodes": [
+              "0253668"
+            ],
+            "packEquivalentMatchingCodes": [
               "0253668"
             ],
             "selectedCode": "0253668",
@@ -9577,22 +9845,26 @@
             "candidateCodes": [
               "0220737"
             ],
-            "preferredCandidateCodes": [],
+            "preferredCandidateCodes": [
+              "0220737"
+            ],
             "packTextMatchingCodes": [],
-            "selectedCode": null,
+            "packEquivalentMatchingCodes": [
+              "0220737"
+            ],
+            "selectedCode": "0220737",
             "nameCandidateCodes": [
               "0220737"
             ],
             "normalizedName": "Aprepitant Sandoz",
             "matchBasis": [
               "normalized_name",
-              "normalized_strength"
+              "normalized_strength",
+              "equivalent_pack_notation"
             ],
-            "reviewReasons": [
-              "no_candidate_with_matching_pack_text"
-            ],
-            "resolution": "pack_mismatch",
-            "selectionMethod": null
+            "reviewReasons": [],
+            "resolution": "unique_metadata_candidate",
+            "selectionMethod": "automatic_unique_metadata_candidate"
           }
         }
       ],
@@ -9629,6 +9901,9 @@
               "0088356"
             ],
             "packTextMatchingCodes": [
+              "0088356"
+            ],
+            "packEquivalentMatchingCodes": [
               "0088356"
             ],
             "selectedCode": "0088356",
@@ -9687,6 +9962,9 @@
               "0184288"
             ],
             "packTextMatchingCodes": [
+              "0184288"
+            ],
+            "packEquivalentMatchingCodes": [
               "0184288"
             ],
             "selectedCode": "0184288",
@@ -9770,6 +10048,12 @@
               "0260949",
               "0260980"
             ],
+            "packEquivalentMatchingCodes": [
+              "0013767",
+              "0260887",
+              "0260949",
+              "0260980"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0013767",
@@ -9830,6 +10114,9 @@
             "packTextMatchingCodes": [
               "0187983"
             ],
+            "packEquivalentMatchingCodes": [
+              "0187983"
+            ],
             "selectedCode": "0187983",
             "nameCandidateCodes": [
               "0187983"
@@ -9888,6 +10175,11 @@
               "0221211"
             ],
             "packTextMatchingCodes": [
+              "0010252",
+              "0132797",
+              "0221211"
+            ],
+            "packEquivalentMatchingCodes": [
               "0010252",
               "0132797",
               "0221211"
@@ -9954,6 +10246,9 @@
               "0213264"
             ],
             "packTextMatchingCodes": [
+              "0213264"
+            ],
+            "packEquivalentMatchingCodes": [
               "0213264"
             ],
             "selectedCode": "0213264",
@@ -10120,6 +10415,9 @@
               "0214438"
             ],
             "packTextMatchingCodes": [
+              "0214438"
+            ],
+            "packEquivalentMatchingCodes": [
               "0214438"
             ],
             "selectedCode": "0214438",
@@ -10340,6 +10638,9 @@
             "packTextMatchingCodes": [
               "0207939"
             ],
+            "packEquivalentMatchingCodes": [
+              "0207939"
+            ],
             "selectedCode": "0207939",
             "nameCandidateCodes": [
               "0207939",
@@ -10390,6 +10691,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0266359",
@@ -10458,6 +10760,9 @@
               "0171539"
             ],
             "packTextMatchingCodes": [
+              "0171539"
+            ],
+            "packEquivalentMatchingCodes": [
               "0171539"
             ],
             "selectedCode": "0171539",
@@ -10540,6 +10845,9 @@
             "packTextMatchingCodes": [
               "0171571"
             ],
+            "packEquivalentMatchingCodes": [
+              "0171571"
+            ],
             "selectedCode": "0171571",
             "nameCandidateCodes": [
               "0171561",
@@ -10615,6 +10923,9 @@
               "0203397"
             ],
             "packTextMatchingCodes": [
+              "0203397"
+            ],
+            "packEquivalentMatchingCodes": [
               "0203397"
             ],
             "selectedCode": "0203397",
@@ -10695,6 +11006,9 @@
               "0231469"
             ],
             "packTextMatchingCodes": [
+              "0231469"
+            ],
+            "packEquivalentMatchingCodes": [
               "0231469"
             ],
             "selectedCode": "0231469",
@@ -10779,6 +11093,9 @@
               "0021856"
             ],
             "packTextMatchingCodes": [
+              "0021856"
+            ],
+            "packEquivalentMatchingCodes": [
               "0021856"
             ],
             "selectedCode": "0021856",
@@ -10887,6 +11204,10 @@
               "0132688",
               "0230415"
             ],
+            "packEquivalentMatchingCodes": [
+              "0132688",
+              "0230415"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0132688",
@@ -10953,6 +11274,9 @@
               "0230409"
             ],
             "packTextMatchingCodes": [
+              "0230409"
+            ],
+            "packEquivalentMatchingCodes": [
               "0230409"
             ],
             "selectedCode": "0230409",
@@ -11022,6 +11346,9 @@
               "0149702"
             ],
             "packTextMatchingCodes": [
+              "0149702"
+            ],
+            "packEquivalentMatchingCodes": [
               "0149702"
             ],
             "selectedCode": "0149702",
@@ -11096,6 +11423,9 @@
             "packTextMatchingCodes": [
               "0266650"
             ],
+            "packEquivalentMatchingCodes": [
+              "0266650"
+            ],
             "selectedCode": "0266650",
             "nameCandidateCodes": [
               "0266649",
@@ -11154,6 +11484,9 @@
               "0054150"
             ],
             "packTextMatchingCodes": [
+              "0054150"
+            ],
+            "packEquivalentMatchingCodes": [
               "0054150"
             ],
             "selectedCode": "0054150",
@@ -11238,6 +11571,9 @@
             "packTextMatchingCodes": [
               "0087076"
             ],
+            "packEquivalentMatchingCodes": [
+              "0087076"
+            ],
             "selectedCode": "0087076",
             "nameCandidateCodes": [
               "0025263",
@@ -11295,6 +11631,9 @@
               "0059595"
             ],
             "packTextMatchingCodes": [
+              "0059595"
+            ],
+            "packEquivalentMatchingCodes": [
               "0059595"
             ],
             "selectedCode": "0059595",
@@ -11361,6 +11700,9 @@
             "packTextMatchingCodes": [
               "0096194"
             ],
+            "packEquivalentMatchingCodes": [
+              "0096194"
+            ],
             "selectedCode": "0096194",
             "nameCandidateCodes": [
               "0046327",
@@ -11421,6 +11763,9 @@
               "0056804"
             ],
             "packTextMatchingCodes": [
+              "0056804"
+            ],
+            "packEquivalentMatchingCodes": [
               "0056804"
             ],
             "selectedCode": "0056804",
@@ -11487,6 +11832,9 @@
             "packTextMatchingCodes": [
               "0056807"
             ],
+            "packEquivalentMatchingCodes": [
+              "0056807"
+            ],
             "selectedCode": "0056807",
             "nameCandidateCodes": [
               "0056802",
@@ -11550,6 +11898,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0155780",
@@ -11619,6 +11968,9 @@
               "0012069"
             ],
             "packTextMatchingCodes": [
+              "0012069"
+            ],
+            "packEquivalentMatchingCodes": [
               "0012069"
             ],
             "selectedCode": "0012069",
@@ -11728,6 +12080,7 @@
               "0278281"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0260725",
@@ -11785,6 +12138,9 @@
               "0116108"
             ],
             "packTextMatchingCodes": [
+              "0116108"
+            ],
+            "packEquivalentMatchingCodes": [
               "0116108"
             ],
             "selectedCode": "0116108",
@@ -11872,6 +12228,9 @@
               "0111792"
             ],
             "packTextMatchingCodes": [
+              "0111792"
+            ],
+            "packEquivalentMatchingCodes": [
               "0111792"
             ],
             "selectedCode": "0111792",
@@ -11984,6 +12343,10 @@
               "0276365",
               "0276762"
             ],
+            "packEquivalentMatchingCodes": [
+              "0276365",
+              "0276762"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0276358",
@@ -12062,6 +12425,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0013886",
@@ -12137,6 +12501,9 @@
               "0025835"
             ],
             "packTextMatchingCodes": [
+              "0025835"
+            ],
+            "packEquivalentMatchingCodes": [
               "0025835"
             ],
             "selectedCode": "0025835",
@@ -12228,6 +12595,9 @@
             "packTextMatchingCodes": [
               "0205998"
             ],
+            "packEquivalentMatchingCodes": [
+              "0205998"
+            ],
             "selectedCode": "0205998",
             "nameCandidateCodes": [
               "0172379",
@@ -12308,6 +12678,9 @@
             "packTextMatchingCodes": [
               "0205992"
             ],
+            "packEquivalentMatchingCodes": [
+              "0205992"
+            ],
             "selectedCode": "0205992",
             "nameCandidateCodes": [
               "0172379",
@@ -12384,6 +12757,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0013886",
@@ -12454,6 +12828,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0013886",
@@ -12524,6 +12899,9 @@
             "packTextMatchingCodes": [
               "0159559"
             ],
+            "packEquivalentMatchingCodes": [
+              "0159559"
+            ],
             "selectedCode": "0159559",
             "nameCandidateCodes": [
               "0159558",
@@ -12576,6 +12954,9 @@
               "0267372"
             ],
             "packTextMatchingCodes": [
+              "0267372"
+            ],
+            "packEquivalentMatchingCodes": [
               "0267372"
             ],
             "selectedCode": "0267372",
@@ -12631,6 +13012,7 @@
               "0128710"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0013316",
@@ -12685,6 +13067,9 @@
               "0248257"
             ],
             "packTextMatchingCodes": [
+              "0248257"
+            ],
+            "packEquivalentMatchingCodes": [
               "0248257"
             ],
             "selectedCode": "0248257",
@@ -12752,6 +13137,9 @@
               "0019571"
             ],
             "packTextMatchingCodes": [
+              "0019571"
+            ],
+            "packEquivalentMatchingCodes": [
               "0019571"
             ],
             "selectedCode": null,
@@ -12841,6 +13229,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0237771",
@@ -13027,6 +13416,9 @@
             "packTextMatchingCodes": [
               "0252375"
             ],
+            "packEquivalentMatchingCodes": [
+              "0252375"
+            ],
             "selectedCode": "0252375",
             "nameCandidateCodes": [
               "0221213",
@@ -13078,6 +13470,9 @@
               "0047478"
             ],
             "packTextMatchingCodes": [
+              "0047478"
+            ],
+            "packEquivalentMatchingCodes": [
               "0047478"
             ],
             "selectedCode": "0047478",
@@ -13143,6 +13538,9 @@
               "0169123"
             ],
             "packTextMatchingCodes": [
+              "0169123"
+            ],
+            "packEquivalentMatchingCodes": [
               "0169123"
             ],
             "selectedCode": "0169123",
@@ -13269,6 +13667,9 @@
             "packTextMatchingCodes": [
               "0157785"
             ],
+            "packEquivalentMatchingCodes": [
+              "0157785"
+            ],
             "selectedCode": "0157785",
             "nameCandidateCodes": [
               "0097027",
@@ -13360,6 +13761,9 @@
             "packTextMatchingCodes": [
               "0017992"
             ],
+            "packEquivalentMatchingCodes": [
+              "0017992"
+            ],
             "selectedCode": "0017992",
             "nameCandidateCodes": [
               "0017992",
@@ -13412,6 +13816,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0032103",
@@ -13470,6 +13875,9 @@
               "0029716"
             ],
             "packTextMatchingCodes": [
+              "0029716"
+            ],
+            "packEquivalentMatchingCodes": [
               "0029716"
             ],
             "selectedCode": "0029716",
@@ -13532,6 +13940,9 @@
             "packTextMatchingCodes": [
               "0054423"
             ],
+            "packEquivalentMatchingCodes": [
+              "0054423"
+            ],
             "selectedCode": "0054423",
             "nameCandidateCodes": [
               "0054422",
@@ -13585,6 +13996,10 @@
               "0040374"
             ],
             "packTextMatchingCodes": [
+              "0040373",
+              "0040374"
+            ],
+            "packEquivalentMatchingCodes": [
               "0040373",
               "0040374"
             ],
@@ -13646,6 +14061,9 @@
               "0040367"
             ],
             "packTextMatchingCodes": [
+              "0040367"
+            ],
+            "packEquivalentMatchingCodes": [
               "0040367"
             ],
             "selectedCode": "0040367",
@@ -13718,6 +14136,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0022896",
@@ -13789,6 +14208,9 @@
             "packTextMatchingCodes": [
               "0231612"
             ],
+            "packEquivalentMatchingCodes": [
+              "0231612"
+            ],
             "selectedCode": "0231612",
             "nameCandidateCodes": [
               "0231611",
@@ -13851,6 +14273,9 @@
               "0194071"
             ],
             "packTextMatchingCodes": [
+              "0194071"
+            ],
+            "packEquivalentMatchingCodes": [
               "0194071"
             ],
             "selectedCode": "0194071",
@@ -13936,6 +14361,9 @@
             "packTextMatchingCodes": [
               "0276375"
             ],
+            "packEquivalentMatchingCodes": [
+              "0276375"
+            ],
             "selectedCode": "0276375",
             "nameCandidateCodes": [
               "0276372",
@@ -14015,6 +14443,9 @@
             "packTextMatchingCodes": [
               "0096187"
             ],
+            "packEquivalentMatchingCodes": [
+              "0096187"
+            ],
             "selectedCode": "0096187",
             "nameCandidateCodes": [
               "0023305",
@@ -14072,6 +14503,9 @@
             "packTextMatchingCodes": [
               "0057525"
             ],
+            "packEquivalentMatchingCodes": [
+              "0057525"
+            ],
             "selectedCode": "0057525",
             "nameCandidateCodes": [
               "0057525"
@@ -14122,6 +14556,10 @@
               "0260958"
             ],
             "packTextMatchingCodes": [
+              "0163754",
+              "0260958"
+            ],
+            "packEquivalentMatchingCodes": [
               "0163754",
               "0260958"
             ],
@@ -14176,6 +14614,9 @@
               "0216963"
             ],
             "packTextMatchingCodes": [
+              "0216963"
+            ],
+            "packEquivalentMatchingCodes": [
               "0216963"
             ],
             "selectedCode": "0216963",
@@ -14247,6 +14688,9 @@
               "0016923"
             ],
             "packTextMatchingCodes": [
+              "0016923"
+            ],
+            "packEquivalentMatchingCodes": [
               "0016923"
             ],
             "selectedCode": "0016923",
@@ -14369,6 +14813,9 @@
             "packTextMatchingCodes": [
               "0018566"
             ],
+            "packEquivalentMatchingCodes": [
+              "0018566"
+            ],
             "selectedCode": "0018566",
             "nameCandidateCodes": [
               "0018562",
@@ -14445,6 +14892,9 @@
               "0016923"
             ],
             "packTextMatchingCodes": [
+              "0016923"
+            ],
+            "packEquivalentMatchingCodes": [
               "0016923"
             ],
             "selectedCode": "0016923",
@@ -14584,6 +15034,9 @@
             "packTextMatchingCodes": [
               "0016647"
             ],
+            "packEquivalentMatchingCodes": [
+              "0016647"
+            ],
             "selectedCode": "0016647",
             "nameCandidateCodes": [
               "0010364",
@@ -14674,6 +15127,9 @@
             "packTextMatchingCodes": [
               "0001940"
             ],
+            "packEquivalentMatchingCodes": [
+              "0001940"
+            ],
             "selectedCode": "0001940",
             "nameCandidateCodes": [
               "0001940"
@@ -14734,6 +15190,9 @@
               "0024987"
             ],
             "packTextMatchingCodes": [
+              "0024987"
+            ],
+            "packEquivalentMatchingCodes": [
               "0024987"
             ],
             "selectedCode": "0024987",
@@ -14838,6 +15297,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0229914",
@@ -14941,6 +15401,9 @@
             "packTextMatchingCodes": [
               "0229909"
             ],
+            "packEquivalentMatchingCodes": [
+              "0229909"
+            ],
             "selectedCode": "0229909",
             "nameCandidateCodes": [
               "0229903",
@@ -15001,6 +15464,9 @@
               "0229903"
             ],
             "packTextMatchingCodes": [
+              "0229903"
+            ],
+            "packEquivalentMatchingCodes": [
               "0229903"
             ],
             "selectedCode": "0229903",
@@ -15067,6 +15533,9 @@
             "packTextMatchingCodes": [
               "0197863"
             ],
+            "packEquivalentMatchingCodes": [
+              "0197863"
+            ],
             "selectedCode": "0197863",
             "nameCandidateCodes": [
               "0197861",
@@ -15121,6 +15590,9 @@
             "packTextMatchingCodes": [
               "0054424"
             ],
+            "packEquivalentMatchingCodes": [
+              "0054424"
+            ],
             "selectedCode": "0054424",
             "nameCandidateCodes": [
               "0054424"
@@ -15170,6 +15642,9 @@
               "0059942"
             ],
             "packTextMatchingCodes": [
+              "0059942"
+            ],
+            "packEquivalentMatchingCodes": [
               "0059942"
             ],
             "selectedCode": "0059942",
@@ -15235,6 +15710,10 @@
               "0150995",
               "0150999"
             ],
+            "packEquivalentMatchingCodes": [
+              "0150995",
+              "0150999"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0150994",
@@ -15290,6 +15769,9 @@
               "0207692"
             ],
             "packTextMatchingCodes": [
+              "0207692"
+            ],
+            "packEquivalentMatchingCodes": [
               "0207692"
             ],
             "selectedCode": "0207692",
@@ -15349,6 +15831,9 @@
               "0032917"
             ],
             "packTextMatchingCodes": [
+              "0032917"
+            ],
+            "packEquivalentMatchingCodes": [
               "0032917"
             ],
             "selectedCode": "0032917",
@@ -15414,6 +15899,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0193022",
@@ -15506,6 +15992,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0119747",
@@ -15597,6 +16084,9 @@
             "packTextMatchingCodes": [
               "0013623"
             ],
+            "packEquivalentMatchingCodes": [
+              "0013623"
+            ],
             "selectedCode": "0013623",
             "nameCandidateCodes": [
               "0013621",
@@ -15657,6 +16147,9 @@
               "0206191"
             ],
             "packTextMatchingCodes": [
+              "0206191"
+            ],
+            "packEquivalentMatchingCodes": [
               "0206191"
             ],
             "selectedCode": "0206191",
@@ -15776,6 +16269,10 @@
               "0233287",
               "0273291"
             ],
+            "packEquivalentMatchingCodes": [
+              "0233287",
+              "0273291"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0233274",
@@ -15882,6 +16379,9 @@
             "packTextMatchingCodes": [
               "0001632"
             ],
+            "packEquivalentMatchingCodes": [
+              "0001632"
+            ],
             "selectedCode": "0001632",
             "nameCandidateCodes": [
               "0001630",
@@ -15935,6 +16435,9 @@
               "0001631"
             ],
             "packTextMatchingCodes": [
+              "0001631"
+            ],
+            "packEquivalentMatchingCodes": [
               "0001631"
             ],
             "selectedCode": "0001631",
@@ -15991,6 +16494,9 @@
               "0252624"
             ],
             "packTextMatchingCodes": [
+              "0252624"
+            ],
+            "packEquivalentMatchingCodes": [
               "0252624"
             ],
             "selectedCode": "0252624",
@@ -16071,6 +16577,10 @@
               "0266692",
               "0289288"
             ],
+            "packEquivalentMatchingCodes": [
+              "0266692",
+              "0289288"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0266691",
@@ -16125,6 +16635,9 @@
               "0137461"
             ],
             "packTextMatchingCodes": [
+              "0137461"
+            ],
+            "packEquivalentMatchingCodes": [
               "0137461"
             ],
             "selectedCode": "0137461",
@@ -16193,6 +16706,9 @@
             "packTextMatchingCodes": [
               "0112561"
             ],
+            "packEquivalentMatchingCodes": [
+              "0112561"
+            ],
             "selectedCode": "0112561",
             "nameCandidateCodes": [
               "0013280",
@@ -16245,6 +16761,9 @@
               "0030805"
             ],
             "packTextMatchingCodes": [
+              "0030805"
+            ],
+            "packEquivalentMatchingCodes": [
               "0030805"
             ],
             "selectedCode": "0030805",
@@ -16303,6 +16822,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0184394",
@@ -16428,6 +16948,9 @@
             "packTextMatchingCodes": [
               "0227277"
             ],
+            "packEquivalentMatchingCodes": [
+              "0227277"
+            ],
             "selectedCode": "0227277",
             "nameCandidateCodes": [
               "0227265",
@@ -16531,6 +17054,9 @@
               "0017163"
             ],
             "packTextMatchingCodes": [
+              "0017163"
+            ],
+            "packEquivalentMatchingCodes": [
               "0017163"
             ],
             "selectedCode": "0017163",
@@ -16653,6 +17179,7 @@
               "0221579"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0173223",
@@ -16747,6 +17274,9 @@
             "packTextMatchingCodes": [
               "0045752"
             ],
+            "packEquivalentMatchingCodes": [
+              "0045752"
+            ],
             "selectedCode": "0045752",
             "nameCandidateCodes": [
               "0013828",
@@ -16820,6 +17350,9 @@
               "0234711"
             ],
             "packTextMatchingCodes": [
+              "0234711"
+            ],
+            "packEquivalentMatchingCodes": [
               "0234711"
             ],
             "selectedCode": "0234711",
@@ -16913,6 +17446,9 @@
             "packTextMatchingCodes": [
               "0253336"
             ],
+            "packEquivalentMatchingCodes": [
+              "0253336"
+            ],
             "selectedCode": "0253336",
             "nameCandidateCodes": [
               "0253336"
@@ -16963,6 +17499,9 @@
               "0049014"
             ],
             "packTextMatchingCodes": [
+              "0049014"
+            ],
+            "packEquivalentMatchingCodes": [
               "0049014"
             ],
             "selectedCode": "0049014",
@@ -17031,6 +17570,10 @@
               "0141034",
               "0169251"
             ],
+            "packEquivalentMatchingCodes": [
+              "0141034",
+              "0169251"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0141034",
@@ -17093,6 +17636,10 @@
               "0261007"
             ],
             "packTextMatchingCodes": [
+              "0232165",
+              "0261007"
+            ],
+            "packEquivalentMatchingCodes": [
               "0232165",
               "0261007"
             ],
@@ -17166,6 +17713,10 @@
               "0224817"
             ],
             "packTextMatchingCodes": [
+              "0224816",
+              "0224817"
+            ],
+            "packEquivalentMatchingCodes": [
               "0224816",
               "0224817"
             ],
@@ -17261,6 +17812,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0148067",
@@ -17370,6 +17922,9 @@
             "packTextMatchingCodes": [
               "0240633"
             ],
+            "packEquivalentMatchingCodes": [
+              "0240633"
+            ],
             "selectedCode": "0240633",
             "nameCandidateCodes": [
               "0240625",
@@ -17434,6 +17989,10 @@
               "0260316"
             ],
             "packTextMatchingCodes": [
+              "0014958",
+              "0260316"
+            ],
+            "packEquivalentMatchingCodes": [
               "0014958",
               "0260316"
             ],
@@ -17506,6 +18065,9 @@
             "packTextMatchingCodes": [
               "0119653"
             ],
+            "packEquivalentMatchingCodes": [
+              "0119653"
+            ],
             "selectedCode": "0119653",
             "nameCandidateCodes": [
               "0097402",
@@ -17567,6 +18129,9 @@
               "0227174"
             ],
             "packTextMatchingCodes": [
+              "0227174"
+            ],
+            "packEquivalentMatchingCodes": [
               "0227174"
             ],
             "selectedCode": "0227174",
@@ -17654,6 +18219,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0019573",
@@ -17741,6 +18307,7 @@
               "0208204"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0191920",
@@ -17806,6 +18373,7 @@
               "0208207"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0191920",
@@ -17870,6 +18438,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0201137",
@@ -17940,6 +18509,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0201137",
@@ -18008,6 +18578,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0201124",
@@ -18067,9 +18638,14 @@
               "0207965",
               "0207966"
             ],
-            "preferredCandidateCodes": [],
+            "preferredCandidateCodes": [
+              "0207966"
+            ],
             "packTextMatchingCodes": [],
-            "selectedCode": null,
+            "packEquivalentMatchingCodes": [
+              "0207966"
+            ],
+            "selectedCode": "0207966",
             "nameCandidateCodes": [
               "0032087",
               "0032088",
@@ -18083,13 +18659,12 @@
             "normalizedName": "Tralgit",
             "matchBasis": [
               "normalized_name",
-              "normalized_strength"
+              "normalized_strength",
+              "equivalent_pack_notation"
             ],
-            "reviewReasons": [
-              "no_candidate_with_matching_pack_text"
-            ],
-            "resolution": "pack_mismatch",
-            "selectionMethod": null
+            "reviewReasons": [],
+            "resolution": "unique_metadata_candidate",
+            "selectionMethod": "automatic_unique_metadata_candidate"
           }
         }
       ],
@@ -18130,6 +18705,10 @@
               "0269062"
             ],
             "packTextMatchingCodes": [
+              "0048578",
+              "0269062"
+            ],
+            "packEquivalentMatchingCodes": [
               "0048578",
               "0269062"
             ],
@@ -18190,6 +18769,9 @@
             "packTextMatchingCodes": [
               "0178626"
             ],
+            "packEquivalentMatchingCodes": [
+              "0178626"
+            ],
             "selectedCode": "0178626",
             "nameCandidateCodes": [
               "0178620",
@@ -18244,6 +18826,9 @@
               "0021731"
             ],
             "packTextMatchingCodes": [
+              "0021731"
+            ],
+            "packEquivalentMatchingCodes": [
               "0021731"
             ],
             "selectedCode": "0021731",
@@ -18399,6 +18984,7 @@
               "0278312"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0269359",
@@ -18712,6 +19298,9 @@
             "packTextMatchingCodes": [
               "0249080"
             ],
+            "packEquivalentMatchingCodes": [
+              "0249080"
+            ],
             "selectedCode": "0249080",
             "nameCandidateCodes": [
               "0249070",
@@ -18805,6 +19394,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0167770",
@@ -18912,6 +19502,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0167770",
@@ -19023,6 +19614,9 @@
             "packTextMatchingCodes": [
               "0148673"
             ],
+            "packEquivalentMatchingCodes": [
+              "0148673"
+            ],
             "selectedCode": "0148673",
             "nameCandidateCodes": [
               "0132111",
@@ -19095,6 +19689,9 @@
               "0190958"
             ],
             "packTextMatchingCodes": [
+              "0190958"
+            ],
+            "packEquivalentMatchingCodes": [
               "0190958"
             ],
             "selectedCode": "0190958",
@@ -19182,6 +19779,9 @@
             "packTextMatchingCodes": [
               "0009844"
             ],
+            "packEquivalentMatchingCodes": [
+              "0009844"
+            ],
             "selectedCode": "0009844",
             "nameCandidateCodes": [
               "0009844",
@@ -19234,6 +19834,9 @@
             "packTextMatchingCodes": [
               "0094114"
             ],
+            "packEquivalentMatchingCodes": [
+              "0094114"
+            ],
             "selectedCode": "0094114",
             "nameCandidateCodes": [
               "0094113",
@@ -19283,6 +19886,9 @@
               "0002429"
             ],
             "packTextMatchingCodes": [
+              "0002429"
+            ],
+            "packEquivalentMatchingCodes": [
               "0002429"
             ],
             "selectedCode": "0002429",
@@ -19341,6 +19947,9 @@
             "packTextMatchingCodes": [
               "0226453"
             ],
+            "packEquivalentMatchingCodes": [
+              "0226453"
+            ],
             "selectedCode": "0226453",
             "nameCandidateCodes": [
               "0226447",
@@ -19396,12 +20005,17 @@
               "0169249"
             ],
             "preferredCandidateCodes": [
+              "0023816",
               "0120369"
             ],
             "packTextMatchingCodes": [
               "0120369"
             ],
-            "selectedCode": "0120369",
+            "packEquivalentMatchingCodes": [
+              "0023816",
+              "0120369"
+            ],
+            "selectedCode": null,
             "nameCandidateCodes": [
               "0023812",
               "0023813",
@@ -19422,11 +20036,12 @@
             "normalizedName": "Velaxin",
             "matchBasis": [
               "normalized_name",
-              "normalized_strength"
+              "normalized_strength",
+              "equivalent_pack_notation"
             ],
             "reviewReasons": [],
-            "resolution": "unique_metadata_candidate",
-            "selectionMethod": "automatic_unique_metadata_candidate"
+            "resolution": "multiple_metadata_candidates",
+            "selectionMethod": null
           }
         }
       ],
@@ -19465,6 +20080,9 @@
               "0225450"
             ],
             "packTextMatchingCodes": [
+              "0225450"
+            ],
+            "packEquivalentMatchingCodes": [
               "0225450"
             ],
             "selectedCode": null,
@@ -19531,6 +20149,10 @@
               "0154031"
             ],
             "packTextMatchingCodes": [
+              "0018279",
+              "0154031"
+            ],
+            "packEquivalentMatchingCodes": [
               "0018279",
               "0154031"
             ],
@@ -19622,6 +20244,10 @@
               "0224365"
             ],
             "packTextMatchingCodes": [
+              "0224357",
+              "0224365"
+            ],
+            "packEquivalentMatchingCodes": [
               "0224357",
               "0224365"
             ],
@@ -19748,6 +20374,9 @@
             "packTextMatchingCodes": [
               "0107643"
             ],
+            "packEquivalentMatchingCodes": [
+              "0107643"
+            ],
             "selectedCode": "0107643",
             "nameCandidateCodes": [
               "0107214",
@@ -19822,6 +20451,9 @@
               "0119220"
             ],
             "packTextMatchingCodes": [
+              "0119220"
+            ],
+            "packEquivalentMatchingCodes": [
               "0119220"
             ],
             "selectedCode": "0119220",
@@ -19924,6 +20556,9 @@
               "0127778"
             ],
             "packTextMatchingCodes": [
+              "0127778"
+            ],
+            "packEquivalentMatchingCodes": [
               "0127778"
             ],
             "selectedCode": "0127778",
@@ -20046,6 +20681,9 @@
             "packTextMatchingCodes": [
               "0127760"
             ],
+            "packEquivalentMatchingCodes": [
+              "0127760"
+            ],
             "selectedCode": "0127760",
             "nameCandidateCodes": [
               "0127753",
@@ -20150,6 +20788,9 @@
             "packTextMatchingCodes": [
               "0016594"
             ],
+            "packEquivalentMatchingCodes": [
+              "0016594"
+            ],
             "selectedCode": "0016594",
             "nameCandidateCodes": [
               "0016592",
@@ -20204,6 +20845,9 @@
               "0053761"
             ],
             "packTextMatchingCodes": [
+              "0053761"
+            ],
+            "packEquivalentMatchingCodes": [
               "0053761"
             ],
             "selectedCode": "0053761",
@@ -20261,6 +20905,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0172410",
@@ -20315,6 +20960,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0162750"
@@ -20371,6 +21017,9 @@
               "0223014"
             ],
             "packTextMatchingCodes": [
+              "0223014"
+            ],
+            "packEquivalentMatchingCodes": [
               "0223014"
             ],
             "selectedCode": "0223014",
@@ -20442,6 +21091,10 @@
               "0185202",
               "0185206"
             ],
+            "packEquivalentMatchingCodes": [
+              "0185202",
+              "0185206"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0185201",
@@ -20497,6 +21150,9 @@
               "0091788"
             ],
             "packTextMatchingCodes": [
+              "0091788"
+            ],
+            "packEquivalentMatchingCodes": [
               "0091788"
             ],
             "selectedCode": "0091788",
@@ -20571,6 +21227,10 @@
               "0289842"
             ],
             "packTextMatchingCodes": [
+              "0260386",
+              "0289842"
+            ],
+            "packEquivalentMatchingCodes": [
               "0260386",
               "0289842"
             ],
@@ -20792,6 +21452,10 @@
               "0260374",
               "0289830"
             ],
+            "packEquivalentMatchingCodes": [
+              "0260374",
+              "0289830"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0260334",
@@ -20988,6 +21652,9 @@
             "packTextMatchingCodes": [
               "0014913"
             ],
+            "packEquivalentMatchingCodes": [
+              "0014913"
+            ],
             "selectedCode": "0014913",
             "nameCandidateCodes": [
               "0014913",
@@ -21043,6 +21710,9 @@
             "packTextMatchingCodes": [
               "0059711"
             ],
+            "packEquivalentMatchingCodes": [
+              "0059711"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0059709",
@@ -21096,6 +21766,9 @@
               "0284167"
             ],
             "packTextMatchingCodes": [
+              "0284167"
+            ],
+            "packEquivalentMatchingCodes": [
               "0284167"
             ],
             "selectedCode": "0284167",
@@ -21164,6 +21837,9 @@
             "packTextMatchingCodes": [
               "0284171"
             ],
+            "packEquivalentMatchingCodes": [
+              "0284171"
+            ],
             "selectedCode": "0284171",
             "nameCandidateCodes": [
               "0280543",
@@ -21230,6 +21906,9 @@
             "packTextMatchingCodes": [
               "0284169"
             ],
+            "packEquivalentMatchingCodes": [
+              "0284169"
+            ],
             "selectedCode": "0284169",
             "nameCandidateCodes": [
               "0280543",
@@ -21289,6 +21968,7 @@
             "candidateCodes": [],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [],
             "normalizedName": "Pyridoxin",
@@ -21339,6 +22019,9 @@
             "packTextMatchingCodes": [
               "0054432"
             ],
+            "packEquivalentMatchingCodes": [
+              "0054432"
+            ],
             "selectedCode": "0054432",
             "nameCandidateCodes": [
               "0007387",
@@ -21386,6 +22069,7 @@
             "candidateCodes": [],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [],
             "normalizedName": "ProbioLact",
@@ -21436,6 +22120,9 @@
               "0235780"
             ],
             "packTextMatchingCodes": [
+              "0235780"
+            ],
+            "packEquivalentMatchingCodes": [
               "0235780"
             ],
             "selectedCode": "0235780",
@@ -21501,6 +22188,9 @@
               "0162008"
             ],
             "packTextMatchingCodes": [
+              "0162008"
+            ],
+            "packEquivalentMatchingCodes": [
               "0162008"
             ],
             "selectedCode": "0162008",
@@ -21605,6 +22295,10 @@
               "0101205",
               "0140124"
             ],
+            "packEquivalentMatchingCodes": [
+              "0101205",
+              "0140124"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0101197",
@@ -21702,6 +22396,9 @@
               "0016405"
             ],
             "packTextMatchingCodes": [
+              "0016405"
+            ],
+            "packEquivalentMatchingCodes": [
               "0016405"
             ],
             "selectedCode": "0016405",
@@ -21881,6 +22578,9 @@
             "packTextMatchingCodes": [
               "0001605"
             ],
+            "packEquivalentMatchingCodes": [
+              "0001605"
+            ],
             "selectedCode": "0001605",
             "nameCandidateCodes": [
               "0001426",
@@ -22058,6 +22758,9 @@
             "packTextMatchingCodes": [
               "0001495"
             ],
+            "packEquivalentMatchingCodes": [
+              "0001495"
+            ],
             "selectedCode": "0001495",
             "nameCandidateCodes": [
               "0001426",
@@ -22211,6 +22914,9 @@
             "packTextMatchingCodes": [
               "0083135"
             ],
+            "packEquivalentMatchingCodes": [
+              "0083135"
+            ],
             "selectedCode": "0083135",
             "nameCandidateCodes": [
               "0017998",
@@ -22266,6 +22972,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0029322",
@@ -22351,6 +23058,9 @@
               "0186821"
             ],
             "packTextMatchingCodes": [
+              "0186821"
+            ],
+            "packEquivalentMatchingCodes": [
               "0186821"
             ],
             "selectedCode": "0186821",
@@ -22501,6 +23211,9 @@
             "packTextMatchingCodes": [
               "0186843"
             ],
+            "packEquivalentMatchingCodes": [
+              "0186843"
+            ],
             "selectedCode": "0186843",
             "nameCandidateCodes": [
               "0186795",
@@ -22641,6 +23354,9 @@
             "packTextMatchingCodes": [
               "0031385"
             ],
+            "packEquivalentMatchingCodes": [
+              "0031385"
+            ],
             "selectedCode": "0031385",
             "nameCandidateCodes": [
               "0031215",
@@ -22696,6 +23412,9 @@
               "0031215"
             ],
             "packTextMatchingCodes": [
+              "0031215"
+            ],
+            "packEquivalentMatchingCodes": [
               "0031215"
             ],
             "selectedCode": "0031215",
@@ -22757,6 +23476,9 @@
             "packTextMatchingCodes": [
               "0138854"
             ],
+            "packEquivalentMatchingCodes": [
+              "0138854"
+            ],
             "selectedCode": "0138854",
             "nameCandidateCodes": [
               "0138851",
@@ -22815,6 +23537,7 @@
               "0267272"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0267265",
@@ -22894,6 +23617,9 @@
               "0056981"
             ],
             "packTextMatchingCodes": [
+              "0056981"
+            ],
+            "packEquivalentMatchingCodes": [
               "0056981"
             ],
             "selectedCode": "0056981",
@@ -23020,6 +23746,10 @@
               "0084360",
               "0260988"
             ],
+            "packEquivalentMatchingCodes": [
+              "0084360",
+              "0260988"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0084360",
@@ -23073,6 +23803,9 @@
               "0060164"
             ],
             "packTextMatchingCodes": [
+              "0060164"
+            ],
+            "packEquivalentMatchingCodes": [
               "0060164"
             ],
             "selectedCode": "0060164",
@@ -23129,6 +23862,9 @@
               "0250994"
             ],
             "packTextMatchingCodes": [
+              "0250994"
+            ],
+            "packEquivalentMatchingCodes": [
               "0250994"
             ],
             "selectedCode": "0250994",
@@ -23196,6 +23932,9 @@
               "0204666"
             ],
             "packTextMatchingCodes": [
+              "0204666"
+            ],
+            "packEquivalentMatchingCodes": [
               "0204666"
             ],
             "selectedCode": "0204666",
@@ -23318,6 +24057,9 @@
             "packTextMatchingCodes": [
               "0204678"
             ],
+            "packEquivalentMatchingCodes": [
+              "0204678"
+            ],
             "selectedCode": "0204678",
             "nameCandidateCodes": [
               "0204662",
@@ -23435,6 +24177,9 @@
             "packTextMatchingCodes": [
               "0206525"
             ],
+            "packEquivalentMatchingCodes": [
+              "0206525"
+            ],
             "selectedCode": "0206525",
             "nameCandidateCodes": [
               "0206481",
@@ -23535,6 +24280,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0193871",
@@ -23620,6 +24366,9 @@
             "packTextMatchingCodes": [
               "0047712"
             ],
+            "packEquivalentMatchingCodes": [
+              "0047712"
+            ],
             "selectedCode": "0047712",
             "nameCandidateCodes": [
               "0047712",
@@ -23691,6 +24440,10 @@
               "0101275"
             ],
             "packTextMatchingCodes": [
+              "0101273",
+              "0101275"
+            ],
+            "packEquivalentMatchingCodes": [
               "0101273",
               "0101275"
             ],
@@ -23793,6 +24546,11 @@
               "0279091"
             ],
             "packTextMatchingCodes": [
+              "0254851",
+              "0261094",
+              "0279091"
+            ],
+            "packEquivalentMatchingCodes": [
               "0254851",
               "0261094",
               "0279091"
@@ -23914,6 +24672,9 @@
             "packTextMatchingCodes": [
               "0168447"
             ],
+            "packEquivalentMatchingCodes": [
+              "0168447"
+            ],
             "selectedCode": "0168447",
             "nameCandidateCodes": [
               "0168444",
@@ -23980,6 +24741,9 @@
               "0206498"
             ],
             "packTextMatchingCodes": [
+              "0206498"
+            ],
+            "packEquivalentMatchingCodes": [
               "0206498"
             ],
             "selectedCode": "0206498",
@@ -24083,6 +24847,9 @@
             "packTextMatchingCodes": [
               "0187800"
             ],
+            "packEquivalentMatchingCodes": [
+              "0187800"
+            ],
             "selectedCode": "0187800",
             "nameCandidateCodes": [
               "0187787",
@@ -24179,6 +24946,9 @@
             "packTextMatchingCodes": [
               "0206211"
             ],
+            "packEquivalentMatchingCodes": [
+              "0206211"
+            ],
             "selectedCode": "0206211",
             "nameCandidateCodes": [
               "0173561",
@@ -24255,6 +25025,9 @@
             "packTextMatchingCodes": [
               "0152958"
             ],
+            "packEquivalentMatchingCodes": [
+              "0152958"
+            ],
             "selectedCode": "0152958",
             "nameCandidateCodes": [
               "0152956",
@@ -24320,6 +25093,9 @@
             "packTextMatchingCodes": [
               "0183073"
             ],
+            "packEquivalentMatchingCodes": [
+              "0183073"
+            ],
             "selectedCode": "0183073",
             "nameCandidateCodes": [
               "0183070",
@@ -24383,6 +25159,9 @@
               "0187792"
             ],
             "packTextMatchingCodes": [
+              "0187792"
+            ],
+            "packEquivalentMatchingCodes": [
               "0187792"
             ],
             "selectedCode": "0187792",
@@ -24485,6 +25264,9 @@
             "packTextMatchingCodes": [
               "0228988"
             ],
+            "packEquivalentMatchingCodes": [
+              "0228988"
+            ],
             "selectedCode": "0228988",
             "nameCandidateCodes": [
               "0226784",
@@ -24579,9 +25361,14 @@
               "0023814",
               "0023815"
             ],
-            "preferredCandidateCodes": [],
+            "preferredCandidateCodes": [
+              "0023815"
+            ],
             "packTextMatchingCodes": [],
-            "selectedCode": null,
+            "packEquivalentMatchingCodes": [
+              "0023815"
+            ],
+            "selectedCode": "0023815",
             "nameCandidateCodes": [
               "0023812",
               "0023813",
@@ -24602,13 +25389,12 @@
             "normalizedName": "Velaxin",
             "matchBasis": [
               "normalized_name",
-              "normalized_strength"
+              "normalized_strength",
+              "equivalent_pack_notation"
             ],
-            "reviewReasons": [
-              "no_candidate_with_matching_pack_text"
-            ],
-            "resolution": "pack_mismatch",
-            "selectionMethod": null
+            "reviewReasons": [],
+            "resolution": "unique_metadata_candidate",
+            "selectionMethod": "automatic_unique_metadata_candidate"
           }
         }
       ],
@@ -24648,6 +25434,9 @@
               "0267437"
             ],
             "packTextMatchingCodes": [
+              "0267437"
+            ],
+            "packEquivalentMatchingCodes": [
               "0267437"
             ],
             "selectedCode": "0267437",
@@ -24717,6 +25506,7 @@
               "0265395"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0003063",
@@ -24776,6 +25566,7 @@
               "0231247"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0231246",
@@ -24834,6 +25625,9 @@
               "0066030"
             ],
             "packTextMatchingCodes": [
+              "0066030"
+            ],
+            "packEquivalentMatchingCodes": [
               "0066030"
             ],
             "selectedCode": "0066030",
@@ -24897,6 +25691,9 @@
               "0228545"
             ],
             "packTextMatchingCodes": [
+              "0228545"
+            ],
+            "packEquivalentMatchingCodes": [
               "0228545"
             ],
             "selectedCode": "0228545",
@@ -24965,6 +25762,9 @@
               "0228548"
             ],
             "packTextMatchingCodes": [
+              "0228548"
+            ],
+            "packEquivalentMatchingCodes": [
               "0228548"
             ],
             "selectedCode": "0228548",
@@ -25038,6 +25838,9 @@
             "packTextMatchingCodes": [
               "0253025"
             ],
+            "packEquivalentMatchingCodes": [
+              "0253025"
+            ],
             "selectedCode": "0253025",
             "nameCandidateCodes": [
               "0253025",
@@ -25096,6 +25899,9 @@
               "0102591"
             ],
             "packTextMatchingCodes": [
+              "0102591"
+            ],
+            "packEquivalentMatchingCodes": [
               "0102591"
             ],
             "selectedCode": "0102591",
@@ -25197,6 +26003,12 @@
               "0279419",
               "0279420"
             ],
+            "packEquivalentMatchingCodes": [
+              "0279298",
+              "0279299",
+              "0279419",
+              "0279420"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0279290",
@@ -25288,6 +26100,7 @@
             ],
             "preferredCandidateCodes": [],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0201606",
@@ -25377,6 +26190,9 @@
               "0227583"
             ],
             "packTextMatchingCodes": [
+              "0227583"
+            ],
+            "packEquivalentMatchingCodes": [
               "0227583"
             ],
             "selectedCode": "0227583",
@@ -25610,6 +26426,9 @@
             "packTextMatchingCodes": [
               "0176453"
             ],
+            "packEquivalentMatchingCodes": [
+              "0176453"
+            ],
             "selectedCode": "0176453",
             "nameCandidateCodes": [
               "0125581",
@@ -25721,6 +26540,9 @@
             "packTextMatchingCodes": [
               "0176446"
             ],
+            "packEquivalentMatchingCodes": [
+              "0176446"
+            ],
             "selectedCode": "0176446",
             "nameCandidateCodes": [
               "0125581",
@@ -25829,6 +26651,9 @@
               "0134292"
             ],
             "packTextMatchingCodes": [
+              "0134292"
+            ],
+            "packEquivalentMatchingCodes": [
               "0134292"
             ],
             "selectedCode": "0134292",
@@ -25955,6 +26780,9 @@
             "packTextMatchingCodes": [
               "0134281"
             ],
+            "packEquivalentMatchingCodes": [
+              "0134281"
+            ],
             "selectedCode": "0134281",
             "nameCandidateCodes": [
               "0134269",
@@ -26070,6 +26898,9 @@
             "packTextMatchingCodes": [
               "0250044"
             ],
+            "packEquivalentMatchingCodes": [
+              "0250044"
+            ],
             "selectedCode": "0250044",
             "nameCandidateCodes": [
               "0250044",
@@ -26126,6 +26957,10 @@
               "0030434",
               "0057339"
             ],
+            "packEquivalentMatchingCodes": [
+              "0030434",
+              "0057339"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0003550",
@@ -26177,6 +27012,9 @@
               "0046755"
             ],
             "packTextMatchingCodes": [
+              "0046755"
+            ],
+            "packEquivalentMatchingCodes": [
               "0046755"
             ],
             "selectedCode": "0046755",
@@ -26235,6 +27073,9 @@
               "0194781"
             ],
             "packTextMatchingCodes": [
+              "0194781"
+            ],
+            "packEquivalentMatchingCodes": [
               "0194781"
             ],
             "selectedCode": "0194781",
@@ -26301,6 +27142,9 @@
             "packTextMatchingCodes": [
               "0253024"
             ],
+            "packEquivalentMatchingCodes": [
+              "0253024"
+            ],
             "selectedCode": "0253024",
             "nameCandidateCodes": [
               "0253023",
@@ -26365,6 +27209,10 @@
               "0232128",
               "0260915"
             ],
+            "packEquivalentMatchingCodes": [
+              "0232128",
+              "0260915"
+            ],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0166191",
@@ -26426,6 +27274,9 @@
               "0254824"
             ],
             "packTextMatchingCodes": [
+              "0254824"
+            ],
+            "packEquivalentMatchingCodes": [
               "0254824"
             ],
             "selectedCode": "0254824",
@@ -26498,6 +27349,9 @@
             "packTextMatchingCodes": [
               "0258216"
             ],
+            "packEquivalentMatchingCodes": [
+              "0258216"
+            ],
             "selectedCode": "0258216",
             "nameCandidateCodes": [
               "0258215",
@@ -26563,6 +27417,9 @@
               "0254824"
             ],
             "packTextMatchingCodes": [
+              "0254824"
+            ],
+            "packEquivalentMatchingCodes": [
               "0254824"
             ],
             "selectedCode": "0254824",
@@ -26641,6 +27498,9 @@
               "0184604"
             ],
             "packTextMatchingCodes": [
+              "0184604"
+            ],
+            "packEquivalentMatchingCodes": [
               "0184604"
             ],
             "selectedCode": "0184604",
@@ -26824,6 +27684,9 @@
             "packTextMatchingCodes": [
               "0231622"
             ],
+            "packEquivalentMatchingCodes": [
+              "0231622"
+            ],
             "selectedCode": "0231622",
             "nameCandidateCodes": [
               "0231614",
@@ -26926,6 +27789,7 @@
               "0231635"
             ],
             "packTextMatchingCodes": [],
+            "packEquivalentMatchingCodes": [],
             "selectedCode": null,
             "nameCandidateCodes": [
               "0231614",
@@ -27021,6 +27885,9 @@
             "packTextMatchingCodes": [
               "0231655"
             ],
+            "packEquivalentMatchingCodes": [
+              "0231655"
+            ],
             "selectedCode": "0231655",
             "nameCandidateCodes": [
               "0231614",
@@ -27106,6 +27973,9 @@
             "packTextMatchingCodes": [
               "0029393"
             ],
+            "packEquivalentMatchingCodes": [
+              "0029393"
+            ],
             "selectedCode": "0029393",
             "nameCandidateCodes": [
               "0029392",
@@ -27174,6 +28044,9 @@
             "packTextMatchingCodes": [
               "0041737"
             ],
+            "packEquivalentMatchingCodes": [
+              "0041737"
+            ],
             "selectedCode": "0041737",
             "nameCandidateCodes": [
               "0041734",
@@ -27232,6 +28105,9 @@
               "0164734"
             ],
             "packTextMatchingCodes": [
+              "0164734"
+            ],
+            "packEquivalentMatchingCodes": [
               "0164734"
             ],
             "selectedCode": "0164734",
@@ -27314,6 +28190,9 @@
               "0184728"
             ],
             "packTextMatchingCodes": [
+              "0184728"
+            ],
+            "packEquivalentMatchingCodes": [
               "0184728"
             ],
             "selectedCode": "0184728",
@@ -27449,6 +28328,9 @@
             "packTextMatchingCodes": [
               "0122593"
             ],
+            "packEquivalentMatchingCodes": [
+              "0122593"
+            ],
             "selectedCode": "0122593",
             "nameCandidateCodes": [
               "0122572",
@@ -27545,6 +28427,9 @@
               "0122580"
             ],
             "packTextMatchingCodes": [
+              "0122580"
+            ],
+            "packEquivalentMatchingCodes": [
               "0122580"
             ],
             "selectedCode": "0122580",
@@ -27645,6 +28530,9 @@
             "packTextMatchingCodes": [
               "0122588"
             ],
+            "packEquivalentMatchingCodes": [
+              "0122588"
+            ],
             "selectedCode": "0122588",
             "nameCandidateCodes": [
               "0122572",
@@ -27743,6 +28631,7 @@
                   "0164735"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0164734",
@@ -27793,6 +28682,7 @@
                   "0220737"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0220737"
@@ -27850,6 +28740,7 @@
                   "0185208"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0185201",
@@ -27902,6 +28793,7 @@
                   "0029393"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0029392",
@@ -27966,6 +28858,7 @@
                   "0238524"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0210211",
@@ -28027,6 +28920,7 @@
                   "0249172"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0249168",
@@ -28186,6 +29080,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -28281,6 +29176,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "PROBIOLACT",
@@ -28327,6 +29223,7 @@
                   "0278733"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0102590",
@@ -28381,6 +29278,7 @@
                   "0164735"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0164734",
@@ -28435,6 +29333,7 @@
                   "0220737"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0220737"
@@ -28495,6 +29394,7 @@
                   "0185208"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0185201",
@@ -28551,6 +29451,7 @@
                   "0029393"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0029392",
@@ -28619,6 +29520,7 @@
                   "0238524"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0210211",
@@ -28684,6 +29586,7 @@
                   "0249172"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0249168",
@@ -28847,6 +29750,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -28946,6 +29850,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Probiolact",
@@ -28996,6 +29901,7 @@
                   "0278733"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0102590",
@@ -29076,6 +29982,7 @@
                   "0199675"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0199668",
@@ -29154,6 +30061,7 @@
                   "0500261"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0167680",
@@ -29221,6 +30129,7 @@
                   "0000168"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0000168"
@@ -29342,6 +30251,7 @@
                   "0279430"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0279290",
@@ -29426,6 +30336,7 @@
                   "0017189"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017188",
@@ -29477,6 +30388,7 @@
                   "0260895"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0232161",
@@ -29590,6 +30502,7 @@
                   "0271692"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0172950",
@@ -29702,6 +30615,7 @@
                   "0000168"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0000168"
@@ -29755,6 +30669,7 @@
                   "0263093"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0263089",
@@ -29804,6 +30719,7 @@
                   "0017189"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017188",
@@ -29883,6 +30799,7 @@
                   "0249172"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0249168",
@@ -29940,6 +30857,7 @@
                   "0086785"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0013388",
@@ -29996,6 +30914,7 @@
                   "0289288"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0266691",
@@ -30043,6 +30962,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0249168",
@@ -30103,6 +31023,7 @@
                   "0086785"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0013388",
@@ -30163,6 +31084,7 @@
                   "0289288"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0266691",
@@ -30243,6 +31165,7 @@
                   "0203255"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0059709",
@@ -30332,6 +31255,7 @@
                   "0101303"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0101241",
@@ -30400,6 +31324,7 @@
                   "0250046"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0250044",
@@ -30457,6 +31382,7 @@
                   "0203255"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0059709",
@@ -30510,6 +31436,7 @@
                   "0014500"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0014498",
@@ -30561,6 +31488,7 @@
                   "0250046"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0250044",
@@ -30637,6 +31565,7 @@
                   "0229905"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0229903",
@@ -30690,6 +31619,7 @@
                   "0207939"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0207939",
@@ -30738,6 +31668,7 @@
                   "0263006"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0096303",
@@ -30792,6 +31723,7 @@
                   "0229905"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0229903",
@@ -30849,6 +31781,7 @@
                   "0207939"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0207939",
@@ -30901,6 +31834,7 @@
                   "0263006"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0096303",
@@ -30983,6 +31917,7 @@
                   "0206215"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0173561",
@@ -31051,6 +31986,7 @@
                   "0151949"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0096696",
@@ -31117,6 +32053,7 @@
                   "0268666"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0148067",
@@ -31219,6 +32156,7 @@
                   "0001633"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001630",
@@ -31301,6 +32239,7 @@
                   "0265466"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0261032",
@@ -31381,6 +32320,7 @@
                   "0250046"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0250044",
@@ -31452,6 +32392,7 @@
                   "0276768"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0276358",
@@ -31529,6 +32470,7 @@
                   "0203255"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0059709",
@@ -31604,6 +32546,7 @@
                   "0237728"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -31733,6 +32676,7 @@
                   "0206215"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0173561",
@@ -31799,6 +32743,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0096696",
@@ -31868,6 +32813,7 @@
                   "0268666"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0148067",
@@ -31974,6 +32920,7 @@
                   "0001633"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001630",
@@ -32060,6 +33007,7 @@
                   "0265466"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0261032",
@@ -32144,6 +33092,7 @@
                   "0250046"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0250044",
@@ -32219,6 +33168,7 @@
                   "0276768"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0276358",
@@ -32300,6 +33250,7 @@
                   "0203255"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0059709",
@@ -32377,6 +33328,7 @@
                   "0237728"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -32534,6 +33486,7 @@
                   "0169464"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0141034",
@@ -32600,6 +33553,7 @@
                   "0235897"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -32664,6 +33618,7 @@
                   "0260943"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0231689",
@@ -32746,6 +33701,7 @@
                   "0204685"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0204662",
@@ -32884,6 +33840,7 @@
                   "0207045"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0005782",
@@ -33023,6 +33980,7 @@
                   "0237728"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -33160,6 +34118,7 @@
                   "0169464"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0141034",
@@ -33230,6 +34189,7 @@
                   "0235897"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -33298,6 +34258,7 @@
                   "0260943"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0231689",
@@ -33364,6 +34325,7 @@
                   "0049009"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0049004",
@@ -33478,6 +34440,7 @@
                   "0201418"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001426",
@@ -33652,6 +34615,7 @@
                   "0237728"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -33799,6 +34763,7 @@
                   "0260627"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0197861",
@@ -33854,6 +34819,7 @@
                   "0112563"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0013280",
@@ -34013,6 +34979,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -34112,6 +35079,7 @@
                   "0040275"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0040274",
@@ -34162,6 +35130,7 @@
                   "0184525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017992",
@@ -34209,6 +35178,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0201606",
@@ -34267,6 +35237,7 @@
                   "0112563"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0013280",
@@ -34430,6 +35401,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -34533,6 +35505,7 @@
                   "0040275"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0040274",
@@ -34587,6 +35560,7 @@
                   "0184525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017992",
@@ -34677,6 +35651,7 @@
                   "0193738"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025827",
@@ -34757,6 +35732,7 @@
                   "0060165"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0060164",
@@ -34804,6 +35780,7 @@
                   "0263124"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0263124",
@@ -34854,6 +35831,7 @@
                   "0184525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017992",
@@ -34921,6 +35899,7 @@
                   "0193738"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025827",
@@ -35005,6 +35984,7 @@
                   "0060165"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0060164",
@@ -35056,6 +36036,7 @@
                   "0263124"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0263124",
@@ -35110,6 +36091,7 @@
                   "0184525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017992",
@@ -35251,6 +36233,7 @@
                   "0221579"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0173223",
@@ -35328,6 +36311,7 @@
                   "0057525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0057525"
@@ -35483,6 +36467,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -35616,6 +36601,7 @@
                   "0266201"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0248671",
@@ -35765,6 +36751,7 @@
                   "0221579"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0173223",
@@ -35844,6 +36831,7 @@
                   "0057525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0057525"
@@ -36003,6 +36991,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -36100,6 +37089,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0096610"
@@ -36172,6 +37162,7 @@
                   "0252376"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0221213",
@@ -36239,6 +37230,7 @@
                   "0268666"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0148067",
@@ -36351,6 +37343,7 @@
                   "0235897"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -36431,6 +37424,7 @@
                   "0237728"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -36558,6 +37552,7 @@
                   "0202739"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0202734",
@@ -36628,6 +37623,7 @@
                   "0184415"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0184394",
@@ -36752,6 +37748,7 @@
                   "0235897"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -37108,6 +38105,7 @@
                   "0298527"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0140168",
@@ -37457,6 +38455,7 @@
                   "0227176"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0227167",
@@ -37524,6 +38523,7 @@
                   "0194783"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0194772",
@@ -37588,6 +38588,7 @@
                   "0254343"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0247845",
@@ -37648,6 +38649,7 @@
                   "0229056"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0209911",
@@ -37724,6 +38726,7 @@
                   "0244742"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0228539",
@@ -37796,6 +38799,7 @@
                   "0235897"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -37852,6 +38856,7 @@
                   "0056805"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0056802",
@@ -37913,6 +38918,7 @@
                   "0001633"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001630",
@@ -37963,6 +38969,7 @@
                   "0225452"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0225450",
@@ -38189,6 +39196,7 @@
                   "0254185"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -38401,6 +39409,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0023746",
@@ -38448,6 +39457,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0194772",
@@ -38501,6 +39511,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0247845",
@@ -38548,6 +39559,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0209911",
@@ -38617,6 +39629,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0228539",
@@ -38674,6 +39687,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -38725,6 +39739,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0056802",
@@ -38779,6 +39794,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001710",
@@ -38898,6 +39914,7 @@
                   "0225452"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0225450",
@@ -38946,6 +39963,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -39203,6 +40221,7 @@
                   "0231635"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0231614",
@@ -39298,6 +40317,7 @@
                   "0186849"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0186795",
@@ -39437,6 +40457,7 @@
                   "0169249"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0023812",
@@ -39502,6 +40523,7 @@
                   "0107644"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0107214",
@@ -39568,6 +40590,7 @@
                   "0261035"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0084360",
@@ -39645,6 +40668,7 @@
                   "0274138"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0258215",
@@ -39815,6 +40839,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -39926,6 +40951,7 @@
                   "0238524"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0210211",
@@ -39975,6 +41001,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "PYRIDOXIN GENERICA",
@@ -40016,6 +41043,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0231614",
@@ -40090,6 +41118,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0186795",
@@ -40220,6 +41249,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0023812",
@@ -40276,6 +41306,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0107214",
@@ -40333,6 +41364,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0084360",
@@ -40379,6 +41411,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0258215",
@@ -40436,6 +41469,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -40534,6 +41568,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0210211",
@@ -40586,6 +41621,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Pyridoxin generica",
@@ -40677,6 +41713,7 @@
                   "0225203"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0024957",
@@ -40779,6 +41816,7 @@
                   "0186849"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0186795",
@@ -40930,6 +41968,7 @@
                   "0176534"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0111789",
@@ -41018,6 +42057,7 @@
                   "0001940"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001940"
@@ -41061,6 +42101,7 @@
                   "0207692"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0207692"
@@ -41106,6 +42147,7 @@
                   "0054423"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0054422",
@@ -41146,6 +42188,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "PYRIDOXIN GENERICA",
@@ -41187,6 +42230,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0024957",
@@ -41268,6 +42312,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0186795",
@@ -41398,6 +42443,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0111789",
@@ -41485,6 +42531,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001940"
@@ -41527,6 +42574,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0207692"
@@ -41569,6 +42617,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0054422",
@@ -41612,6 +42661,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Pyridoxin generica",
@@ -41693,6 +42743,7 @@
                   "0187263"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0122572",
@@ -41789,6 +42840,7 @@
                   "0056990"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0041734",
@@ -41851,6 +42903,7 @@
                   "0238524"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0210211",
@@ -41904,6 +42957,7 @@
                   "0009844"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0009844",
@@ -42127,6 +43181,7 @@
                   "0254185"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -42344,6 +43399,7 @@
                   "0184525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017992",
@@ -42393,6 +43449,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0011955",
@@ -42514,6 +43571,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0041734",
@@ -42563,6 +43621,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0210211",
@@ -42615,6 +43674,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0009844",
@@ -42659,6 +43719,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -42879,6 +43940,7 @@
                   "0184525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017992",
@@ -42958,6 +44020,7 @@
                   "0208204"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0191920",
@@ -43034,6 +44097,7 @@
                   "0219159"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0186795",
@@ -43219,6 +44283,7 @@
                   "0281588"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0010111",
@@ -43523,6 +44588,7 @@
                   "0254185"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -43735,6 +44801,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0023793",
@@ -43853,6 +44920,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0026195",
@@ -43949,6 +45017,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0010111",
@@ -44074,6 +45143,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -44329,6 +45399,7 @@
                   "0173397"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0127959",
@@ -44417,6 +45488,7 @@
                   "0265466"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0261032",
@@ -44497,6 +45569,7 @@
                   "0250046"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0250044",
@@ -44538,6 +45611,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "PROBIOLACT",
@@ -44577,6 +45651,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0127959",
@@ -44628,6 +45703,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0261032",
@@ -44703,6 +45779,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0250044",
@@ -44745,6 +45822,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Probiolact",
@@ -44856,6 +45934,7 @@
                   "0201671"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0184529",
@@ -45064,6 +46143,7 @@
                   "0201663"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0182379",
@@ -45223,6 +46303,7 @@
                   "0289851"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0260334",
@@ -45411,6 +46492,7 @@
                   "0040275"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0040274",
@@ -45457,6 +46539,7 @@
                   "0200144"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0021728",
@@ -45615,6 +46698,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -45718,6 +46802,7 @@
                   "0267790"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0046444",
@@ -45777,6 +46862,7 @@
                   "0086785"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0013388",
@@ -45878,6 +46964,7 @@
                   "0201671"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0184529",
@@ -46090,6 +47177,7 @@
                   "0201663"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0182379",
@@ -46261,6 +47349,7 @@
                   "0277301"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0019973",
@@ -46395,6 +47484,7 @@
                   "0040275"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0040274",
@@ -46445,6 +47535,7 @@
                   "0200144"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0021728",
@@ -46607,6 +47698,7 @@
                   "0280472"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0233274",
@@ -46706,6 +47798,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0046444",
@@ -46766,6 +47859,7 @@
                   "0086785"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0013388",
@@ -46915,6 +48009,7 @@
                   "0280438"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0237771",
@@ -47103,6 +48198,7 @@
                   "0230419"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0132688",
@@ -47167,6 +48263,7 @@
                   "0278733"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0102590",
@@ -47210,6 +48307,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "PYRIDOXIN GENERICA",
@@ -47326,6 +48424,7 @@
                   "0280438"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0237771",
@@ -47518,6 +48617,7 @@
                   "0230419"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0132688",
@@ -47586,6 +48686,7 @@
                   "0278733"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0102590",
@@ -47633,6 +48734,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Pyridoxin",
@@ -47708,6 +48810,7 @@
                   "0261028"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0191728",
@@ -47755,6 +48858,7 @@
                   "0057525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0057525"
@@ -47976,6 +49080,7 @@
                   "0254185"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -48198,6 +49303,7 @@
                   "0261028"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0191728",
@@ -48243,6 +49349,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Tolperison",
@@ -48321,6 +49428,7 @@
                   "0261083"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0109396",
@@ -48437,6 +49545,7 @@
                   "0276445"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0243130",
@@ -48567,6 +49676,7 @@
                   "0265466"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0261032",
@@ -48649,6 +49759,7 @@
                   "0096193"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0046327",
@@ -48713,6 +49824,7 @@
                   "0276445"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0243130",
@@ -48847,6 +49959,7 @@
                   "0265466"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0261032",
@@ -48933,6 +50046,7 @@
                   "0096193"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0046327",
@@ -49035,6 +50149,7 @@
                   "0267180"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0002944",
@@ -49127,6 +50242,7 @@
                   "0027899"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0026319",
@@ -49201,6 +50317,7 @@
                   "0184525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017992",
@@ -49246,6 +50363,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Amlodipin Sandoz",
@@ -49312,6 +50430,7 @@
                   "0209328"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0168841",
@@ -49368,6 +50487,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0017992",
@@ -49454,6 +50574,7 @@
                   "0249630"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0209038",
@@ -49526,6 +50647,7 @@
                   "0260944"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0231689",
@@ -49590,6 +50712,7 @@
                   "0057339"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0003550",
@@ -49640,6 +50763,7 @@
                   "0056805"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0056802",
@@ -49697,6 +50821,7 @@
                   "0094114"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0094113",
@@ -49747,6 +50872,7 @@
                   "0279264"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0200935",
@@ -49793,6 +50919,7 @@
                   "0088356"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0002132",
@@ -49838,6 +50965,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0209038",
@@ -49903,6 +51031,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0054150",
@@ -49974,6 +51103,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Spironolacton",
@@ -50014,6 +51144,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0056802",
@@ -50068,6 +51199,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Warfarin",
@@ -50118,6 +51250,7 @@
                   "0279264"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0200935",
@@ -50170,6 +51303,7 @@
                   "0088356"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0002132",
@@ -50248,6 +51382,7 @@
                   "0233150"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0172379",
@@ -50334,6 +51469,7 @@
                   "0186665"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0032912",
@@ -50392,6 +51528,7 @@
                   "0096190"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0023305",
@@ -50456,6 +51593,7 @@
                   "0235897"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -50510,6 +51648,7 @@
                   "0047478"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0047477",
@@ -50558,6 +51697,7 @@
                   "0001633"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001630",
@@ -50632,6 +51772,7 @@
                   "0237728"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -50802,6 +51943,7 @@
                   "0233154"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0172379",
@@ -50889,6 +52031,7 @@
                   "0186665"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0032912",
@@ -50959,6 +52102,7 @@
                   "0096191"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0023305",
@@ -51030,6 +52174,7 @@
                   "0235897"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -51087,6 +52232,7 @@
                   "0047478"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0047477",
@@ -51141,6 +52287,7 @@
                   "0001633"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001630",
@@ -51328,6 +52475,7 @@
                   "0237728"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -51481,6 +52629,7 @@
                   "0234447"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0234440",
@@ -51541,6 +52690,7 @@
                   "0207640"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0201137",
@@ -51603,6 +52753,7 @@
                   "0207966"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0032087",
@@ -51653,6 +52804,7 @@
                   "0009844"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0009844",
@@ -51734,6 +52886,7 @@
                   "0265466"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0261032",
@@ -51838,6 +52991,7 @@
                   "0237728"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -51960,6 +53114,7 @@
                   "0278733"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0102590",
@@ -52008,6 +53163,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Exemestan",
@@ -52076,6 +53232,7 @@
                   "0201136"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0201124",
@@ -52148,6 +53305,7 @@
                   "0207966"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0032087",
@@ -52197,6 +53355,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0009844",
@@ -52247,6 +53406,7 @@
                   "0265578"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0265576",
@@ -52290,6 +53450,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0025361",
@@ -52401,6 +53562,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0102590",
@@ -52491,6 +53653,7 @@
                   "0206525"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0206481",
@@ -52582,6 +53745,7 @@
                   "0208207"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0191920",
@@ -52642,6 +53806,7 @@
                   "0244741"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0228539",
@@ -52732,6 +53897,7 @@
                   "0224373"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001710",
@@ -52858,6 +54024,7 @@
                   "0235897"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -52912,6 +54079,7 @@
                   "0128710"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0013316",
@@ -52962,6 +54130,7 @@
                   "0267374"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0267371",
@@ -53186,6 +54355,7 @@
                   "0254185"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -53398,6 +54568,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0206481",
@@ -53484,6 +54655,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0191920",
@@ -53537,6 +54709,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0228539",
@@ -53594,6 +54767,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001710",
@@ -53705,6 +54879,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0087680",
@@ -53756,6 +54931,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0013316",
@@ -53799,6 +54975,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0267371",
@@ -53844,6 +55021,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -54099,6 +55277,7 @@
                   "0169464"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0141034",
@@ -54203,6 +55382,7 @@
                   "0201418"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001426",
@@ -54371,6 +55551,7 @@
                   "0194082"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0194070",
@@ -54455,6 +55636,7 @@
                   "0261024"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0010252",
@@ -54506,6 +55688,7 @@
                   "0040275"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0040274",
@@ -54552,6 +55735,7 @@
                   "0207966"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0032087",
@@ -54624,6 +55808,7 @@
                   "0204685"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0204662",
@@ -54744,6 +55929,7 @@
                   "0186665"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0032912",
@@ -54974,6 +56160,7 @@
                   "0254185"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -55208,6 +56395,7 @@
                   "0169464"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0141034",
@@ -55316,6 +56504,7 @@
                   "0201418"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001426",
@@ -55488,6 +56677,7 @@
                   "0194082"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0194070",
@@ -55574,6 +56764,7 @@
                   "0261024"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0004062",
@@ -55630,6 +56821,7 @@
                   "0040275"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0040274",
@@ -55680,6 +56872,7 @@
                   "0207966"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0032087",
@@ -55734,6 +56927,7 @@
                   "0019593"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0019590",
@@ -55804,6 +56998,7 @@
                   "0186665"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0032912",
@@ -56038,6 +57233,7 @@
                   "0254185"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -56343,6 +57539,7 @@
                   "0241918"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0227491",
@@ -56605,6 +57802,7 @@
                   "0184259"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0019573",
@@ -56687,6 +57885,7 @@
                   "0244741"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0228539",
@@ -56775,6 +57974,7 @@
                   "0274138"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0258215",
@@ -56843,6 +58043,7 @@
                   "0260915"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0166191",
@@ -56901,6 +58102,7 @@
                   "0225452"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0225450",
@@ -56949,6 +58151,7 @@
                   "0094114"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0094113",
@@ -56997,6 +58200,7 @@
                   "0001633"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001630",
@@ -57221,6 +58425,7 @@
                   "0254185"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0214427",
@@ -57436,6 +58641,7 @@
                   "0250046"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0250044",
@@ -57552,6 +58758,7 @@
                   "0241918"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0227491",
@@ -57816,6 +59023,7 @@
                   "0184259"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0019573",
@@ -57903,6 +59111,7 @@
                   "0244741"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0228539",
@@ -57993,6 +59202,7 @@
                   "0274138"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0258215",
@@ -58083,6 +59293,7 @@
                   "0260915"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0010268",
@@ -58169,6 +59380,7 @@
                   "0225453"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0225450",
@@ -58215,6 +59427,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [],
                 "normalizedName": "Warfarin",
@@ -58297,6 +59510,7 @@
                   "0237944"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0001630",
@@ -58413,6 +59627,7 @@
                 "candidateCodes": [],
                 "preferredCandidateCodes": [],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0109396",
@@ -58673,6 +59888,7 @@
                   "0250046"
                 ],
                 "packTextMatchingCodes": [],
+                "packEquivalentMatchingCodes": [],
                 "selectedCode": null,
                 "nameCandidateCodes": [
                   "0250044",

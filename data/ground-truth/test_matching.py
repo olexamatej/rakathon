@@ -1,6 +1,6 @@
 """Synthetic regression cases for identity matching; no patient data or images."""
 import unittest
-from refine_matching import Matcher, refine, strength_key
+from refine_matching import Matcher, refine, strength_key, equivalent_pack_key
 
 
 def row(code, name, strength, pack='30'):
@@ -70,6 +70,33 @@ class PromotionTests(unittest.TestCase):
 
 
 class MatcherTests(unittest.TestCase):
+    def test_equivalent_pack_notation(self):
+        m = Matcher([row('01', 'Example', '5MG', '20(2X10)')])
+        result = m.match(observation('Example', '5mg', '20'))
+        self.assertEqual(result['resolution'], 'unique_metadata_candidate')
+        self.assertEqual(result['packTextMatchingCodes'], [])
+        self.assertEqual(result['packEquivalentMatchingCodes'], ['01'])
+        self.assertIn('equivalent_pack_notation', result['matchBasis'])
+        self.assertEqual(equivalent_pack_key('1 x 1 + 1 x 2'), equivalent_pack_key('1+2'))
+
+    def test_pack_variants_remain_ambiguous(self):
+        m = Matcher([row('01', 'Example', '5MG', '60(3X20)'),
+                     row('02', 'Example', '5MG', '60(6X10)')])
+        self.assertEqual(m.match(observation('Example', '5mg', '60'))['resolution'],
+                         'multiple_metadata_candidates')
+        self.assertEqual(m.match(observation('Example', '5mg', '60(3X20)'))['preferredCandidateCodes'],
+                         ['01'])
+        # Even an exact textual candidate cannot hide an equivalent alternative.
+        m = Matcher([row('01', 'Example', '5MG', '60'),
+                     row('02', 'Example', '5MG', '60(6X10)')])
+        self.assertEqual(m.match(observation('Example', '5mg', '60'))['preferredCandidateCodes'],
+                         ['01', '02'])
+
+    def test_pack_qualifiers_and_unit_dose_preserved(self):
+        for value in ['20 I', '20 II', '20X1', '20(2X11)', '20(20X1)']:
+            self.assertNotEqual(equivalent_pack_key(value), equivalent_pack_key('20'))
+        self.assertNotEqual(equivalent_pack_key('1+2'), equivalent_pack_key('2+1'))
+
     def test_helicid_alias(self):
         m = Matcher([row('01', 'HELICID', '20MG')])
         result = m.match(observation('Helicid 20 Zentiva', '20mg', '30'))

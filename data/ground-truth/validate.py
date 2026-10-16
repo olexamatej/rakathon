@@ -68,6 +68,7 @@ def main():
             assert set(item["sukl"]["nameCandidateCodes"]) <= sukl
             assert set(item["sukl"]["preferredCandidateCodes"]) <= set(item["sukl"]["candidateCodes"])
             assert set(item["sukl"]["packTextMatchingCodes"]) <= set(item["sukl"]["candidateCodes"])
+            assert set(item["sukl"]["packEquivalentMatchingCodes"]) <= set(item["sukl"]["candidateCodes"])
             selected = item["sukl"]["selectedCode"]
             if selected is not None:
                 assert record["kind"] == "medication_package"

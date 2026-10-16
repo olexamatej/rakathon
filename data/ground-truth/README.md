@@ -48,7 +48,7 @@ choosing one. SÚKL codes are candidates, with automatic selections for packages
 having one preferred metadata candidate. Do not treat source aliases, handwriting
 substitutions, or name-only matches as evidence of therapeutic equivalence.
 
-## Refined SÚKL matching (schema 1.2)
+## Refined SÚKL matching (schema 1.3)
 
 `refine_matching.py` rebuilds only the SÚKL links from the saved visual fields.
 It uses a separate SÚKL alias table (fixing the Helicid catalogue-alias bug),
@@ -66,7 +66,8 @@ The `sukl` object contains:
 | `candidateCodes` | Strict or review-only candidates, depending on `status`. |
 | `nameCandidateCodes` | Name-based lookup results, including records with conflicting strengths; these are review aids only. |
 | `packTextMatchingCodes` | Candidates whose pack text matches after whitespace/case normalization. Pack qualifiers are preserved. |
-| `preferredCandidateCodes` | Pack-matching candidates when pack size is present, otherwise all candidates. Empty for exclusions and pack mismatches. |
+| `packEquivalentMatchingCodes` | Candidates with equivalent pack notation: verified totals such as `20(2X10)` match `20`, and `1X1+1X2` matches `1+2`. Qualifiers, component order, and unit-dose `X1` are preserved. |
+| `preferredCandidateCodes` | Equivalent-pack candidates when pack size is present, otherwise all candidates. Empty for exclusions and pack mismatches. |
 | `normalizedName` | Name supplied to the lookup after explicit spelling/branding aliases. |
 | `matchBasis` | Evidence used, such as normalized name and strength. |
 | `reviewReasons` | Explicit missing-data, alias, notation, conflict or pack-mismatch reasons. |
