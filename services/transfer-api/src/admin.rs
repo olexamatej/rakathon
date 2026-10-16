@@ -84,6 +84,30 @@ mod tests {
     use std::sync::Arc;
     use crate::store::TransferStore;
 
+    #[tokio::test]
+    async fn router_protects_admin_and_returns_no_store() {
+        use axum::body::Body;
+        use axum::http::Request;
+        use tower::ServiceExt;
+        let app = crate::storage_router(state().await);
+        for (method, uri, authenticated, expected) in [
+            ("GET", "/v1/admin/blobs", false, StatusCode::UNAUTHORIZED),
+            ("DELETE", "/v1/admin/blobs/invalid", false, StatusCode::UNAUTHORIZED),
+            ("GET", "/v1/admin/blobs?offset=0", true, StatusCode::OK),
+            ("DELETE", "/v1/admin/blobs/invalid", true, StatusCode::BAD_REQUEST),
+        ] {
+            let mut builder = Request::builder().method(method).uri(uri);
+            if authenticated {
+                builder = builder.header(header::AUTHORIZATION, "Bearer synthetic-test-password");
+            }
+            let mut request = builder.body(Body::empty()).unwrap();
+            request.extensions_mut().insert(ConnectInfo("127.0.0.1:1234".parse::<SocketAddr>().unwrap()));
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), expected);
+            assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+        }
+    }
+
     async fn state() -> AppState {
         let pool = SqlitePoolOptions::new().max_connections(1)
             .connect("sqlite::memory:").await.unwrap();
@@ -118,6 +142,8 @@ mod tests {
             .await.unwrap_or_else(|_| panic!("delete rejected")), StatusCode::NO_CONTENT);
         assert!(matches!(delete_blob(State(state.clone()), ConnectInfo(address), Path(digest), headers()).await, Err(ApiError::NotFound)));
         assert!(matches!(delete_blob(State(state.clone()), ConnectInfo(address), Path("invalid".to_owned()), headers()).await, Err(ApiError::BadRequest)));
+        assert!(state.store.get_blob(&[1; 32]).await.unwrap().is_none());
+        assert_eq!(state.store.get_blob(&[2; 32]).await.unwrap().unwrap(), b"null");
         assert_eq!(state.store.list_blobs(0).await.unwrap().len(), 1);
     }
 
@@ -150,7 +176,13 @@ mod tests {
             .unwrap_or_else(|_| panic!("list rejected"));
         assert_eq!(last.items.len(), 2);
         assert!(!last.has_more);
-        for _ in 0..58 { authorize(&state, address, &headers()).await.unwrap_or_else(|_| panic!("limited early")); }
+        // Pre-fill adjacent buckets to avoid a flaky wall-clock minute boundary.
+        let now = Utc::now().timestamp();
+        for time in [now, now + 60] {
+            for _ in 0..60 {
+                state.store.allow_source(&state.pepper, b"rate:storage-admin:source", address.ip(), 60, time).await.unwrap();
+            }
+        }
         assert!(matches!(authorize(&state, address, &headers()).await, Err(ApiError::RateLimited)));
     }
 

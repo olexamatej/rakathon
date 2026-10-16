@@ -4,7 +4,8 @@ Small Czech HTML/CSS/JavaScript admin, matching the patient PWA technology. List
 only opaque JSON blobs from `blob_transfers`: exact payload byte count and a
 64-character hexadecimal HMAC PIN digest, plus a confirmed delete action. It
 does not show original PINs, JSON content, or legacy encrypted demo transfers.
-There is no database migration or change to PIN storage.
+Admin adds no database migration or change to PIN storage. The current main's
+existing 1 MiB widening migration still applies when updating an older API.
 
 ## Authentication
 
@@ -32,8 +33,8 @@ respect `Retry-After: 60`; the UI does not automatically retry or poll.
   `sizeBytes`, and a `hasMore` flag. Previous/next pages allow visiting all rows.
   Concurrent inserts/deletes can shift offset-based pages; refresh to recheck.
 - `DELETE /api/v1/admin/blobs/{pinDigest}`: hard delete one blob, returning 204;
-  unknown digest returns 404, malformed digest 400. Requires the admin password,
-  not the existing legacy revocation token. Does not change legacy revocation.
+  unknown digest returns 404, malformed digest 400. Requires the admin password;
+  the digest is not an authorization credential. Legacy rows are untouched.
 
 The public `/api` prefix is removed by the existing frontend proxy.
 Delete removes the live row, not necessarily old SQLite pages/WAL or backups;
@@ -75,6 +76,8 @@ but is not the live configuration and the manual UI refresh does not deploy admi
 Deploying this needs a separately tested API image from this branch, the protected
 password configuration and the targeted live proxy change. Back up SQLite using
 its backup API before updating; do not copy an active WAL database file alone.
+When updating from the old encrypted API, also update external smoke checks and
+raise the live frontend body limit to `1m`, as required by the current main.
 Retain the previous API/admin images. Expect a short API restart/proxy reload;
 other websites should not be touched. Roll back proxy block and API/admin images
 without deleting the persistent volume (`down -v` is forbidden). Rolling back
