@@ -1,0 +1,9 @@
+__pycache__/
+.venv/
+.pytest_cache/
+.local/
+exports/
+*.sqlite3*
+assets/*.csv
+assets/datapackage.json
+
