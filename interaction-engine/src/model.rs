@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 // An internal inference contract, deliberately smaller than the HTTP response.
-// The server owns references, links, IDs, timestamps, and coverage arithmetic.
+// The server owns references, IDs, timestamps, and coverage arithmetic.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ModelResult {

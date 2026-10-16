@@ -80,8 +80,6 @@ def main():
             reportedPairs=len(found), status=response["status"], coverage=response["coverage"],
             drugNames=list(drugs.values()), severityByPair=severities,
             returnedDrugNames=[drug["name"] for drug in response["drugs"]],
-            drugsComPrefilledPairs=sum(any(link["provider"] == "Drugs.com" and link.get("prefilled") is True for link in pair["externalLinks"]) for pair in response["interactions"]),
-            patientPrefilledPairs=sum(any(link["provider"] == "Patient.info" and link.get("prefilled") is True for link in pair["externalLinks"]) for pair in response["interactions"]),
             heuristicEffectIndicators=indicators, heuristicEffectCount=sum(indicators.values()))
         reviews.append(row)
     (directory / "mechanical-review.json").write_text(json.dumps(reviews, indent=2, ensure_ascii=False) + "\n")

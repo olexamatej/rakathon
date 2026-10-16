@@ -182,8 +182,7 @@ pub fn build_report(input: &[String], result: ModelResult) -> anyhow::Result<Val
         interactions.push(json!({
             "drugIds": [drugs[a]["id"], drugs[b]["id"]],
             "severity": pair_severity[&(a,b)],
-            "findings": findings,
-            "externalLinks": []
+            "findings": findings
         }));
     }
     let count = drugs.len();
@@ -191,7 +190,7 @@ pub fn build_report(input: &[String], result: ModelResult) -> anyhow::Result<Val
     if interactions.len() > evaluated_pairs {
         bail!("interaction count exceeds evaluated pairs");
     }
-    let mut report = json!({
+    let report = json!({
         "status": if partial { "partial" } else { "complete" },
         "checkedAt": Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
         "resolutions": resolutions,
@@ -201,9 +200,7 @@ pub fn build_report(input: &[String], result: ModelResult) -> anyhow::Result<Val
             "evaluatedPairs": evaluated_pairs,
             "interactingPairs": interactions.len()
         },
-        "interactions": interactions,
-        "externalLinks": []
+        "interactions": interactions
     });
-    crate::links::enrich_report(&mut report)?;
     Ok(report)
 }

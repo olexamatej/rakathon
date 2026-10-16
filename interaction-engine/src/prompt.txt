@@ -47,6 +47,6 @@ Evidence: established (consistent clinical support), limited (sparse/inconsisten
 support), theoretical (predicted without direct clinical support), unknown.
 These labels describe recalled knowledge, not verification against current data.
 Keep recommendations concise and conditional where needed. Do not invent source
-references, URLs, dose instructions, or facts to fill gaps. After inference the
-server builds checker links deterministically; do not generate provider URLs or
-drug IDs. References stay empty because sources are not being retrieved.
+references, URLs, dose instructions, or facts to fill gaps. The server assigns
+drug IDs after inference. References stay empty because sources are not being
+retrieved.

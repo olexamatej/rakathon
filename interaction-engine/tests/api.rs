@@ -66,6 +66,10 @@ fn assert_matches_openapi(value: &Value, name: &str) {
 fn merges_reversed_pairs_deduplicates_aliases_and_computes_coverage() {
     let result = report(model_result()).unwrap();
     assert_eq!(result["status"], "partial");
+    assert!(result.get("externalLinks").is_none());
+    for pair in result["interactions"].as_array().unwrap() {
+        assert!(pair.get("externalLinks").is_none());
+    }
     assert_eq!(result["drugs"].as_array().unwrap().len(), 2);
     assert_eq!(result["resolutions"][2]["drugId"], "drug-1");
     assert_eq!(result["interactions"].as_array().unwrap().len(), 1);
@@ -149,20 +153,15 @@ fn model_fixture_conforms_to_generated_structured_output_schema() {
 }
 
 #[test]
-fn saved_czech_response_has_pair_links_and_matches_openapi() {
+fn saved_czech_response_has_no_external_links_and_matches_openapi() {
     let result: Value = serde_json::from_str(include_str!(
         "../examples/four-drug-interactions.response.json"
     ))
     .unwrap();
     assert_matches_openapi(&result, "InteractionCheckResponse");
+    assert!(result.get("externalLinks").is_none());
     for pair in result["interactions"].as_array().unwrap() {
-        let links = pair["externalLinks"].as_array().unwrap();
-        assert_eq!(links.len(), 5);
-        assert_eq!(links[0]["prefilled"], true);
-        assert_eq!(links[2]["prefilled"], true);
-        for index in [1, 3, 4] {
-            assert_eq!(links[index]["prefilled"], false);
-        }
+        assert!(pair.get("externalLinks").is_none());
     }
 }
 

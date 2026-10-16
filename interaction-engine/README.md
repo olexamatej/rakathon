@@ -49,7 +49,7 @@ with `Retry-After`. Bodies are limited to 64 KiB.
 - Unrecognized, ambiguous, and unsupported names are returned alongside results.
 - The internal model schema is generated from Rust types. The model supplies
   name resolutions and clinical findings; Rust owns IDs, timestamps, pair counts,
-  severity aggregation, and external checker links.
+  and severity aggregation.
 - Interactions are strictly pairwise. Duplicate aliases are consolidated;
   reversed or repeated pair records are merged. Self-pairs, references to missing
   drugs, malformed output, and incomplete evaluation cause 503.
@@ -59,55 +59,7 @@ with `Retry-After`. Bodies are limited to 64 KiB.
 - Success responses include `X-Interaction-Source: model-knowledge` and
   `X-Sources-Verified: false`. Clinical effects and evidence labels come from
   model knowledge and are not verified against current sources. References stay
-  empty. Checker links are generated after inference as described below.
-
-## External checker links
-
-Each detected pair has links for Drugs.com, WebMD, Patient.info, RxList, and
-Medscape. Link generation runs in Rust after the model result is validated;
-it makes no model calls or network requests. Clinical references remain empty.
-
-| Provider | Pair prefill |
-| --- | --- |
-| Drugs.com | `interactions-check.php?drug_list=<id>,<id>` for drugs in the verified local catalog |
-| Patient.info | Its official embedded app, `https://rxinteractions.patient.info/?medicines=<name>,<name>` |
-| WebMD | General checker with explicit manual-entry fallback |
-| RxList | General checker with explicit manual-entry fallback |
-| Medscape | General checker with explicit manual-entry fallback |
-
-`prefilled: true` and `scope: pair` indicate an actual pair URL. Fallbacks use
-`prefilled: false`, `scope: general`, a machine-readable `manualEntryReason`,
-the intended `drugNames`, and a Czech `message`. Top-level links are general
-entry points; pair-specific URLs live under each interaction.
-
-The bundled [Drugs.com ID catalog](data/drugs-com-ids.json) currently covers the
-four example generics (warfarin, ibuprofen, aspirin, fluconazole), including the
-listed Czech/English aliases. Add entries with a verified provider ID, source
-URL, and verification date, then rebuild to support more drugs. Unknown names
-never receive guessed IDs. Brand/product IDs must be verified separately.
-
-Patient.info's app splits names on commas, newlines, and the word `and`. Names
-containing these delimiters receive a manual fallback to preserve pair identity.
-Query values are URL-encoded, including Czech diacritics and reserved characters.
-
-Provider formats were checked on 2026-10-16 against the public checker UIs and
-their shipped scripts. Patient.info's **Share results** feature uses its embedded
-app's `medicines` parameter. WebMD stores selections in local storage, Medscape
-restores selections from a cookie, and RxList maintains its selection in page
-state; no URL-based prefill was verified for those three. Their links therefore
-remain manual-entry fallbacks. Supporting sources:
-[Patient.info checker](https://patient.info/treatment-medication/interaction-checker),
-[WebMD checker implementation](https://img.lb.wbmdstatic.com/webmd_v1_static_vue/091e9c5e8189e707/client/js/app-core.a0c9b5be.js),
-[RxList checker implementation](https://images.rxlist.com/javascript/rxlist/drugchecker.js),
-[Medscape checker implementation](https://img.medscapestatic.com/medscape-core/reference/js/drug/mdic.js?v=20260806).
-Drugs.com catalog entries link to the source reports confirming their IDs.
-
-Refresh just the external links in the saved Czech response, preserving the
-clinical findings and original `checkedAt`, with:
-
-```sh
-cargo run --example refresh_example_links
-```
+  empty.
 
 ## Codex restrictions
 
