@@ -166,6 +166,7 @@ class ModelTests(unittest.TestCase):
                 e["day_end"] = 110
         result = analyze(tables)
         self.assertEqual(result["summary"]["candidates"], 0)
+        self.assertEqual(result["summary"]["outside_interval"], 0)
         self.assertEqual(result["groups"], [])
 
 

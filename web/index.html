@@ -26,9 +26,9 @@
       <div id="notice" role="status" aria-live="polite"></div>
       <section id="overview-view">
         <div class="page-heading"><div><div class="eyebrow">KDYŽ REALITA PŘEKONÁ PROGNÓZU</div><h1>Za každou odchylkou<br>může být nový poznatek.</h1><p>Najděte neočekávaný průběh péče. Prozkoumejte souvislosti. Přidejte svůj pohled.</p></div><a class="button secondary export" href="/api/export.csv" download>↓ &nbsp; Exportovat CSV <small>celá kohorta + hodnocení</small></a></div>
-        <div id="stats" class="stats" aria-label="Souhrn kohorty"></div>
+        <div id="stats" class="stats" role="group" aria-label="Souhrn kohorty"></div>
         <div class="overview-grid">
-          <section class="panel plot-panel"><div class="panel-heading"><div><h2>Očekávání a skutečnost</h2><p>Dny ve vícedenních pobytech během prvního roku od indexu</p></div><span class="chip">365 dnů</span></div><div id="scatter" aria-label="Graf očekávané a skutečné zátěže"></div><div class="legend"><span><i class="dot higher"></i> Vyšší zátěž</span><span><i class="dot lower"></i> Nižší zátěž</span><span><i class="dot muted"></i> Ostatní</span><span class="legend-note">Klikněte na bod pro detail</span></div></section>
+          <section class="panel plot-panel"><div class="panel-heading"><div><h2>Očekávání a skutečnost</h2><p>Dny ve vícedenních pobytech během prvního roku od indexu</p></div><span class="chip">365 dnů</span></div><div id="scatter"></div><div class="legend"><span><i class="dot higher"></i> Vyšší zátěž</span><span><i class="dot lower"></i> Nižší zátěž</span><span><i class="dot muted"></i> Ostatní</span><span class="legend-note">Klikněte na bod pro detail</span></div></section>
           <section class="panel context-panel"><div class="eyebrow">JAK ČÍST ODCHYLKU</div><h2>Méně péče nemusí<br>znamenat lepší výsledek.</h2><p>Porovnáváme záznamy péče s očekáváním podle diagnózy, věku a pohlaví. Důvod rozdílu posuzuje klinik.</p><div id="context-numbers"></div><button class="text-button" data-view="method">Prohlédnout metodiku <span>↗</span></button></section>
         </div>
         <section class="panel cases-panel"><div class="panel-heading"><div><h2>Případy k prozkoumání <span id="result-count" class="count"></span></h2><p>Řazeno podle absolutní odchylky vzhledem k šířce predikčního intervalu</p></div></div>

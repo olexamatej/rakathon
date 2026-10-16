@@ -187,6 +187,13 @@ překryvy, chybějící údaje, vazby CSV, absenci úniku vlastního výsledku,
 intervaly, rozklad modelu, shlukování pouze kandidátů, uložení/obnovu hodnocení,
 ochranu před souběžným přepsáním a CSV formulemi.
 
+Ověřeno také 19 automatickými testy, včetně HTTP čtení/zápisů a odmítnutí
+cizího Host/Origin. V prohlížeči prošly filtry včetně prázdného výsledku,
+detail, skupiny, metodika, uložení a vrácení hodnocení, přepočet po označení
+chyby dat a skutečné stažení CSV se 157 řádky. Desktop i mobilní šířka 390 px
+byly vizuálně zkontrolovány. Automatický axe-core audit přehledu a dialogu
+nehlásil porušení; kontrola SVG kontrastu vyžaduje i ruční posouzení.
+
 ## Podklady a další odborné ověření
 
 Zadání: `assets/Vyzva_KDO_Rakathon_Outlier.docx`; skutečné schéma a počty mají

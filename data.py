@@ -2,6 +2,7 @@
 
 import csv
 import hashlib
+import io
 import json
 import math
 import re
@@ -21,7 +22,7 @@ def load_data(directory):
         digest.update(raw)
         resource = next(r for r in schema["resources"] if r["name"] == name)
         fields = resource["schema"]["fields"]
-        reader = csv.DictReader(raw.decode("utf-8-sig").splitlines())
+        reader = csv.DictReader(io.StringIO(raw.decode("utf-8-sig"), newline=""))
         if set(reader.fieldnames or []) != {f["name"] for f in fields}:
             raise ValueError(f"{name}.csv: sloupce neodpovídají datapackage.json")
         rows, seen = [], set()

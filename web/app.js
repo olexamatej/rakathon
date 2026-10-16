@@ -115,7 +115,7 @@ async function openPatient(id) {
     if (requestId !== detailRequest) return;
     currentPatient = row;
     renderPatient(row);
-  } catch (error) { $('#patient-content').textContent = error.message; }
+  } catch (error) { if (requestId === detailRequest) $('#patient-content').textContent = error.message; }
 }
 
 function renderPatient(r) {
@@ -180,7 +180,14 @@ document.addEventListener('keydown', event => {
     event.preventDefault(); openPatient(event.target.dataset.patient);
   }
 });
-for (const selector of ['#search','#scope','#direction','#review-filter']) $(selector).addEventListener('input', () => {if (dataset) renderRows();});
+$('#search').addEventListener('input', () => {if (dataset) renderRows();});
+for (const selector of ['#scope','#direction','#review-filter']) $(selector).addEventListener('change', () => {if (dataset) renderRows();});
+$('#review-filter').addEventListener('change', () => {
+  if ($('#review-filter').value === 'data_issue') {$('#scope').value = 'all'; $('#direction').value = 'all'; renderRows();}
+});
+$('#scope').addEventListener('change', () => {
+  if ($('#scope').value === 'insufficient') {$('#review-filter').value = 'all'; $('#direction').value = 'all'; renderRows();}
+});
 function closeDialog(event) {
   if (dirty && !confirm('Zahodit neuložené změny hodnocení?')) {event?.preventDefault();return;}
   dirty = false;

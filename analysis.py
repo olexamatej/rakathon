@@ -105,8 +105,8 @@ def analyze(tables, reviews=None):
             peers = [r for r, included in zip(rows, training) if included]
         evidence = [{"label": label, "actual": row[key], "peer_median": float(np.median([r[key] for r in peers]))}
                     for key, label in METRICS.items()]
-        outside = assessable and (row["observed"] < interval[0] or row["observed"] > interval[1])
-        stable = bool(outside and all(v < interval[0] if residual < 0 else v > interval[1] for v in row["sensitivity"]))
+        outside = assessable and (row["observed"] < interval[0] - 1e-8 or row["observed"] > interval[1] + 1e-8)
+        stable = bool(outside and all(v < interval[0] - 1e-8 if residual < 0 else v > interval[1] + 1e-8 for v in row["sensitivity"]))
         row.update({"expected": expected, "interval": interval, "residual": residual,
                     "baseline": float(mean_x @ beta), "contributions": contributions,
                     "support": support, "outside_interval": bool(outside), "stable": stable,
