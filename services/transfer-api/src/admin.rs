@@ -69,6 +69,16 @@ pub async fn delete_blob(
     }
 }
 
+pub async fn delete_all_blobs(
+    State(state): State<AppState>,
+    ConnectInfo(address): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+) -> Result<StatusCode, ApiError> {
+    authorize(&state, address, &headers).await?;
+    state.store.delete_all_blobs().await.map_err(|_| ApiError::Unavailable)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 fn parse_digest(value: &str) -> Option<[u8; 32]> {
     if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return None;
@@ -96,6 +106,7 @@ mod tests {
         for (method, uri, authenticated, expected) in [
             ("GET", "/v1/admin/blobs", false, StatusCode::UNAUTHORIZED),
             ("DELETE", "/v1/admin/blobs/invalid", false, StatusCode::UNAUTHORIZED),
+            ("DELETE", "/v1/admin/blobs", false, StatusCode::UNAUTHORIZED),
             ("GET", "/v1/admin/blobs?offset=0", true, StatusCode::OK),
             ("DELETE", "/v1/admin/blobs/invalid", true, StatusCode::BAD_REQUEST),
         ] {
@@ -153,6 +164,38 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn delete_all_requires_auth_and_removes_rows_beyond_the_first_page() {
+        use axum::body::Body;
+        use axum::http::Request;
+        use tower::ServiceExt;
+        let state = state().await;
+        for n in 0..150 {
+            state.store.create_blob(&[n; 32], None, b"{\"synthetic\":true}", 1).await.unwrap();
+        }
+        let app = crate::storage_router(state.clone());
+        for password in [None, Some("wrong-password"), Some("synthetic-test-password"), Some("synthetic-test-password")] {
+            let mut request = Request::builder().method("DELETE").uri("/v1/admin/blobs");
+            if let Some(value) = password { request = request.header(header::AUTHORIZATION, format!("Bearer {value}")); }
+            let mut request = request.body(Body::empty()).unwrap();
+            request.extensions_mut().insert(ConnectInfo("127.0.0.1:1234".parse::<SocketAddr>().unwrap()));
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+            if password == Some("synthetic-test-password") {
+                assert_eq!(response.status(), StatusCode::NO_CONTENT);
+                assert!(state.store.list_blobs(0, true).await.unwrap().is_empty());
+                assert!(state.store.get_blob(&[149; 32]).await.unwrap().is_none());
+            } else {
+                assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+                assert_eq!(state.store.list_blobs(0, false).await.unwrap().len(), 101);
+                assert!(state.store.get_blob(&[149; 32]).await.unwrap().is_some());
+            }
+        }
+        // A purge preserves the schema and storage remains usable.
+        assert!(state.store.create_blob(&[200; 32], None, b"null", 2).await.unwrap());
+        assert_eq!(state.store.get_blob(&[200; 32]).await.unwrap().unwrap(), b"null");
+    }
+
+    #[tokio::test]
     async fn both_endpoints_require_password_and_admin_defaults_to_disabled() {
         let mut state = state().await;
         let address = "127.0.0.1:1234".parse().unwrap();
@@ -164,6 +207,7 @@ mod tests {
         }
         state.admin_password_digest = None;
         assert!(matches!(authorize(&state, address, &headers()).await, Err(ApiError::NotFound)));
+        assert!(matches!(delete_all_blobs(State(state), ConnectInfo(address), headers()).await, Err(ApiError::NotFound)));
     }
 
     #[tokio::test]

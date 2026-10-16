@@ -14,8 +14,11 @@ test('login gates requests, metadata listing and deletion use authorized noncach
   client.login('synthetic-test-password');
   assert.deepEqual(await client.request('?offset=0'), { items: [], hasMore: false });
   assert.equal(await client.request('/ABC', 'DELETE'), null);
+  assert.equal(await client.request('', 'DELETE'), null);
   assert.equal(calls[0].url, '/api/v1/admin/blobs?offset=0');
   assert.equal(calls[1].options.method, 'DELETE');
+  assert.equal(calls[2].url, '/api/v1/admin/blobs');
+  assert.equal(calls[2].options.method, 'DELETE');
   for (const { url, options } of calls) {
     assert.ok(!url.includes('synthetic-test-password'));
     assert.equal(options.headers.Authorization, 'Bearer synthetic-test-password');

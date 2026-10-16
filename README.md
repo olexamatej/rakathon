@@ -38,7 +38,13 @@ Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva a v histo
 pokud je vyplněný, textové předání přidá sloupec **Kdy**.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
-Fotografie se odesílá přes `POST /api/transcribe` do serverového adaptéru Gemini
+Pacientské UI nyní výslovně používá demo režim: každá fotografie přidá kompletní
+ukázkový seznam PARALEN, IBALGIN a LETROX, včetně síly, počtu dávek a rozpisu.
+Fotografie se v tomto režimu neposílá do Gemini. Odesílání i lékařské čtení
+používají stejnou validaci formátu seznamu.
+
+Skutečné rozpoznávání zůstává dostupné voláním `recognizePhoto(file)` bez
+`{ mode: 'demo' }`. Fotografie se pak odesílá přes `POST /api/transcribe` do serverového adaptéru Gemini
 3.6 Flash. Server načítá klíč `GEMINI_API_KEY` a model `GEMINI_MODEL` z kořenového
 `.env`; klíč se nikdy neposílá do prohlížeče. Rozpoznávání vrací pouze
 `[{"name":"Concor 5 mg","schedule":"1-0-0"}]`; nečitelné údaje jsou `null`.

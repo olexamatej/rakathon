@@ -169,6 +169,16 @@ if (typeof document !== 'undefined') {
   });
   element('logout').addEventListener('click', () => logout());
   element('refresh').addEventListener('click', () => run(load));
+  element('delete-all').addEventListener('click', () => {
+    if (busy || !confirm('Opravdu nevratně smazat všechny uložené záznamy ze všech stran? Všechny vydané PINy přestanou fungovat.')) return;
+    run(async () => {
+      const current = generation;
+      await client.request('', 'DELETE');
+      if (current !== generation) return;
+      offset = 0;
+      await load();
+    });
+  });
   element('previous').addEventListener('click', () => run(async () => {
     const previous = offset;
     offset = Math.max(0, offset - 100);
