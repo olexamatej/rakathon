@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#174e43">
+  <meta name="description" content="Seznam léčiv.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>PillGaze · Seznam</title>
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Přejít k obsahu</a>
+  <div id="app"></div>
+  <noscript>Pro práci se seznamy prosím povolte JavaScript.</noscript>
+  <dialog id="camera-dialog" aria-label="Fotoaparát">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div class="camera-actions">
+      <button type="button" class="secondary" id="camera-cancel">Zrušit</button>
+      <button type="button" class="primary" id="camera-shoot">Vyfotit</button>
+    </div>
+  </dialog>
+  <dialog id="install-dialog" aria-labelledby="install-title">
+    <h2 id="install-title">PillGaze na ploše</h2>
+    <p><strong>iPhone / iPad:</strong> v Safari otevřete Sdílet a vyberte Přidat na plochu.</p>
+    <p><strong>Android:</strong> v nabídce prohlížeče vyberte Nainstalovat aplikaci nebo Přidat na plochu.</p>
+    <form method="dialog"><button class="primary">Rozumím</button></form>
+  </dialog>
+</body>
+</html>

@@ -18,6 +18,27 @@ npm run web       # webový server; vypsanou adresu otevřete ručně v prohlí�
 
 Webový skript používá `BROWSER=none`, aby fungoval i na Linuxu bez grafického prostředí, kde automatické `xdg-open` selhává kódem 3. Na Linuxu/macOS otevřete vypsanou adresu (obvykle `http://localhost:8081`) ručně. V PowerShellu spusťte `$env:BROWSER='none'; npx expo start --web`.
 
+## Pacientská PWA
+
+Nové webové UI v `apps/patient-web/public/` lze spustit samostatně bez instalace závislostí:
+
+```sh
+npm run web:patient
+# http://localhost:8081/pacient
+```
+
+Fotografie z galerie nebo fotoaparátu přidají léčiva do seznamu. Na počítači
+fotoaparát otevře náhled webkamery, na telefonu systémový fotoaparát. Položky lze
+odstranit; seznam a historii odeslání uchovává localStorage tohoto prohlížeče.
+Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
+
+`apps/patient-web/public/services.js` zatím rozpoznávání a odesílání pouze simuluje: každý obrázek
+vrátí dvě ukázková léčiva a PIN vzniká lokálně. Fotografie ani seznam se neposílají
+na server; PIN nepředává data lékaři. Pro zkoušení používejte ukázková data.
+Při změně souborů UI zvyšte verzi cache v `apps/patient-web/public/sw.js`. Testy PWA jsou součástí
+`npm test`; samostatně je spustíte příkazem
+`node --test tests/patient.test.mjs tests/server.test.mjs`.
+
 ## Co funguje
 
 - České rozhraní s částmi Moje léky, Podklady a Předání.
@@ -91,8 +112,11 @@ bezpečnostní audit; nepoužívejte `npm audit fix --force`.
 ## Výzkumné podklady
 
 `knowledge-base/` je gitignorovaný lokální klon týmového Fieldnotes workspace; není potřeba ke spuštění aplikace. Pokyny k práci s ním jsou v `AGENTS.md`.
-# VPS deployment
 
-The full application deploys from `master` to `https://rakathon.denishromada.cz`.
-See [the VPS release guide](infra/vps/README.md) for one-time bootstrap,
-automatic frontend/API builds, persistence and rollback. Azure workflows are retired.
+## Nasazení na VPS
+
+Živé demo je **https://rakathon.denishromada.com** a používá Docker Compose,
+nikoli Kubernetes. Frontend a Rust API mají oddělené Compose projekty;
+pushe do repozitáře je automaticky nemění. Provozní cesty, ruční aktualizaci
+frontendu a návrat popisuje [VPS průvodce](infra/vps/README.md).
+Nepoužité AKS/k3s podklady a jejich deploy workflow byly odstraněny.

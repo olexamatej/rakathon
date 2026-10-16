@@ -32,8 +32,6 @@ target/
 /.local/
 /exports/
 /assets/*.csv
-# Generated ARM template from `bicep build` (not source of truth)
-infra/azure/**/*.json
 *.sqlite
 *.sqlite-*
 *.sqlite3*
