@@ -80,3 +80,7 @@ web-build/
 ._*
 Thumbs.db
 Desktop.ini
+
+# Playwright output may contain private browser state
+/e2e/test-results/
+/e2e/playwright-report/
