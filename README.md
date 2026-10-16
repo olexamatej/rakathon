@@ -60,8 +60,8 @@ OPENBLAS_NUM_THREADS=1 .venv/bin/coverage run --branch --source=analysis,app,dat
 node --check web/app.js
 ```
 
-Pokrytí se zatím reportuje bez minimálního procentního prahu. HTTP obsluha má
-nižší pokrytí než výpočty a práce s daty; přidání integračních testů je další krok.
+Pokrytí se zatím reportuje bez minimálního procentního prahu. Testy zahrnují
+i HTTP čtení, zápis hodnocení, export, konflikty a odmítnutí cizího Host/Origin.
 
 ## Průchod demem
 

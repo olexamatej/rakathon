@@ -15,8 +15,8 @@ from urllib.parse import urlsplit
 # Tiny matrices are faster without a large BLAS thread pool.
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
-from analysis import analyze
-from data import load_data
+from analysis import analyze  # noqa: E402
+from data import load_data  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 STATUSES = {"unreviewed", "relevant", "not_relevant", "data_issue"}
