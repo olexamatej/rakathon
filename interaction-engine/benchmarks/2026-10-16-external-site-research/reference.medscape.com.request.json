@@ -1,0 +1,7 @@
+{
+  "drugs": [
+    "warfarin",
+    "ibuprofen"
+  ],
+  "site": "https://reference.medscape.com/drug-interactionchecker"
+}

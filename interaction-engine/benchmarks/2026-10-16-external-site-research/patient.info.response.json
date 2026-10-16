@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-16T21:00:16Z",
+  "drugs": [
+    "warfarin",
+    "ibuprofen"
+  ],
+  "site": "patient.info",
+  "status": "found",
+  "summary": "Stránka uvádí, že kombinace warfarinu a ibuprofenu výrazně zvyšuje riziko závažného krvácení, zejména do žaludku či střev. Doporučuje vyhnout se této kombinaci, pokud ji výslovně nenařídí lékař, a při známkách krvácení, například černé stolici nebo neustávajícím krvácení z nosu, okamžitě vyhledat lékařskou pomoc.",
+  "url": "https://patient.info/medication-interactions/warfarin-and-ibuprofen-interaction"
+}

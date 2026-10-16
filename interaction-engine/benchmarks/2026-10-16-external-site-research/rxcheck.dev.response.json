@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-16T21:00:31Z",
+  "drugs": [
+    "warfarin",
+    "ibuprofen"
+  ],
+  "site": "rxcheck.dev",
+  "status": "not_found",
+  "summary": "Při vyhledávání na rxcheck.dev nebyla nalezena veřejně dostupná stránka věnovaná přímo dvojici warfarin–ibuprofen. Tento výsledek neznamená, že mezi léky není interakce nebo že je jejich kombinace bezpečná.",
+  "url": null
+}

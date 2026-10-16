@@ -1,6 +1,7 @@
 mod codex;
 pub mod model;
 pub mod report;
+mod research;
 
 use std::{env, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
@@ -101,6 +102,7 @@ impl AppState {
 pub fn app(state: AppState) -> Router {
     Router::new()
         .route("/interaction-checks", post(check))
+        .route("/interaction-research", post(research_check))
         .route(
             "/openapi.yaml",
             get(|| async {
@@ -192,6 +194,72 @@ async fn check(
         Err(_) => Err(Problem::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Při zpracování kontroly interakcí došlo k vnitřní chybě.",
+        )),
+    }
+}
+
+async fn research_check(
+    State(state): State<AppState>,
+    payload: Result<Json<research::ResearchRequest>, JsonRejection>,
+) -> Result<Response, Problem> {
+    let Json(request) = payload.map_err(|rejection| {
+        let status = match rejection.status() {
+            StatusCode::UNSUPPORTED_MEDIA_TYPE => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            StatusCode::PAYLOAD_TOO_LARGE => StatusCode::PAYLOAD_TOO_LARGE,
+            _ => StatusCode::BAD_REQUEST,
+        };
+        Problem::new(
+            status,
+            "Očekává se objekt JSON s poli drugs (právě dva názvy léčiv) a site (podporovaný web).",
+        )
+    })?;
+    for (index, name) in request.drugs.iter().enumerate() {
+        if name.trim().is_empty() || name.chars().count() > 200 {
+            return Err(Problem::invalid(
+                &format!("/drugs/{index}"),
+                "Názvy léčiv nesmějí být prázdné a mohou obsahovat nejvýše 200 znaků.",
+            ));
+        }
+    }
+    if research::site(&request.site).is_none() {
+        return Err(Problem::invalid(
+            "/site",
+            "Vyberte podporovaný web nebo jeho přesnou adresu uvedenou v dokumentaci API.",
+        ));
+    }
+    let permit = state.permits.clone().try_acquire_owned().map_err(|_| {
+        Problem::new(
+            StatusCode::TOO_MANY_REQUESTS,
+            "Kapacita služby je nyní vyčerpána. Zkuste to za chvíli znovu.",
+        )
+    })?;
+    let task = tokio::spawn(async move {
+        let _permit = permit;
+        research::research(&state.config, &request).await
+    });
+    match task.await {
+        Ok(Ok(result)) => Ok((
+            [
+                (header::CACHE_CONTROL, "no-store"),
+                (header::CONTENT_LANGUAGE, "cs"),
+                (
+                    header::HeaderName::from_static("x-interaction-source"),
+                    "web-search",
+                ),
+            ],
+            Json(result),
+        )
+            .into_response()),
+        Ok(Err(error)) => {
+            tracing::warn!(error = %error, "interaction research failed");
+            Err(Problem::new(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Služba nedokázala dokončit průzkum s platným výsledkem. Zkuste to později znovu.",
+            ))
+        }
+        Err(_) => Err(Problem::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Při průzkumu interakcí došlo k vnitřní chybě.",
         )),
     }
 }

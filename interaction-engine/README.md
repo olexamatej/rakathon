@@ -7,6 +7,7 @@ Rust validates the result and constructs the public response.
 ## Run
 
 Requires Rust 1.91+ and Codex CLI 0.163.0 (the version used for development),
+plus its `codex-code-mode-host` companion on PATH for research requests,
 authenticated using `codex login` or the CLI's supported API-key authentication.
 Your existing Codex login is used; user configuration is ignored for inference.
 
@@ -61,9 +62,58 @@ with `Retry-After`. Bodies are limited to 64 KiB.
   model knowledge and are not verified against current sources. References stay
   empty.
 
+## External-site research
+
+`POST /interaction-research` waits for a fresh agent to research exactly two
+names on one supported site using live web search:
+
+```sh
+curl http://127.0.0.1:3000/interaction-research \
+  -H 'Content-Type: application/json' \
+  -d '{"drugs":["warfarin","ibuprofen"],"site":"drugs.com"}'
+```
+
+Supply `site` as `drugs.com`, `webmd.com`, `patient.info`, `rxlist.com`,
+`reference.medscape.com`, `rxlabelguard.com`, or `rxcheck.dev`. The exact seven
+checker URLs listed in the OpenAPI request schema are also accepted. The
+response always uses the canonical domain.
+
+Responses contain `drugs`, `site`, `checkedAt`, `status`, `url`, and `summary`:
+
+- `found`: the agent reports retrieving a dedicated page for that pair; `url`
+  contains its HTTPS address on the selected site. The short Czech summary
+  describes the interaction, severity, and precautions where the page provides
+  them. A page explicitly reporting no known interaction can also qualify.
+- `not_found`: no dedicated pair page was found; `url` is null. This does not
+  establish safety or absence of an interaction.
+- `inconclusive`: access restrictions, ambiguous names, or insufficient
+  accessible evidence prevented a reliable answer; `url` is null.
+
+Generic checkers and homepages do not qualify as result URLs. The agent is
+instructed to retrieve the actual pair page and use only its clinical claims;
+the server validates URL structure, host, status consistency, summary length,
+and that the returned URL appeared in the web tool results.
+These are agent-reported findings, not independent clinical verification.
+Search is configured with a domain filter for the selected site. The endpoint
+requires a completed web-search tool event and rejects other tool activity.
+The Code Mode host is enabled for research because CLI 0.163 requires it to
+expose web tools; Code Mode execution remains disabled. Live retrieval is
+enabled through Codex's hosted search tool; command network
+access remains disabled. This does not automate login or browser-only checkers.
+
+Research shares the existing model, service tier, `CODEX_TIMEOUT_SECONDS`
+(default 90 seconds), and `MAX_CONCURRENT_CHECKS` capacity. Requests wait for
+the result, receive 429 when capacity is full, and receive 503 for model/process
+failures, timeouts, or invalid output. Completed negative and inconclusive
+research returns 200. Responses declare `Content-Language: cs`,
+`X-Interaction-Source: web-search`, and `Cache-Control: no-store`.
+
+Web-search settings follow the official
+[Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
+
 ## Codex restrictions
 
-Every invocation disables web search, shell execution, image/file viewing,
+Interaction checks disable web search. Every invocation disables shell execution, image/file viewing,
 plugins, connectors, MCP configuration, hooks, subagents, and memories. User
 configuration and execution rules are ignored; project instructions and the
 skills instruction catalog are excluded. The working directory is a fresh
@@ -81,7 +131,7 @@ putting the entire CLI process in a container. `--ephemeral` suppresses session
 files; temporary schema files and CLI logs are removed after each check. This
 does not make a claim about provider-side retention.
 
-Unexpected tool events, failed processes, invalid responses, or timeouts return
+Unexpected tool events (except web-search events on research requests), failed processes, invalid responses, or timeouts return
 a generic 503 without exposing model output or CLI diagnostics. Server logs do
 not include submitted names or raw responses. Processes are killed and reaped
 on timeout; concurrency permits remain held for background checks even when a
@@ -110,6 +160,12 @@ model call:
 
 ```sh
 cargo test --test api live_codex_smoke -- --ignored --nocapture
+```
+
+The optional live research check also uses your login and makes a real model call:
+
+```sh
+cargo test --test api live_research_smoke -- --ignored --nocapture
 ```
 
 Print the internal Structured Outputs schema with

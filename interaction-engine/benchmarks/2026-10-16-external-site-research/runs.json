@@ -1,0 +1,184 @@
+[
+  {
+    "site": "webmd.com",
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "web-search",
+      "content-length": "391",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 21:00:09 GMT"
+    },
+    "elapsedSeconds": 11.65,
+    "responseFile": "webmd.com.response.json",
+    "response": {
+      "checkedAt": "2026-10-16T21:00:09Z",
+      "drugs": [
+        "warfarin",
+        "ibuprofen"
+      ],
+      "site": "webmd.com",
+      "status": "not_found",
+      "summary": "Vyhledávání na webmd.com nenalezlo samostatnou veřejnou stránku věnovanou přesně dvojici warfarin–ibuprofen, ani při použití obchodních názvů. Tento výsledek neznamená, že mezi léky není interakce nebo že je jejich kombinace bezpečná.",
+      "url": null
+    }
+  },
+  {
+    "site": "drugs.com",
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "web-search",
+      "content-length": "603",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 21:00:10 GMT"
+    },
+    "elapsedSeconds": 12.776,
+    "responseFile": "drugs.com.response.json",
+    "response": {
+      "checkedAt": "2026-10-16T21:00:10Z",
+      "drugs": [
+        "warfarin",
+        "ibuprofen"
+      ],
+      "site": "drugs.com",
+      "status": "found",
+      "summary": "Drugs.com označuje interakci warfarinu s ibuprofenem jako závažnou (Major): kombinace může zvýšit riziko vážného krvácení, zejména v trávicím traktu. Doporučuje konzultaci s lékařem ohledně alternativy, úpravy dávky nebo častějšího sledování INR. Při neobvyklém krvácení, tvorbě modřin či jiných známkách krvácení doporučuje okamžitou lékařskou pomoc.",
+      "url": "https://www.drugs.com/drug-interactions/ibuprofen-with-warfarin-1310-0-2311-0.html"
+    }
+  },
+  {
+    "site": "patient.info",
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "web-search",
+      "content-length": "566",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 21:00:16 GMT"
+    },
+    "elapsedSeconds": 18.824,
+    "responseFile": "patient.info.response.json",
+    "response": {
+      "checkedAt": "2026-10-16T21:00:16Z",
+      "drugs": [
+        "warfarin",
+        "ibuprofen"
+      ],
+      "site": "patient.info",
+      "status": "found",
+      "summary": "Stránka uvádí, že kombinace warfarinu a ibuprofenu výrazně zvyšuje riziko závažného krvácení, zejména do žaludku či střev. Doporučuje vyhnout se této kombinaci, pokud ji výslovně nenařídí lékař, a při známkách krvácení, například černé stolici nebo neustávajícím krvácení z nosu, okamžitě vyhledat lékařskou pomoc.",
+      "url": "https://patient.info/medication-interactions/warfarin-and-ibuprofen-interaction"
+    }
+  },
+  {
+    "site": "rxlist.com",
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "web-search",
+      "content-length": "396",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 21:00:21 GMT"
+    },
+    "elapsedSeconds": 11.761,
+    "responseFile": "rxlist.com.response.json",
+    "response": {
+      "checkedAt": "2026-10-16T21:00:21Z",
+      "drugs": [
+        "warfarin",
+        "ibuprofen"
+      ],
+      "site": "rxlist.com",
+      "status": "not_found",
+      "summary": "Při vyhledávání na rxlist.com nebyla nalezena samostatná stránka věnovaná dvojici warfarin a ibuprofen, a to ani pod odpovídajícími obchodními názvy. Tento výsledek neznamená, že mezi léky není interakce nebo že je jejich kombinace bezpečná.",
+      "url": null
+    }
+  },
+  {
+    "site": "reference.medscape.com",
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "web-search",
+      "content-length": "414",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 21:00:24 GMT"
+    },
+    "elapsedSeconds": 13.743,
+    "responseFile": "reference.medscape.com.response.json",
+    "response": {
+      "checkedAt": "2026-10-16T21:00:24Z",
+      "drugs": [
+        "warfarin",
+        "ibuprofen"
+      ],
+      "site": "reference.medscape.com",
+      "status": "inconclusive",
+      "summary": "Vyhledávání na reference.medscape.com nenalezlo samostatnou stránku věnovanou dvojici warfarin–ibuprofen. Obsah zadaného interakčního checkeru se nepodařilo načíst, takže výsledek nelze spolehlivě ověřit; nejde o potvrzení bezpečnosti kombinace.",
+      "url": null
+    }
+  },
+  {
+    "site": "rxlabelguard.com",
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "web-search",
+      "content-length": "412",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 21:00:28 GMT"
+    },
+    "elapsedSeconds": 11.927,
+    "responseFile": "rxlabelguard.com.response.json",
+    "response": {
+      "checkedAt": "2026-10-16T21:00:28Z",
+      "drugs": [
+        "warfarin",
+        "ibuprofen"
+      ],
+      "site": "rxlabelguard.com",
+      "status": "not_found",
+      "summary": "Při vyhledávání na rxlabelguard.com nebyla nalezena veřejná stránka věnovaná přímo dvojici warfarin–ibuprofen; výsledky obsahovaly pouze dokumentaci API a obecné články. To neznamená, že mezi léky není interakce ani že je jejich kombinace bezpečná.",
+      "url": null
+    }
+  },
+  {
+    "site": "rxcheck.dev",
+    "httpStatus": 200,
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "content-language": "cs",
+      "x-interaction-source": "web-search",
+      "content-length": "363",
+      "connection": "close",
+      "date": "Fri, 16 Oct 2026 21:00:31 GMT"
+    },
+    "elapsedSeconds": 10.442,
+    "responseFile": "rxcheck.dev.response.json",
+    "response": {
+      "checkedAt": "2026-10-16T21:00:31Z",
+      "drugs": [
+        "warfarin",
+        "ibuprofen"
+      ],
+      "site": "rxcheck.dev",
+      "status": "not_found",
+      "summary": "Při vyhledávání na rxcheck.dev nebyla nalezena veřejně dostupná stránka věnovaná přímo dvojici warfarin–ibuprofen. Tento výsledek neznamená, že mezi léky není interakce nebo že je jejich kombinace bezpečná.",
+      "url": null
+    }
+  }
+]

@@ -9,7 +9,7 @@ info:
     This contract does not assess interactions requiring three or more drugs,
     or patient-specific factors such as dose, route, age, or medical conditions.
     No authentication is required by this initial contract.
-    The initial implementation uses model knowledge without web search or
+    The /interaction-checks endpoint uses model knowledge without web search or
     retrieval from a curated interaction database. Clinical findings and evidence
     labels are unverified; source references are empty. Coverage reports pairs
     considered by the model rather than a verified database search.
@@ -207,8 +207,157 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /interaction-research:
+    post:
+      operationId: researchDrugInteraction
+      tags: [Interactions]
+      summary: Research a drug pair on a supported external site
+      description: |
+        Waits for a fresh agent using live web search restricted to one selected
+        site. Accepts precisely two drug names and either a canonical domain or
+        the exact checker URL from the site enum. Returned site is canonical.
+        found means a dedicated pair page was retrieved, even if that page reports
+        no known interaction. Generic checkers, homepages and single-drug articles
+        do not qualify. not_found means the search found no dedicated page, not
+        proof of safety. inconclusive means access restrictions, ambiguous names
+        or insufficient accessible evidence prevented a reliable result.
+        The summary is in Czech and limited to 1–3 short sentences. Clinical
+        claims must come from the retrieved pair page. Findings are agent-reported,
+        not independently medically verified. Service/model failures and timeouts
+        return 503. Shares CODEX_TIMEOUT_SECONDS and MAX_CONCURRENT_CHECKS with
+        interaction checks (defaults: 90 seconds, 4 concurrent processes).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InteractionResearchRequest'
+            example:
+              drugs: [warfarin, ibuprofen]
+              site: drugs.com
+      responses:
+        '200':
+          description: Research completed, including negative or inconclusive outcomes.
+          headers:
+            Content-Language:
+              schema: {type: string, const: cs}
+            X-Interaction-Source:
+              schema: {type: string, const: web-search}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InteractionResearchResponse'
+        '400':
+          description: Invalid drug pair or unsupported site.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: Body exceeds 64 KiB.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '415':
+          description: Content-Type must be application/json.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Shared agent capacity exhausted.
+          headers:
+            Retry-After:
+              schema: {type: integer, minimum: 0}
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Agent failed, timed out, or returned an invalid result.
+          headers:
+            Retry-After:
+              schema: {type: integer, minimum: 0}
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unexpected server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 components:
   schemas:
+    ResearchDrugs:
+      type: array
+      minItems: 2
+      maxItems: 2
+      items:
+        type: string
+        minLength: 1
+        maxLength: 200
+        pattern: '\S'
+    ResearchSite:
+      type: string
+      enum: [drugs.com, webmd.com, patient.info, rxlist.com, reference.medscape.com, rxlabelguard.com, rxcheck.dev]
+    InteractionResearchRequest:
+      type: object
+      additionalProperties: false
+      required: [drugs, site]
+      properties:
+        drugs:
+          $ref: '#/components/schemas/ResearchDrugs'
+        site:
+          oneOf:
+            - $ref: '#/components/schemas/ResearchSite'
+            - type: string
+              enum:
+                - https://www.drugs.com/drug_interactions.html
+                - https://www.webmd.com/interaction-checker/default.htm
+                - https://patient.info/treatment-medication/interaction-checker
+                - https://www.rxlist.com/drug-interaction-checker.htm
+                - https://reference.medscape.com/drug-interactionchecker
+                - https://rxlabelguard.com/
+                - https://rxcheck.dev/
+    InteractionResearchResponse:
+      type: object
+      additionalProperties: false
+      required: [drugs, site, checkedAt, status, url, summary]
+      properties:
+        drugs:
+          $ref: '#/components/schemas/ResearchDrugs'
+        site:
+          $ref: '#/components/schemas/ResearchSite'
+        checkedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [found, not_found, inconclusive]
+        url:
+          type: [string, 'null']
+          format: uri
+          maxLength: 4096
+          description: Retrieved HTTPS page dedicated to the exact pair, or null.
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          pattern: '\S'
+          description: Short Czech source-based summary, or reason no result is available.
+      allOf:
+        - if:
+            properties:
+              status: {const: found}
+          then:
+            properties:
+              url: {type: string, pattern: '^https://'}
+          else:
+            properties:
+              url: {type: 'null'}
     InteractionCheckRequest:
       type: object
       additionalProperties: false

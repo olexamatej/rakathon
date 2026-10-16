@@ -99,7 +99,7 @@ pub fn output_schema() -> Value {
 
 // Structured Outputs requires all object fields to be required; optional Rust
 // fields remain nullable. Schemas are generated from the deserialization types.
-fn strict_objects(schema: &mut Value) {
+pub(crate) fn strict_objects(schema: &mut Value) {
     match schema {
         Value::Object(object) => {
             if object.get("type").and_then(Value::as_str) == Some("object") {

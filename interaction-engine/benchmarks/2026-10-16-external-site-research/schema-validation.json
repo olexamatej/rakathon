@@ -1,0 +1,37 @@
+[
+  {
+    "errors": [],
+    "site": "webmd.com",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "site": "drugs.com",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "site": "patient.info",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "site": "rxlist.com",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "site": "reference.medscape.com",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "site": "rxlabelguard.com",
+    "valid": true
+  },
+  {
+    "errors": [],
+    "site": "rxcheck.dev",
+    "valid": true
+  }
+]

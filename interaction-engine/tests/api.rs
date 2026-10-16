@@ -181,9 +181,18 @@ async fn send(
     body: String,
     content_type: &str,
 ) -> (StatusCode, axum::http::HeaderMap, Value) {
+    send_path(router, "/interaction-checks", body, content_type).await
+}
+
+async fn send_path(
+    router: Router,
+    path: &str,
+    body: String,
+    content_type: &str,
+) -> (StatusCode, axum::http::HeaderMap, Value) {
     let response = router
         .oneshot(
-            Request::post("/interaction-checks")
+            Request::post(path)
                 .header("content-type", content_type)
                 .body(Body::from(body))
                 .unwrap(),
@@ -374,7 +383,7 @@ async fn process_failure_invalid_json_and_tool_activity_return_503() {
 async fn deadline_kills_and_reaps_the_process() {
     let fixture = fake_codex("time.sleep(20)", &events(model_result()));
     let mut cfg = config(fixture.path().join("codex"));
-    cfg.timeout = Duration::from_secs(1);
+    cfg.timeout = Duration::from_secs(3);
     let router = app(AppState::new(cfg).unwrap());
     let (status, _, _) = send(
         router,
@@ -441,4 +450,234 @@ async fn live_codex_smoke() {
         "Live Codex check completed in {:.2}s; response matches OpenAPI.",
         started.elapsed().as_secs_f64()
     );
+}
+
+fn research_input() -> Value {
+    json!({"drugs": ["warfarin", "ibuprofen"], "site": "drugs.com"})
+}
+
+fn research_events(result: Value) -> String {
+    format!(
+        "{}\n{}",
+        json!({"type": "item.completed", "item": {"type": "web_search", "query": "site:drugs.com warfarin ibuprofen", "results": [{"url": result["url"]}]}}),
+        events(result)
+    )
+}
+
+#[tokio::test]
+async fn research_rejects_invalid_input_before_launching_agent() {
+    let router = app(AppState::new(config("/does/not/exist".into())).unwrap());
+    let mut cases = vec![json!({}), json!({"drugs": ["a"], "site": "drugs.com"})];
+    for (key, value) in [
+        ("drugs", json!(["a", "b", "c"])),
+        ("drugs", json!(["a", " "])),
+        ("drugs", json!(["a", "x".repeat(201)])),
+        ("site", json!("drugs.com.evil.test")),
+        (
+            "site",
+            json!("https://www.drugs.com/drug_interactions.html?evil=true"),
+        ),
+        ("site", json!("http://127.0.0.1")),
+        ("extra", json!(true)),
+    ] {
+        let mut input = research_input();
+        input[key] = value;
+        cases.push(input);
+    }
+    for input in cases {
+        let (status, _, body) = send_path(
+            router.clone(),
+            "/interaction-research",
+            input.to_string(),
+            "application/json",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{input}");
+        assert_matches_openapi(&body, "Problem");
+    }
+    for (body, media, expected) in [
+        (
+            "{}".into(),
+            "text/plain",
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+        ),
+        (
+            " ".repeat(65 * 1024),
+            "application/json",
+            StatusCode::PAYLOAD_TOO_LARGE,
+        ),
+    ] {
+        assert_eq!(
+            send_path(router.clone(), "/interaction-research", body, media)
+                .await
+                .0,
+            expected
+        );
+    }
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn research_returns_all_outcomes_and_restricts_search_to_selected_site() {
+    for outcome in ["found", "not_found", "inconclusive"] {
+        let result = json!({"status": outcome, "url": if outcome == "found" { json!("https://www.drugs.com/drug-interactions/ibuprofen-with-warfarin-1310-0-2311-0.html") } else { Value::Null }, "summary": "Krátké shrnutí výsledku průzkumu."});
+        let fixture = fake_codex("", &research_events(result.clone()));
+        let router = app(AppState::new(config(fixture.path().join("codex"))).unwrap());
+        let mut input = research_input();
+        input["site"] = json!("https://www.drugs.com/drug_interactions.html");
+        assert_matches_openapi(&input, "InteractionResearchRequest");
+        let (status, headers, body) = send_path(
+            router,
+            "/interaction-research",
+            input.to_string(),
+            "application/json",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(headers["content-language"], "cs");
+        assert_eq!(headers["cache-control"], "no-store");
+        assert_eq!(headers["x-interaction-source"], "web-search");
+        assert_eq!(body["site"], "drugs.com");
+        assert_eq!(body["status"], outcome);
+        assert_eq!(body["url"], result["url"]);
+        assert_matches_openapi(&body, "InteractionResearchResponse");
+        let invocation: Value =
+            serde_json::from_slice(&fs::read(fixture.path().join("invocation.json")).unwrap())
+                .unwrap();
+        let args = invocation["args"].as_array().unwrap();
+        for flag in [
+            "web_search=\"live\"",
+            "tools.web_search.allowed_domains=[\"drugs.com\"]",
+            "shell_tool",
+            "permissions.inference.network.enabled=false",
+        ] {
+            assert!(args.iter().any(|a| a == flag), "missing {flag}");
+        }
+        assert!(!args.iter().any(|a| a == "web_search=\"disabled\""));
+        assert_eq!(invocation["input"]["drugs"], input["drugs"]);
+        assert!(!PathBuf::from(invocation["cwd"].as_str().unwrap()).exists());
+    }
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn research_fails_closed_for_invalid_urls_results_and_unexpected_tools() {
+    let valid = json!({"status": "found", "url": "https://www.drugs.com/drug-interactions/a-with-b.html", "summary": "Shrnutí."});
+    let mut outputs = vec![
+        events(valid.clone()),
+        research_events(json!({"status": "found", "url": null, "summary": "Shrnutí."})),
+    ];
+    let unobserved = format!(
+        "{}\n{}",
+        json!({"type": "item.completed", "item": {"type": "web_search", "results": []}}),
+        events(valid.clone())
+    );
+    outputs.push(unobserved);
+    for url in [
+        "https://evil.test/pair",
+        "https://drugs.com.evil.test/pair",
+        "https://user@drugs.com/pair",
+        "http://drugs.com/pair",
+        "https://www.drugs.com/drug_interactions.html?pair=a,b",
+        "https://www.drugs.com/",
+        "javascript:alert(1)",
+    ] {
+        let mut result = valid.clone();
+        result["url"] = json!(url);
+        outputs.push(research_events(result));
+    }
+    for (key, value) in [
+        ("summary", json!(" ")),
+        ("summary", json!("x".repeat(2001))),
+        ("status", json!("not_found")),
+        ("extra", json!(true)),
+    ] {
+        let mut result = valid.clone();
+        result[key] = value;
+        outputs.push(research_events(result));
+    }
+    outputs.push(format!(
+        "{}\n{}",
+        json!({"type": "item.completed", "item": {"type": "command_execution"}}),
+        research_events(valid)
+    ));
+    for output in outputs {
+        let fixture = fake_codex("", &output);
+        let router = app(AppState::new(config(fixture.path().join("codex"))).unwrap());
+        let (status, _, body) = send_path(
+            router,
+            "/interaction-research",
+            research_input().to_string(),
+            "application/json",
+        )
+        .await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+        assert_matches_openapi(&body, "Problem");
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires an authenticated Codex CLI and makes a real model call"]
+async fn live_research_smoke() {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter("interaction_engine=debug")
+        .try_init();
+    let router = app(AppState::new(Config::from_env().unwrap()).unwrap());
+    let (status, _, body) = send_path(
+        router,
+        "/interaction-research",
+        research_input().to_string(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_matches_openapi(&body, "InteractionResearchResponse");
+    println!("{body}");
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn research_shares_capacity_with_checks_and_times_out() {
+    let fixture = fake_codex(
+        "time.sleep(20)",
+        &research_events(
+            json!({"status": "inconclusive", "url": null, "summary": "Výsledek nelze ověřit."}),
+        ),
+    );
+    let mut cfg = config(fixture.path().join("codex"));
+    cfg.timeout = Duration::from_secs(3);
+    let router = app(AppState::new(cfg).unwrap());
+    let worker = tokio::spawn(send_path(
+        router.clone(),
+        "/interaction-research",
+        research_input().to_string(),
+        "application/json",
+    ));
+    for _ in 0..200 {
+        if fixture.path().join("invocation.json").exists() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(fixture.path().join("invocation.json").exists());
+    let (status, headers, _) = send(
+        router.clone(),
+        json!({"drugs": input()}).to_string(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(headers["retry-after"], "1");
+    assert_eq!(worker.await.unwrap().0, StatusCode::SERVICE_UNAVAILABLE);
+    let invocation: Value =
+        serde_json::from_slice(&fs::read(fixture.path().join("invocation.json")).unwrap()).unwrap();
+    assert!(
+        !std::process::Command::new("kill")
+            .args(["-0", &invocation["pid"].to_string()])
+            .stderr(std::process::Stdio::null())
+            .status()
+            .unwrap()
+            .success()
+    );
+    assert!(!PathBuf::from(invocation["cwd"].as_str().unwrap()).exists());
 }

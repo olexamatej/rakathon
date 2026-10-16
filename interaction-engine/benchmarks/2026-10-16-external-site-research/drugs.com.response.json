@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-16T21:00:10Z",
+  "drugs": [
+    "warfarin",
+    "ibuprofen"
+  ],
+  "site": "drugs.com",
+  "status": "found",
+  "summary": "Drugs.com označuje interakci warfarinu s ibuprofenem jako závažnou (Major): kombinace může zvýšit riziko vážného krvácení, zejména v trávicím traktu. Doporučuje konzultaci s lékařem ohledně alternativy, úpravy dávky nebo častějšího sledování INR. Při neobvyklém krvácení, tvorbě modřin či jiných známkách krvácení doporučuje okamžitou lékařskou pomoc.",
+  "url": "https://www.drugs.com/drug-interactions/ibuprofen-with-warfarin-1310-0-2311-0.html"
+}

@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-16T21:00:28Z",
+  "drugs": [
+    "warfarin",
+    "ibuprofen"
+  ],
+  "site": "rxlabelguard.com",
+  "status": "not_found",
+  "summary": "Při vyhledávání na rxlabelguard.com nebyla nalezena veřejná stránka věnovaná přímo dvojici warfarin–ibuprofen; výsledky obsahovaly pouze dokumentaci API a obecné články. To neznamená, že mezi léky není interakce ani že je jejich kombinace bezpečná.",
+  "url": null
+}

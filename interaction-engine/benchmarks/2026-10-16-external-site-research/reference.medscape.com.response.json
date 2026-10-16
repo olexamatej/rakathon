@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-16T21:00:24Z",
+  "drugs": [
+    "warfarin",
+    "ibuprofen"
+  ],
+  "site": "reference.medscape.com",
+  "status": "inconclusive",
+  "summary": "Vyhledávání na reference.medscape.com nenalezlo samostatnou stránku věnovanou dvojici warfarin–ibuprofen. Obsah zadaného interakčního checkeru se nepodařilo načíst, takže výsledek nelze spolehlivě ověřit; nejde o potvrzení bezpečnosti kombinace.",
+  "url": null
+}

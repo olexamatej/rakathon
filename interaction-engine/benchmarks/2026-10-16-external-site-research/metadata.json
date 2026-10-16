@@ -1,0 +1,15 @@
+{
+  "startedAt": "2026-10-16T20:59:56.834625+00:00",
+  "model": "gpt-6.1-sol",
+  "requestedServiceTier": "priority",
+  "servedServiceTierVerified": false,
+  "codexVersion": "codex-cli 0.163.0",
+  "drugs": [
+    "warfarin",
+    "ibuprofen"
+  ],
+  "timeoutSeconds": 90,
+  "concurrentRequests": 3,
+  "method": "One real localhost POST /interaction-research per supplied site URL; no retries. Elapsed time includes Codex startup, live search, inference and validation.",
+  "finishedAt": "2026-10-16T21:00:31.467533+00:00"
+}
