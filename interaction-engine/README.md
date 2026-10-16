@@ -15,6 +15,15 @@ Your existing Codex login is used; user configuration is ignored for inference.
 cargo run --release
 ```
 
+Set the listening port with `--port` (or `-p`):
+
+```sh
+cargo run --release -- --port 8080
+```
+
+The default is port 3000. `--port` overrides the port in `BIND_ADDR` while
+keeping its host address. Run with `--help` to see command line options.
+
 ```sh
 curl -i http://127.0.0.1:3000/interaction-checks \
   -H 'Content-Type: application/json' \
