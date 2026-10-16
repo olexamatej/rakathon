@@ -5,6 +5,9 @@ odhaduje očekávanou zátěž péče, řadí neobvyklé průběhy, ukazuje vysv
 jednotlivce i skupin a ukládá odborná hodnocení. Aplikace funguje bez API klíčů,
 externích služeb, frontendového buildu a připojení k internetu po instalaci závislostí.
 
+Orientace v repozitáři, nastavení editoru a postup pro změny:
+[návod pro vývoj](CONTRIBUTING.md).
+
 ## Spuštění
 
 Python 3.10+; ověřeno na Pythonu 3.12, NumPy 1.26.4 a SciPy 1.11.4.

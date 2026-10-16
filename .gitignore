@@ -1,14 +1,67 @@
+# Python bytecode and virtual environments
 __pycache__/
+*.py[cod]
 .venv/
+.venv-*/
+venv/
+
+# Test, lint, dependency, and coverage caches
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.hypothesis/
+.tox/
+.nox/
 .cache/
 .coverage
+.coverage.*
 coverage.xml
+coverage.json
 htmlcov/
-.local/
-exports/
+
+# Python build outputs
+/build/
+/dist/
+*.egg-info/
+.eggs/
+
+# Local application state, private inputs, and generated exports
+/.local/
+/exports/
+/assets/*.csv
+*.sqlite
+*.sqlite-*
 *.sqlite3*
-assets/*.csv
-assets/datapackage.json
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.log
+
+# Credentials and machine-specific environment; keep example files shareable
+.env
+.env.*
+!.env.example
+!.env.*.example
+.secrets/
+*.key
+*.pem
+
+# Frontend dependencies, if added later; lockfiles remain versioned
+node_modules/
+
+# Editor and OS files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.swp
+*.swo
+*~
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
 
