@@ -25,15 +25,15 @@ export async function recognizePhoto(file) {
   ];
 }
 
-export async function sendList(text) {
-  if (typeof text !== 'string' || !text.trim()) throw new Error('Seznam je prázdný.');
+export async function sendList(payload) {
+  if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) throw new Error('Seznam je prázdný.');
   let response;
   try {
     // Each POST creates a blob: never retry automatically or invent a local PIN.
     response = await fetch('/api/v1/transfers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(payload),
       cache: 'no-store',
       credentials: 'omit',
       redirect: 'error',

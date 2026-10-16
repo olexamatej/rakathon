@@ -2,7 +2,7 @@
 
 `storage.spec.mjs` logs into storage admin, counts every page, submits a unique
 synthetic patient draft by clicking **Odeslat seznam**, verifies the displayed
-server-issued PIN and exact JSON read back through that PIN, loads the same list
+server-issued PIN and exact structured list read back through that PIN, loads the same list
 by PIN in a separate doctor browser context, then reloads admin and requires
 **exactly one additional record**.
 

@@ -20,9 +20,12 @@ test('patient sends a list and doctor opens it with the same PIN', async ({ page
   await send.click();
   const upload = await uploadPromise;
   expect(upload.status(), 'Patient upload must succeed').toBe(201);
-  const uploaded = JSON.parse(upload.request().postData()).text;
-  expect(uploaded).toContain('Ukázkové léčivo Alfa\t500 mg\t30\t1-0-0');
-  expect(uploaded).toContain('Ukázkové léčivo Beta\t10 mg\t20');
+  const uploaded = JSON.parse(upload.request().postData());
+  expect(uploaded.version).toBe(1);
+  expect(uploaded.items).toEqual([
+    { name: 'Ukázkové léčivo Alfa', dosage: '500 mg', dosesPerPackage: '30', schedule: '1-0-0' },
+    { name: 'Ukázkové léčivo Beta', dosage: '10 mg', dosesPerPackage: '20' },
+  ]);
   const { pin } = await upload.json();
   expect(typeof pin === 'string' && /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
   await expect(page.locator('h1.pin')).toBeVisible();

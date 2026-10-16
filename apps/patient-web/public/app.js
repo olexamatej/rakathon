@@ -1,4 +1,4 @@
-import { createState, loadState, saveState, recordSubmission, canSend, toText } from './lists.js';
+import { createState, loadState, saveState, recordSubmission, canSend } from './lists.js';
 import { recognizePhoto, sendList, loadRegimens } from './services.js';
 
 const app = document.querySelector('#app');
@@ -358,7 +358,15 @@ app.addEventListener('submit', async event => {
   render();
   let entry;
   try {
-    const receipt = await sendList(toText(items, regimen));
+    // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
+    const payload = {
+      version: 1,
+      regimen,
+      items: items.map(({ name, dosage, dosesPerPackage, schedule }) => ({
+        name, dosage, dosesPerPackage, ...(schedule ? { schedule } : {}),
+      })),
+    };
+    const receipt = await sendList(payload);
     entry = recordSubmission(state, items, receipt, regimen);
     persist();
   } catch (error) {

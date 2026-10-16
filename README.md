@@ -38,9 +38,12 @@ Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
 `apps/patient-web/public/services.js` zatím rozpoznávání pouze simuluje: každý obrázek
 vrátí dvě ukázková léčiva; fotografie se neposílají na server. „Odeslat seznam“
-uloží text seznamu (včetně volitelného režimu a rozpisu užívání) jako JSON `{ text }`
-přes `POST /api/v1/transfers`. PIN vrací storage API a PWA jej zobrazí i uloží do
-historie až po úspěšném odeslání. Blob lze vyzvednout přes `GET /api/v1/transfers/{pin}`.
+uloží verzovaný strukturovaný JSON `{ version: 1, regimen, items }` přes
+`POST /api/v1/transfers`. Každá položka obsahuje pouze název, dávkování, počet
+dávek v balení a případný rozpis užívání; lékař tyto položky načte a vykreslí.
+PIN vrací storage API a PWA jej zobrazí i uloží do historie až po úspěšném
+odeslání. Blob lze vyzvednout přes `GET /api/v1/transfers/{pin}`. Lékař nadále
+umí načíst i dřívější textový formát `{ text }`.
 Používejte pouze syntetická data: storage nevynucuje šifrování ani expiraci.
 Lokální Node server je pouze statický; odesílání vyžaduje stejný origin s `/api`
 proxy na storage (jako v nasazení na VPS). Automatické opakování odeslání není zapnuté.
