@@ -1,5 +1,18 @@
 import { newId } from './lists.js';
 
+let regimens;
+
+// Names of oncology regimens for autocomplete; resolves to [] when unavailable (free text still works).
+export function loadRegimens() {
+  regimens ??= fetch('/regimens.json').then(response => {
+    if (!response.ok) throw new Error('Seznam režimů není dostupný.');
+    return response.json();
+  }).then(names => Array.isArray(names) ? names.filter(name => typeof name === 'string') : [])
+    .catch(() => { regimens = undefined; return []; });
+  return regimens;
+}
+
+// Resolves to the medicines array, or { items, regimen } when the photo also names an oncology regimen.
 export async function recognizePhoto(file) {
   if (!file?.type.startsWith('image/')) throw new Error('Vyberte prosím fotografii.');
   if (file.size > 20 * 1024 * 1024) throw new Error('Fotografie je příliš velká. Vyberte snímek do 20 MB.');

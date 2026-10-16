@@ -16,6 +16,23 @@ const files = {
   '/icons/icon-512.png': ['icons/icon-512.png', 'image/png'],
 };
 
+const securityHeaders = {
+  'Cache-Control': 'no-cache',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy': "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+};
+
+// Only regimen names leave the data file, never the rest of the dataset. Synthetic regimens are
+// per-biosimilar copies of a real regimen (GEMOX-B (bevacizumab-xxxx) ...) and would flood autocomplete.
+let regimenNames;
+function loadRegimenNames() {
+  regimenNames ??= readFile(new URL('../../data/solid-tumors-regimens.json', import.meta.url), 'utf8')
+    .then(text => JSON.stringify([...new Set(JSON.parse(text).regimens.filter(regimen => regimen.type === 'Regimen').map(regimen => regimen.name))].sort()))
+    .catch(error => { regimenNames = undefined; throw error; });
+  return regimenNames;
+}
+
 export function createAppServer() {
   return createServer(async (req, res) => {
     let path;
@@ -33,6 +50,16 @@ export function createAppServer() {
       res.writeHead(302, { Location: '/pacient' }).end();
       return;
     }
+    if (path === '/regimens.json') {
+      try {
+        const body = await loadRegimenNames();
+        res.writeHead(200, { ...securityHeaders, 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(req.method === 'HEAD' ? undefined : body);
+      } catch {
+        res.writeHead(500).end('Seznam režimů není dostupný.');
+      }
+      return;
+    }
     const file = Object.hasOwn(files, path) ? files[path] : null;
     if (!file) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Nenalezeno');
@@ -40,13 +67,7 @@ export function createAppServer() {
     }
     try {
       const body = await readFile(new URL(`./public/${file[0]}`, import.meta.url));
-      res.writeHead(200, {
-        'Content-Type': `${file[1]}; charset=utf-8`,
-        'Cache-Control': 'no-cache',
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'no-referrer',
-        'Content-Security-Policy': "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-      });
+      res.writeHead(200, { ...securityHeaders, 'Content-Type': `${file[1]}; charset=utf-8` });
       res.end(req.method === 'HEAD' ? undefined : body);
     } catch {
       res.writeHead(500).end('Soubor aplikace není dostupný.');

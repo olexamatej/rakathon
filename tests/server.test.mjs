@@ -20,6 +20,10 @@ test('patient routes, PWA assets and private-file boundaries', async t => {
     assert.equal(response.status, 200);
     assert.match(await response.text(), /lang="cs"/);
   }
+  const regimens = await (await fetch(base + '/regimens.json')).json();
+  assert.ok(regimens.length > 1000 && regimens.every(name => typeof name === 'string'));
+  assert.ok(regimens.includes('A-CMF'));
+  assert.ok(!regimens.some(name => /bevacizumab-[a-z]{4}\)/.test(name)), 'biosimilar copies are excluded');
   const manifest = await (await fetch(base + '/manifest.webmanifest')).json();
   assert.equal(manifest.start_url, '/pacient');
   assert.equal(manifest.display, 'standalone');
