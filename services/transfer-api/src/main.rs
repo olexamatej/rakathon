@@ -1,5 +1,5 @@
+mod admin;
 mod crypto;
-mod model;
 mod store;
 
 use std::{
@@ -11,27 +11,23 @@ use std::{
 };
 
 use axum::{
+    body::Bytes,
     extract::{ConnectInfo, DefaultBodyLimit, Path, Request, State},
     http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
     middleware::{self, Next},
-    response::{Html, IntoResponse, Redirect, Response},
+    response::{IntoResponse, Response},
     routing::{delete, get, post},
     Json, Router,
 };
-use chrono::{SecondsFormat, TimeZone, Utc};
-use model::{
-    CreateTransferRequest, CreateTransferResponse, EncryptedEnvelope, RedeemTransferRequest,
-    RedeemTransferResponse,
-};
+use chrono::Utc;
 use serde::Serialize;
 use sqlx::{sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions}, SqlitePool};
 use store::TransferStore;
 use tokio::time::{interval, MissedTickBehavior};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{error, info};
-use uuid::Uuid;
 
-const MAX_BODY_BYTES: usize = 384 * 1024;
+const MAX_BODY_BYTES: usize = 1024 * 1024;
 const DEFAULT_BIND_ADDRESS: &str = "127.0.0.1:3000";
 const DEFAULT_DATABASE_PATH: &str = "services/transfer-api/data/transfers.sqlite3";
 
@@ -39,6 +35,7 @@ const DEFAULT_DATABASE_PATH: &str = "services/transfer-api/data/transfers.sqlite
 struct AppState {
     store: TransferStore,
     pepper: Arc<Vec<u8>>,
+    admin_password_digest: Option<[u8; 32]>,
 }
 
 #[derive(Serialize)]
@@ -46,7 +43,13 @@ struct ErrorBody {
     error: &'static str,
 }
 
+#[derive(Debug, Serialize)]
+struct CreateBlobResponse {
+    pin: String,
+}
+
 enum ApiError {
+    Unauthorized,
     BadRequest,
     NotFound,
     RateLimited,
@@ -56,6 +59,7 @@ enum ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, code) = match self {
+            Self::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             Self::BadRequest => (StatusCode::BAD_REQUEST, "bad_request"),
             Self::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             Self::RateLimited => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
@@ -76,6 +80,7 @@ struct Config {
     database_path: PathBuf,
     pepper: Vec<u8>,
     cors_origins: Vec<HeaderValue>,
+    admin_password_digest: Option<[u8; 32]>,
 }
 
 impl Config {
@@ -101,7 +106,14 @@ impl Config {
             .map(|origin| origin.parse::<HeaderValue>())
             .collect::<Result<Vec<_>, _>>()
             .map_err(|_| "CORS_ALLOWED_ORIGINS contains an invalid origin".to_owned())?;
-        Ok(Self { bind_address, database_path, pepper, cors_origins })
+        let admin_password_digest = match env::var("STORAGE_ADMIN_PASSWORD") {
+            Ok(password) if !password.is_empty() && password.len() <= 256 =>
+                Some(crypto::digest(&pepper, b"storage-admin:password:v1", password.as_bytes())),
+            Ok(_) => return Err("STORAGE_ADMIN_PASSWORD must be 1–256 bytes or unset".to_owned()),
+            Err(env::VarError::NotPresent) => None,
+            Err(_) => return Err("STORAGE_ADMIN_PASSWORD must be valid Unicode".to_owned()),
+        };
+        Ok(Self { bind_address, database_path, pepper, cors_origins, admin_password_digest })
     }
 }
 
@@ -134,34 +146,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     migrate(&pool).await?;
 
     let store = TransferStore::new(pool);
-    let state = AppState { store, pepper: Arc::new(config.pepper) };
+    let state = AppState {
+        store, pepper: Arc::new(config.pepper),
+        admin_password_digest: config.admin_password_digest,
+    };
     start_cleanup_worker(state.store.clone());
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(config.cors_origins.clone()))
-        .allow_methods([Method::GET, Method::POST, Method::DELETE])
-        .allow_headers([
-            header::CONTENT_TYPE,
-            header::AUTHORIZATION,
-            HeaderName::from_static("idempotency-key"),
-        ]);
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers([header::CONTENT_TYPE]);
 
-    let app = Router::new()
-        .route("/", get(demo_index))
-        .route("/demo", get(demo_index))
-        .route("/demo/patient", get(patient_page))
-        .route("/demo/doctor", get(doctor_page))
-        .route("/demo/app.js", get(demo_script))
-        .route("/demo/styles.css", get(demo_styles))
-        .route("/health/live", get(liveness))
-        .route("/health/ready", get(readiness))
-        .route("/v1/transfers", post(create_transfer))
-        .route("/v1/transfers/redeem", post(redeem_transfer))
-        .route("/v1/transfers/{transfer_id}", delete(revoke_transfer))
-        .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
-        .layer(cors)
-        .layer(middleware::from_fn(response_security_headers))
-        .with_state(state);
+    let app = storage_router(state)
+        .layer(cors);
 
     let listener = tokio::net::TcpListener::bind(config.bind_address).await?;
     info!(address = %config.bind_address, "PillGaze transfer API listening");
@@ -169,6 +166,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
+}
+
+fn storage_router(state: AppState) -> Router {
+    Router::new()
+        .route("/health/live", get(liveness))
+        .route("/health/ready", get(readiness))
+        .route("/v1/admin/blobs", get(admin::list_blobs))
+        .route("/v1/admin/blobs/{pin_digest}", delete(admin::delete_blob))
+        .route("/v1/transfers", post(create_blob))
+        .route("/v1/transfers/{pin}", get(get_blob))
+        .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
+        .layer(middleware::from_fn(response_security_headers))
+        .with_state(state)
 }
 
 async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::migrate::MigrateError> {
@@ -181,8 +191,8 @@ fn start_cleanup_worker(store: TransferStore) {
         ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
         loop {
             ticker.tick().await;
-            if let Err(error) = store.cleanup().await {
-                error!(%error, "transfer cleanup failed");
+            if store.cleanup().await.is_err() {
+                error!("rate-limit cleanup failed");
             }
         }
     });
@@ -211,36 +221,6 @@ async fn shutdown_signal() {
 
 async fn liveness() -> StatusCode {
     StatusCode::OK
-}
-
-async fn demo_index() -> Redirect {
-    Redirect::temporary("/demo/patient")
-}
-
-async fn patient_page() -> Html<&'static str> {
-    Html(include_str!("../../../apps/transfer-demo/patient.html"))
-}
-
-async fn doctor_page() -> Html<&'static str> {
-    Html(include_str!("../../../apps/transfer-demo/doctor.html"))
-}
-
-async fn demo_script() -> Response {
-    let mut response = include_str!("../../../apps/transfer-demo/app.js").into_response();
-    response.headers_mut().insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_static("text/javascript; charset=utf-8"),
-    );
-    response
-}
-
-async fn demo_styles() -> Response {
-    let mut response = include_str!("../../../apps/transfer-demo/styles.css").into_response();
-    response.headers_mut().insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_static("text/css; charset=utf-8"),
-    );
-    response
 }
 
 async fn response_security_headers(request: Request, next: Next) -> Response {
@@ -274,156 +254,61 @@ async fn readiness(State(state): State<AppState>) -> Result<StatusCode, ApiError
     Ok(StatusCode::OK)
 }
 
-async fn create_transfer(
+async fn create_blob(
     State(state): State<AppState>,
     ConnectInfo(address): ConnectInfo<SocketAddr>,
-    Json(request): Json<CreateTransferRequest>,
-) -> Result<(StatusCode, Json<CreateTransferResponse>), ApiError> {
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<CreateBlobResponse>), ApiError> {
     let now = Utc::now().timestamp();
     enforce_source_limit(&state, address.ip(), b"rate:create:source", 30, now).await?;
-    let expires_in_seconds = request.expires_in_seconds.unwrap_or(900);
-    if !(60..=3600).contains(&expires_in_seconds) {
+    // Validate JSON syntax only. Preserve the original bytes, including whitespace
+    // and field ordering; no medication schema or encryption envelope is required.
+    let is_json = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(';').next())
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("application/json"));
+    if !is_json || serde_json::from_slice::<serde_json::Value>(&body).is_err() {
         return Err(ApiError::BadRequest);
     }
-    let envelope = request.envelope.decode().map_err(|_| ApiError::BadRequest)?;
 
-    let retrieval_code = crypto::new_retrieval_code().map_err(|error| {
-        error!(%error, "retrieval-code generation failed");
-        ApiError::Unavailable
-    })?;
-    let revocation_token = crypto::new_revocation_token().map_err(|error| {
-        error!(%error, "revocation-token generation failed");
-        ApiError::Unavailable
-    })?;
-    let retrieval_digest = crypto::digest(
-        &state.pepper,
-        b"retrieval-code:v1",
-        retrieval_code.as_bytes(),
-    );
-    let revocation_digest = crypto::digest(
-        &state.pepper,
-        b"revocation-token:v1",
-        revocation_token.as_bytes(),
-    );
-    let transfer_id = Uuid::new_v4().to_string();
-    let expires_at = now + i64::from(expires_in_seconds);
-
-    state
-        .store
-        .create(
-            &transfer_id,
-            &retrieval_digest,
-            &revocation_digest,
-            envelope,
-            now,
-            expires_at,
-        )
-        .await
-        .map_err(|error| {
-            error!(%error, "transfer creation failed");
+    for _ in 0..10 {
+        let pin = crypto::new_pin().map_err(|_| ApiError::Unavailable)?;
+        let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
+        let created = state.store.create_blob(&pin_digest, &body, now).await.map_err(|_| {
+            // Do not include database errors: they might contain payload details.
+            error!("blob transfer creation failed");
             ApiError::Unavailable
         })?;
-
-    Ok((
-        StatusCode::CREATED,
-        Json(CreateTransferResponse {
-            transfer_id,
-            retrieval_code,
-            revocation_token,
-            expires_at: format_timestamp(expires_at)?,
-        }),
-    ))
+        if created {
+            return Ok((StatusCode::CREATED, Json(CreateBlobResponse { pin })));
+        }
+    }
+    Err(ApiError::Unavailable)
 }
 
-async fn redeem_transfer(
+async fn get_blob(
     State(state): State<AppState>,
     ConnectInfo(address): ConnectInfo<SocketAddr>,
-    headers: HeaderMap,
-    Json(request): Json<RedeemTransferRequest>,
-) -> Result<Json<RedeemTransferResponse>, ApiError> {
+    Path(pin): Path<String>,
+) -> Result<Response, ApiError> {
     let now = Utc::now().timestamp();
-    enforce_source_limit(&state, address.ip(), b"rate:redeem:source", 20, now).await?;
-    if !crypto::valid_retrieval_code(&request.retrieval_code) {
+    enforce_source_limit(&state, address.ip(), b"rate:get:source", 20, now).await?;
+    if !crypto::valid_pin(&pin) {
         return Err(ApiError::NotFound);
     }
-    let idempotency_key = headers
-        .get("Idempotency-Key")
-        .and_then(|value| value.to_str().ok())
-        .filter(|value| (22..=128).contains(&value.len()) && value.is_ascii())
-        .ok_or(ApiError::BadRequest)?;
-    let code_digest = crypto::digest(
-        &state.pepper,
-        b"retrieval-code:v1",
-        request.retrieval_code.as_bytes(),
-    );
-    if !state
+    let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
+    let payload = state
         .store
-        .allow_code_attempt(&state.pepper, &code_digest, 5, now)
+        .get_blob(&pin_digest)
         .await
-        .map_err(|error| {
-            error!(%error, "code rate-limit check failed");
-            ApiError::Unavailable
-        })?
-    {
-        return Err(ApiError::RateLimited);
-    }
-    let idempotency_digest = crypto::digest(
-        &state.pepper,
-        b"redemption-idempotency:v1",
-        idempotency_key.as_bytes(),
-    );
-    let record = state
-        .store
-        .redeem(&code_digest, &idempotency_digest, now)
-        .await
-        .map_err(|error| {
-            error!(%error, "transfer redemption failed");
+        .map_err(|_| {
+            error!("blob transfer lookup failed");
             ApiError::Unavailable
         })?
         .ok_or(ApiError::NotFound)?;
-
-    let envelope = EncryptedEnvelope::from_stored(
-        record.envelope_format,
-        record.format_version,
-        record.algorithm,
-        &record.nonce,
-        &record.ciphertext,
-    );
-    Ok(Json(RedeemTransferResponse {
-        transfer_id: record.id,
-        envelope,
-        expires_at: format_timestamp(record.expires_at)?,
-    }))
-}
-
-async fn revoke_transfer(
-    State(state): State<AppState>,
-    ConnectInfo(address): ConnectInfo<SocketAddr>,
-    Path(transfer_id): Path<String>,
-    headers: HeaderMap,
-) -> Result<StatusCode, ApiError> {
-    let now = Utc::now().timestamp();
-    enforce_source_limit(&state, address.ip(), b"rate:revoke:source", 60, now).await?;
-    let token = headers
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "))
-        .filter(|value| !value.is_empty())
-        .ok_or(ApiError::NotFound)?;
-    let digest = crypto::digest(&state.pepper, b"revocation-token:v1", token.as_bytes());
-    let revoked = state
-        .store
-        .revoke(&transfer_id, &digest, now)
-        .await
-        .map_err(|error| {
-            error!(%error, "transfer revocation failed");
-            ApiError::Unavailable
-        })?;
-    if revoked {
-        Ok(StatusCode::NO_CONTENT)
-    } else {
-        Err(ApiError::NotFound)
-    }
+    Ok(([(header::CONTENT_TYPE, "application/json")], payload).into_response())
 }
 
 async fn enforce_source_limit(
@@ -448,9 +333,119 @@ async fn enforce_source_limit(
     }
 }
 
-fn format_timestamp(timestamp: i64) -> Result<String, ApiError> {
-    Utc.timestamp_opt(timestamp, 0)
-        .single()
-        .map(|datetime| datetime.to_rfc3339_opts(SecondsFormat::Secs, true))
-        .ok_or(ApiError::Unavailable)
+#[cfg(test)]
+mod blob_tests {
+    use super::*;
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn router_enforces_one_mib_and_removes_legacy_routes() {
+        let app = storage_router(state().await);
+        for (size, status) in [(MAX_BODY_BYTES, StatusCode::CREATED), (MAX_BODY_BYTES + 1, StatusCode::PAYLOAD_TOO_LARGE)] {
+            let payload = format!("\"{}\"", "x".repeat(size - 2));
+            let mut request = Request::builder().method("POST").uri("/v1/transfers")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(axum::body::Body::from(payload)).unwrap();
+            request.extensions_mut().insert(ConnectInfo("127.0.0.1:1234".parse::<SocketAddr>().unwrap()));
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), status);
+            assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+        }
+        for (method, uri, status) in [
+            ("POST", "/v1/encrypted-transfers", StatusCode::NOT_FOUND),
+            ("POST", "/v1/transfers/redeem", StatusCode::METHOD_NOT_ALLOWED),
+            ("DELETE", "/v1/transfers/AAAAAA", StatusCode::METHOD_NOT_ALLOWED),
+            ("GET", "/demo/patient", StatusCode::NOT_FOUND),
+        ] {
+            let request = Request::builder().method(method).uri(uri)
+                .body(axum::body::Body::empty()).unwrap();
+            assert_eq!(app.clone().oneshot(request).await.unwrap().status(), status);
+        }
+    }
+
+    async fn state() -> AppState {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        migrate(&pool).await.unwrap();
+        AppState {
+            store: TransferStore::new(pool), pepper: Arc::new(vec![42; 32]),
+            admin_password_digest: None,
+        }
+    }
+
+    fn json_headers() -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        headers
+    }
+
+    #[tokio::test]
+    async fn get_returns_original_json_repeatedly() {
+        let state = state().await;
+        let payload = " {\"z\":null, \"a\": [1,2]}\n";
+        let (_, Json(receipt)) = create_blob(
+            State(state.clone()),
+            ConnectInfo("127.0.0.1:1234".parse().unwrap()),
+            json_headers(),
+            Bytes::from(payload),
+        ).await.unwrap_or_else(|_| panic!("upload failed"));
+        for _ in 0..2 {
+            let response = get_blob(
+                State(state.clone()),
+                ConnectInfo("127.0.0.1:1234".parse().unwrap()),
+                Path(receipt.pin.clone()),
+            ).await.unwrap_or_else(|_| panic!("lookup failed"));
+            assert_eq!(response.status(), StatusCode::OK);
+            assert_eq!(response.headers()[header::CONTENT_TYPE], "application/json");
+            let body = axum::body::to_bytes(response.into_body(), MAX_BODY_BYTES).await.unwrap();
+            assert_eq!(&body[..], payload.as_bytes());
+        }
+    }
+
+    #[tokio::test]
+    async fn get_rejects_unknown_and_invalid_pins() {
+        let state = state().await;
+        for pin in ["AAAAAA", "abc", "123456789012", "!!!!!!"] {
+            let result = get_blob(
+                State(state.clone()),
+                ConnectInfo("127.0.0.1:1234".parse().unwrap()),
+                Path(pin.to_owned()),
+            ).await;
+            assert!(matches!(result, Err(ApiError::NotFound)));
+        }
+    }
+
+    #[tokio::test]
+    async fn upload_returns_only_pin_for_arbitrary_json() {
+        let state = state().await;
+        for payload in ["{\"unexpected\":[1,null,true]}", "[1,2]", "null", "42", "\"text\""] {
+            let (status, Json(response)) = create_blob(
+                State(state.clone()),
+                ConnectInfo("127.0.0.1:1234".parse().unwrap()),
+                json_headers(),
+                Bytes::from(payload),
+            ).await.unwrap_or_else(|_| panic!("valid JSON rejected"));
+            assert_eq!(status, StatusCode::CREATED);
+            assert_eq!(response.pin.len(), 6);
+            let value = serde_json::to_value(response).unwrap();
+            assert_eq!(value.as_object().unwrap().len(), 1);
+            assert!(value.get("pin").is_some());
+        }
+    }
+
+    #[tokio::test]
+    async fn rejects_invalid_json_and_wrong_content_type() {
+        for (headers, payload) in [(json_headers(), "not json"), (HeaderMap::new(), "{}")] {
+            let result = create_blob(
+                State(state().await),
+                ConnectInfo("127.0.0.1:1234".parse().unwrap()),
+                headers,
+                Bytes::from(payload),
+            ).await;
+            assert!(matches!(result, Err(ApiError::BadRequest)));
+        }
+    }
 }

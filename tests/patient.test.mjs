@@ -162,3 +162,9 @@ test('optional oncology regimen is stored, validated and handed off', () => {
   assert.equal(toText([medicine()], ' FOLFOX\n').split('\n')[0], 'Režim onkologické léčby\tFOLFOX');
   assert.equal(recordSubmission(state, [medicine()], { pin: 'ABC234', sentAt: new Date().toISOString() }, 'FOLFOX').regimen, 'FOLFOX');
 });
+
+test('optional API-provided schedule is passed to the handoff but never required', () => {
+  assert.ok(canSend([{ ...medicine(), schedule: '1-0-0' }, medicine()]));
+  assert.equal(toText([medicine()]).split('\n')[0], 'Název léčiva\tDosage\tPočet dávek v balení');
+  assert.equal(toText([{ ...medicine(), schedule: '1-0-0' }, medicine()]).split('\n').slice(1).map(row => row.split('\t')[3]).join('|'), '1-0-0|');
+});

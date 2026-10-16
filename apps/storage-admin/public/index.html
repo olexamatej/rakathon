@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PillGaze — Storage admin</title>
+  <link rel="stylesheet" href="/storage-admin/styles.css">
+  <script type="module" src="/storage-admin/app.mjs"></script>
+</head>
+<body>
+  <div class="shell">
+    <header><a href="/pacient" class="brand">PillGaze</a><span>Storage admin</span></header>
+    <main>
+      <h1>Uložené záznamy</h1>
+      <p class="note">Pouze JSON storage. Zobrazuje se HMAC otisk PINu, nikoli původní PIN nebo obsah záznamu.</p>
+      <form id="login">
+        <label for="password">Heslo administrátora</label>
+        <input id="password" type="password" autocomplete="current-password" required maxlength="256">
+        <button type="submit">Přihlásit</button>
+      </form>
+      <p id="status" role="status" aria-live="polite"></p>
+      <section id="storage" hidden aria-label="Správa storage">
+        <div class="actions">
+          <button id="refresh" type="button">Obnovit</button>
+          <button id="logout" class="secondary" type="button">Odhlásit</button>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">Velikost</th><th scope="col">HMAC PINu</th><th scope="col">Akce</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="actions">
+          <button id="previous" class="secondary" type="button">Předchozí</button>
+          <span id="page"></span>
+          <button id="next" class="secondary" type="button">Další</button>
+        </div>
+      </section>
+      <p class="note">Hackathonový prototyp, pouze syntetická data. Smazání je nevratné v živé databázi; nemusí odstranit kopie ze záloh.</p>
+    </main>
+  </div>
+</body>
+</html>

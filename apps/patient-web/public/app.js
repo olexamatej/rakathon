@@ -71,7 +71,7 @@ function historyView() {
     ${state.submissions.length ? `<div class="history-list">${state.submissions.map(entry => `
       <details class="submission"><summary><span>${escape(date(entry.sentAt))} v ${escape(time(entry.sentAt))}<small>${itemCount(entry.items.length)}</small></span>
         <code>${escape(entry.pin)}</code></summary>
-        ${entry.regimen ? `<p class="submission-regimen">Režim: <strong>${escape(entry.regimen)}</strong></p>` : ''}<ul>${entry.items.map(item => `<li><strong>${escape(item.name)}</strong><span>${escape(item.dosage)} · ${escape(item.dosesPerPackage)} dávek v balení</span></li>`).join('')}</ul>
+        ${entry.regimen ? `<p class="submission-regimen">Režim: <strong>${escape(entry.regimen)}</strong></p>` : ''}<ul>${entry.items.map(item => `<li><strong>${escape(item.name)}</strong><span>${escape(item.dosage)} · ${escape(item.dosesPerPackage)} dávek v balení${item.schedule ? ` · ${escape(item.schedule)}` : ''}</span></li>`).join('')}</ul>
       </details>`).join('')}</div>`
       : `<div class="empty-history">${icon('history')}<h2>Zatím žádná odeslání</h2></div>`}`;
 }
@@ -100,7 +100,7 @@ function editor() {
         <legend class="list-heading">Léčiva v seznamu <span>${itemCount(state.items.length)}</span></legend>${state.items.map((item, index) => `
         <article class="medicine"><div class="medicine-info">
           <strong>${escape(item.name)}</strong>
-          <span>${escape(item.dosage)} · ${escape(item.dosesPerPackage)} dávek v balení</span></div>
+          <span>${escape(item.dosage)} · ${escape(item.dosesPerPackage)} dávek v balení${item.schedule ? ` · ${escape(item.schedule)}` : ''}</span></div>
           <button type="button" class="icon-button" data-action="remove" data-id="${escape(item.id)}" aria-label="Odstranit léčivo ${escape(item.name)}">${icon('trash')}</button>
         </article>`).join('')}</fieldset>`
       : `<div class="empty-list">${icon('list')}<strong>Seznam je prázdný</strong></div>`}
@@ -139,8 +139,9 @@ function render(focus = false) {
     <div class="pin-actions"><button class="secondary" data-action="copy" data-pin="${escape(receipt.pin)}">${icon('copy')} <span>Kopírovat PIN</span></button>
     <button class="primary" data-action="home">Domů</button></div></main>`
     : showHistory ? historyView() : editor();
-  app.innerHTML = receipt ? content : `<div class="shell"><header><a class="brand" href="/pacient" data-action="home"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
-    <button class="install-button" data-action="install" aria-label="Nainstalovat aplikaci">${icon('download')}</button></header>
+  const header = `<header><a class="brand" href="/pacient" data-action="home"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
+    <button class="install-button" data-action="install" aria-label="Nainstalovat aplikaci">${icon('download')}</button></header>`;
+  app.innerHTML = receipt ? `<div class="shell">${header}${content}</div>` : `<div class="shell">${header}
     <main id="main"><nav class="view-tabs" aria-label="Přehled pacienta">
       <a href="/pacient" data-action="home" ${!showHistory ? 'aria-current="page"' : ''}>Seznam</a>
       <a href="/pacient?historie=1" data-action="history" ${showHistory ? 'aria-current="page"' : ''}>Historie odeslání</a>

@@ -1,6 +1,10 @@
-# Shared API Contract
+# Shared API contract
 
-`openapi.yaml` is the source of truth for the first transfer-service HTTP
-contract. Update it with the backend, patient client, and doctor web owners when
-an endpoint or payload changes. The service must return ciphertext only; the
-decryption key is exchanged directly between the patient and doctor.
+`openapi.yaml` defines opaque JSON blob storage:
+
+- `POST /v1/transfers`: any JSON in, only `{"pin":"A7K2QM"}` out.
+- `GET /v1/transfers/{pin}`: original JSON out, without consumption or expiry.
+
+Operational liveness/readiness probes remain separate. Old encrypted transfer
+and demo endpoints are removed. Use synthetic data only; this API does not
+enforce encryption. Update the contract together with its client consumers.

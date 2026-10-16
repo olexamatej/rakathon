@@ -2,7 +2,7 @@
 
 Základ pacientské aplikace a náhledu pracovního rozhraní lékaře v React Native / Expo / TypeScript. Vychází ze [zadání PillGaze](assets/RAKATHON_2026_MOU_Rusinko.md) a [prezentace](assets/Rakathon_Rusinko_prezentace.md).
 
-[Checklist zadání](docs/requirements.md) · [Architektura systému](architecture.md) · [Transfer API](services/transfer-api/README.md) · [Lokální demo](apps/transfer-demo/README.md) · [Pravidla spolupráce a CI](CONTRIBUTING.md) · [Katalog SÚKL](data/sukl/README.md)
+[Checklist zadání](docs/requirements.md) · [Architektura systému](architecture.md) · [Transfer API](services/transfer-api/README.md) · [Pravidla spolupráce a CI](CONTRIBUTING.md) · [Katalog SÚKL](data/sukl/README.md)
 
 ## Spuštění
 
@@ -32,6 +32,8 @@ fotoaparát otevře náhled webkamery, na telefonu systémový fotoaparát. Polo
 odstranit; seznam a historii odeslání uchovává localStorage tohoto prohlížeče.
 Volitelný režim onkologické léčby má našeptávání z HemOncKB a uchovává se také
 v historii odeslání. Poslední PIN lze znovu otevřít a zkopírovat.
+Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva a v historii;
+pokud je vyplněný, textové předání přidá sloupec **Kdy**.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
 `apps/patient-web/public/services.js` zatím rozpoznávání a odesílání pouze simuluje: každý obrázek
