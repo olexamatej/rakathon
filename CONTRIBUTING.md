@@ -2,8 +2,9 @@
 
 Keep changes small and scoped. When another agent is developing the application,
 use a separate Git worktree and avoid changing its checkout or uncommitted files.
-Fetch `origin/master` before pushing and integrate concurrent changes without
-force-pushing the shared branch.
+Use `main` as the primary application branch. Fetch `origin/main` before integrating
+changes and avoid force-pushing shared branches. The original prognosis project is
+archived on `legacy-prognosis`.
 
 ## Repository conventions
 
@@ -51,7 +52,7 @@ the live Actions checkout. A web export checks bundling, not native device behav
 ## Continuous integration
 
 `.github/workflows/repository-checks.yml` runs on pushes and pull requests targeting
-`master` or `pillgaze`. It checks the agent configuration's JSON syntax, repository configuration
+`main` or `pillgaze`. It checks the agent configuration's JSON syntax, repository configuration
 whitespace, accidentally tracked ignored files, and GitHub Actions workflows with
 actionlint. The ignored-file check covers filenames and patterns, not secret
 contents; review commits for credentials as well.

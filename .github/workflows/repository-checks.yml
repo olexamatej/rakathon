@@ -2,9 +2,9 @@ name: Pillgaze repository checks
 
 on:
   push:
-    branches: [master, pillgaze]
+    branches: [main, pillgaze]
   pull_request:
-    branches: [master, pillgaze]
+    branches: [main, pillgaze]
 
 permissions:
   contents: read

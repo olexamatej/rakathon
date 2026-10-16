@@ -2,9 +2,9 @@ name: Pillgaze application CI
 
 on:
   push:
-    branches: [master, pillgaze]
+    branches: [main, pillgaze]
   pull_request:
-    branches: [master, pillgaze]
+    branches: [main, pillgaze]
 
 permissions:
   contents: read
