@@ -1,0 +1,69 @@
+# Transfer API
+
+Rust HTTP service for short-lived encrypted medication-list transfers. It is a
+blind relay: the service stores and returns client ciphertext, and must never
+receive the decryption key, medicine photos, or plaintext medication names.
+
+Local development uses a persistent SQLite file. Azure deployment will use
+PostgreSQL; both implementations must preserve the same HTTP contract and
+single-use redemption behavior. SQLite is not suitable for a shared file across
+scaled service replicas.
+
+The shared endpoint and request/response definitions are in
+[`../../packages/api-contract/openapi.yaml`](../../packages/api-contract/openapi.yaml).
+The initial PostgreSQL schema is in `migrations/0001_create_transfers.sql`.
+
+## Run locally
+
+Install a current Rust toolchain, then from the repository root:
+
+```sh
+export TRANSFER_HMAC_SECRET='replace-with-a-random-secret-of-at-least-32-bytes'
+cargo run --manifest-path services/transfer-api/Cargo.toml
+```
+
+The service listens on `127.0.0.1:3000` by default and creates
+`services/transfer-api/data/transfers.sqlite3` when started from the repository
+root. Set `BIND_ADDRESS` and `PILLGAZE_DB_PATH` to override those defaults.
+Copy `.env.example` to `.env` in this directory, replace the secret, then load
+it in your shell before starting the service:
+
+```sh
+cp services/transfer-api/.env.example services/transfer-api/.env
+set -a
+source services/transfer-api/.env
+set +a
+cargo run --manifest-path services/transfer-api/Cargo.toml
+```
+
+Only the exact origins in `CORS_ALLOWED_ORIGINS` receive browser CORS headers.
+Local state and `.env` files are ignored by Git. Use synthetic medication data
+only. For a physical phone, bind to the development machine's LAN address and
+configure the API URL in the client; `127.0.0.1` on the phone refers to the
+phone itself.
+
+## Implementation boundary
+
+- Keep the documented endpoints aligned with the shared OpenAPI contract.
+- Keep persistence behind the store module. Local SQLite is the development
+  implementation; PostgreSQL is the Azure implementation target. Redemption
+  must be atomic across API replicas when deployed.
+- Store keyed digests of retrieval and revocation secrets, never their raw
+  values. Keep the digest pepper outside the database in Azure Key Vault.
+- Use one atomic database update and the same idempotency key to support a retry
+  after a lost redemption response.
+- Enforce request-size, code-attempt, and source rate limits. SQLite counters
+  apply to one local service instance; Azure counters must use shared storage.
+- `GET /health/live` must not query PostgreSQL. `GET /health/ready` must check
+  required dependencies without exposing connection details.
+- Keep `Cache-Control: no-store` on every response, especially transfer
+  responses that contain one-time secrets.
+- Do not log request bodies, headers containing secrets, ciphertext, or codes.
+- Keep a redeemed ciphertext only until the original expiry so the same
+  idempotency key can retry; delete expired and revoked rows with the scheduled
+  cleanup task.
+
+Do not use real patient data during local development. Before public deployment,
+review Azure storage, trusted-proxy client IP handling, rate limits across
+replicas, expiry cleanup, secret handling, TLS, monitoring scrubbing, and
+recovery behavior.

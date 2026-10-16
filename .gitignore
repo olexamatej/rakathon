@@ -24,6 +24,7 @@ htmlcov/
 # Python build outputs
 /build/
 /dist/
+target/
 *.egg-info/
 .eggs/
 

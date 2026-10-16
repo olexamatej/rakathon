@@ -41,6 +41,23 @@ archived on `legacy-prognosis`.
   `.github/pull_request_template.md` is a short checklist; copy it manually if
   GitHub does not offer it (automatic templates come from the default branch).
 
+## Parallel application and service work
+
+- The active Expo patient prototype remains at the repository root; its entry
+  points and current CI assume that location. Do not move or duplicate it while
+  teammates are developing it.
+- Keep the doctor-facing browser client in `apps/doctor-web/`, the Rust transfer
+  service in `services/transfer-api/`, the shared OpenAPI contract in
+  `packages/api-contract/`, and Azure deployment work in `infra/azure/`.
+- Read [`architecture.md`](architecture.md) before changing a cross-component
+  boundary. Update the OpenAPI contract when API behavior changes and coordinate
+  the matching patient, doctor, and service updates.
+- The Rust transfer service currently runs locally with SQLite. Azure
+  PostgreSQL storage and public deployment are future work. Do not send real
+  patient data to the local prototype.
+- Commit the Rust crate's `Cargo.lock` with dependency changes. The Rust CI job
+  compiles its targets on the isolated ARM64 runner.
+
 Before pushing application changes, use Node.js 24 and run:
 
 ```sh
@@ -65,7 +82,9 @@ contents; review commits for credentials as well.
 `.github/workflows/application-ci.yml` runs on the same branch events. It uses
 Node.js 24, installs the committed lockfile with `npm ci`, checks TypeScript, runs
 unit tests and the offline public-catalog integrity checks, and exports the Expo
-web bundle with one Metro worker.
+web bundle with one Metro worker. It also installs a SHA-pinned Rust stable
+toolchain and compiles `services/transfer-api` targets with one Cargo build job
+to fit the sandbox runner's memory limit.
 No application lint rules or formatter are imposed on the active development work.
 
 The full `npm audit --audit-level=high` report is deliberately **non-blocking**
