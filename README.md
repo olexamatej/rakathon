@@ -32,6 +32,8 @@ fotoaparát otevře náhled webkamery, na telefonu systémový fotoaparát. Polo
 odstranit; seznam a historii odeslání uchovává localStorage tohoto prohlížeče.
 Volitelný režim onkologické léčby má našeptávání z HemOncKB a uchovává se také
 v historii odeslání. Poslední PIN lze znovu otevřít a zkopírovat.
+Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva a v historii;
+pokud je vyplněný, textové předání přidá sloupec **Kdy**.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
 `apps/patient-web/public/services.js` zatím rozpoznávání a odesílání pouze simuluje: každý obrázek
