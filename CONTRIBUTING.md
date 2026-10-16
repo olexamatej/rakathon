@@ -17,6 +17,9 @@ force-pushing the shared branch.
   avoid bulk formatting or line-ending conversion. Use synthetic fixtures for
   tests and review new inputs before committing them.
 - `.gitignore` does not remove files already tracked in Git or its history.
+- Keep project documentation in `docs/` and public reference catalogs in `data/`.
+  Update catalog data and provenance metadata together; preserve source values.
+  See `data/sukl/README.md` for the current snapshot and update procedure.
 
 ## Application boundaries and small changes
 
@@ -26,6 +29,8 @@ force-pushing the shared branch.
   while someone else is editing them.
 - Add regression tests for changes to validation, export, and handoff behavior.
   Keep fixtures synthetic; do not read patient documents or photographs in tests.
+  Offline integrity tests may read the versioned public SÚKL catalog, but must
+  not query external services or claim clinical validation.
 - Use npm and `npm ci`; do not introduce another package manager or regenerate
   the lockfile for unrelated cleanup. Review runtime upgrades separately.
 - Follow surrounding style. No repository-wide formatting, mass renames, or
@@ -58,7 +63,8 @@ contents; review commits for credentials as well.
 
 `.github/workflows/application-ci.yml` runs on the same branch events. It uses
 Node.js 24, installs the committed lockfile with `npm ci`, checks TypeScript, runs
-the existing unit tests, and exports the Expo web bundle with one Metro worker.
+unit tests and the offline public-catalog integrity checks, and exports the Expo
+web bundle with one Metro worker.
 No application lint rules or formatter are imposed on the active development work.
 
 The full `npm audit --audit-level=high` report is deliberately **non-blocking**
