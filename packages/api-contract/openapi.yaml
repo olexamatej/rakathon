@@ -3,7 +3,7 @@ info:
   title: PillGaze Transfer API
   version: 0.1.0
   description: >-
-    Short-lived relay for client-encrypted medication-list envelopes. Responses
+    Opaque JSON blob storage plus a separate legacy client-encrypted relay. Responses
     use Cache-Control: no-store; clients must not cache one-time secrets or payloads.
 servers:
   - url: https://{host}
@@ -12,6 +12,42 @@ servers:
         default: api.example.invalid
 paths:
   /v1/transfers:
+    post:
+      operationId: createBlobTransfer
+      summary: Store an opaque JSON blob and return only its PIN
+      description: >-
+        Accepts any valid JSON value, storing the exact request bytes without
+        interpreting fields. Maximum request size is 393216 bytes. Returns a
+        random six-character alphanumeric PIN. No expiry or retrieval endpoint
+        is implemented for these blobs yet. This endpoint does not guarantee
+        client-side encryption; use synthetic data only. Never log bodies or PINs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {}
+      responses:
+        '201':
+          description: Blob stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [pin]
+                properties:
+                  pin:
+                    type: string
+                    pattern: '^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$'
+        '400':
+          description: Invalid JSON or missing application/json content type.
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/encrypted-transfers:
     post:
       operationId: createTransfer
       summary: Store an encrypted medication-list envelope

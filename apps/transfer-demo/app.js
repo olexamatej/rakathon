@@ -105,7 +105,7 @@ function setupPatient() {
       const decryptionKey = toBase64Url(rawKey);
       rawKey.fill(0);
 
-      const response = await fetch("/v1/transfers", {
+      const response = await fetch("/v1/encrypted-transfers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",

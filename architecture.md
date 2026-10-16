@@ -21,6 +21,21 @@ and OCR flow is not implemented yet.
 
 ## Product flow
 
+### Current opaque-blob upload
+
+`POST /v1/transfers` accepts any valid JSON and stores its exact bytes in the
+separate SQLite `blob_transfers` table. It returns only a random six-character
+alphanumeric `pin`; PINs are persisted as keyed digests, and collisions never
+overwrite existing blobs. Payload fields are not interpreted. Expiry and
+retrieval are not implemented for this path yet. It does not enforce encryption
+and is for synthetic data only; storage currently grows without automatic cleanup.
+
+### Legacy encrypted demo flow
+
+The following flow and ciphertext-only trust boundaries describe the separate
+legacy demo, whose upload route is now `POST /v1/encrypted-transfers`, not the
+new opaque-blob endpoint.
+
 1. The patient client captures or selects medicine photos and extracts a draft
    medication list. The patient reviews and confirms every item before sharing.
 2. The patient client serializes the confirmed list and encrypts it on the
@@ -90,7 +105,8 @@ The initial contract is [`packages/api-contract/openapi.yaml`](packages/api-cont
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /v1/transfers` | Store an encrypted envelope and return a retrieval code, expiry, and revocation token once. |
+| `POST /v1/transfers` | Store opaque JSON bytes and return only a six-character PIN. No expiry or retrieval yet. |
+| `POST /v1/encrypted-transfers` | Legacy encrypted demo: return a retrieval code, expiry, and revocation token once. |
 | `POST /v1/transfers/redeem` | Atomically redeem a code and return the encrypted envelope. Supports a same-client idempotent retry. |
 | `DELETE /v1/transfers/{transferId}` | Revoke a transfer using its separate revocation token. |
 | `GET /health/live` | Process liveness; does not depend on PostgreSQL. |

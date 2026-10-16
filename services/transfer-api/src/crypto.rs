@@ -15,6 +15,29 @@ pub fn new_retrieval_code() -> Result<String, rand::Error> {
         .collect())
 }
 
+pub fn new_pin() -> Result<String, rand::Error> {
+    let mut random = [0_u8; 6];
+    OsRng.try_fill_bytes(&mut random)?;
+    Ok(random
+        .iter()
+        .map(|byte| CODE_ALPHABET[(byte & 0b1_1111) as usize] as char)
+        .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pin_is_six_alphanumeric_characters() {
+        for _ in 0..100 {
+            let pin = new_pin().unwrap();
+            assert_eq!(pin.len(), 6);
+            assert!(pin.bytes().all(|byte| CODE_ALPHABET.contains(&byte)));
+        }
+    }
+}
+
 pub fn new_revocation_token() -> Result<String, rand::Error> {
     let mut random = [0_u8; 32];
     let mut rng = OsRng;

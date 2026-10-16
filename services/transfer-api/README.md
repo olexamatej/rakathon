@@ -1,8 +1,30 @@
 # Transfer API
 
-Rust HTTP service for short-lived encrypted medication-list transfers. It is a
-blind relay: the service stores and returns client ciphertext, and must never
-receive the decryption key, medicine photos, or plaintext medication names.
+Rust HTTP service with two separate transfer paths:
+
+- `POST /v1/transfers`: store any valid JSON as an opaque blob, preserving exact
+  request bytes. Send `Content-Type: application/json`; no wrapper or medication
+  schema is required. Returns HTTP 201 with only `{"pin":"A7K2QM"}`. PINs are
+  six random Crockford Base32 alphanumeric characters; collisions are retried
+  without overwriting stored blobs. Only keyed PIN digests are persisted.
+  The request limit is 384 KiB and the existing source rate limit is retained.
+  Blobs have **no expiry, retrieval, or revocation endpoint yet** and are not
+  deleted by the legacy cleanup worker. Storage can grow indefinitely.
+  This path does not enforce client-side encryption: do not send real patient data.
+- `POST /v1/encrypted-transfers`: legacy client-encrypted envelope upload, used
+  by the browser demo. This path remains a blind relay; it must never receive
+  the decryption key. Existing redemption and revocation routes are unchanged.
+
+Example for the new path (synthetic data):
+
+```sh
+curl -X POST http://127.0.0.1:3000/v1/transfers \
+  -H 'Content-Type: application/json' \
+  --data-binary '{"anything":["synthetic",123]}'
+# {"pin":"A7K2QM"} (random on each successful request)
+```
+
+The lifecycle and encryption notes below apply to the legacy path only.
 
 Local development uses a persistent SQLite file. Azure deployment will use
 PostgreSQL; both implementations must preserve the same HTTP contract and

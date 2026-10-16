@@ -10,6 +10,30 @@ pub struct TransferStore {
     pool: SqlitePool,
 }
 
+#[cfg(test)]
+mod blob_tests {
+    use super::*;
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    #[tokio::test]
+    async fn blob_preserves_bytes_survives_cleanup_and_cannot_be_overwritten() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:").await.unwrap();
+        crate::migrate(&pool).await.unwrap();
+        let store = TransferStore::new(pool.clone());
+        let digest = [7; 32];
+        let payload = b" { \"z\": 1, \"a\": [true, null] } \n";
+        assert!(store.create_blob(&digest, payload, 1).await.unwrap());
+        assert!(!store.create_blob(&digest, b"{}", 2).await.unwrap());
+        store.cleanup().await.unwrap();
+        let stored: Vec<u8> = sqlx::query_scalar(
+            "SELECT payload FROM blob_transfers WHERE pin_digest = ?",
+        ).bind(digest.as_slice()).fetch_one(&pool).await.unwrap();
+        assert_eq!(stored, payload);
+    }
+}
+
 #[derive(Debug, FromRow)]
 pub struct TransferRecord {
     pub id: String,
@@ -31,6 +55,25 @@ impl TransferStore {
             .fetch_one(&self.pool)
             .await?;
         Ok(())
+    }
+
+    // False means a PIN collision. Never overwrite an existing payload.
+    pub async fn create_blob(
+        &self,
+        pin_digest: &[u8; 32],
+        payload: &[u8],
+        now: i64,
+    ) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query(
+            "INSERT INTO blob_transfers (pin_digest, payload, created_at) VALUES (?, ?, ?) \
+             ON CONFLICT(pin_digest) DO NOTHING",
+        )
+        .bind(pin_digest.as_slice())
+        .bind(payload)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        Ok(result.rows_affected() == 1)
     }
 
     pub async fn allow_source(

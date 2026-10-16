@@ -11,6 +11,7 @@ use std::{
 };
 
 use axum::{
+    body::Bytes,
     extract::{ConnectInfo, DefaultBodyLimit, Path, Request, State},
     http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
     middleware::{self, Next},
@@ -44,6 +45,11 @@ struct AppState {
 #[derive(Serialize)]
 struct ErrorBody {
     error: &'static str,
+}
+
+#[derive(Debug, Serialize)]
+struct CreateBlobResponse {
+    pin: String,
 }
 
 enum ApiError {
@@ -155,7 +161,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/demo/styles.css", get(demo_styles))
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))
-        .route("/v1/transfers", post(create_transfer))
+        .route("/v1/transfers", post(create_blob))
+        .route("/v1/encrypted-transfers", post(create_transfer))
         .route("/v1/transfers/redeem", post(redeem_transfer))
         .route("/v1/transfers/{transfer_id}", delete(revoke_transfer))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
@@ -272,6 +279,40 @@ async fn readiness(State(state): State<AppState>) -> Result<StatusCode, ApiError
         ApiError::Unavailable
     })?;
     Ok(StatusCode::OK)
+}
+
+async fn create_blob(
+    State(state): State<AppState>,
+    ConnectInfo(address): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<CreateBlobResponse>), ApiError> {
+    let now = Utc::now().timestamp();
+    enforce_source_limit(&state, address.ip(), b"rate:create:source", 30, now).await?;
+    // Validate JSON syntax only. Preserve the original bytes, including whitespace
+    // and field ordering; no medication schema or encryption envelope is required.
+    let is_json = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(';').next())
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("application/json"));
+    if !is_json || serde_json::from_slice::<serde_json::Value>(&body).is_err() {
+        return Err(ApiError::BadRequest);
+    }
+
+    for _ in 0..10 {
+        let pin = crypto::new_pin().map_err(|_| ApiError::Unavailable)?;
+        let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
+        let created = state.store.create_blob(&pin_digest, &body, now).await.map_err(|_| {
+            // Do not include database errors: they might contain payload details.
+            error!("blob transfer creation failed");
+            ApiError::Unavailable
+        })?;
+        if created {
+            return Ok((StatusCode::CREATED, Json(CreateBlobResponse { pin })));
+        }
+    }
+    Err(ApiError::Unavailable)
 }
 
 async fn create_transfer(
@@ -453,4 +494,56 @@ fn format_timestamp(timestamp: i64) -> Result<String, ApiError> {
         .single()
         .map(|datetime| datetime.to_rfc3339_opts(SecondsFormat::Secs, true))
         .ok_or(ApiError::Unavailable)
+}
+
+#[cfg(test)]
+mod blob_tests {
+    use super::*;
+
+    async fn state() -> AppState {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        migrate(&pool).await.unwrap();
+        AppState { store: TransferStore::new(pool), pepper: Arc::new(vec![42; 32]) }
+    }
+
+    fn json_headers() -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        headers
+    }
+
+    #[tokio::test]
+    async fn upload_returns_only_pin_for_arbitrary_json() {
+        let state = state().await;
+        for payload in ["{\"unexpected\":[1,null,true]}", "[1,2]", "null", "42", "\"text\""] {
+            let (status, Json(response)) = create_blob(
+                State(state.clone()),
+                ConnectInfo("127.0.0.1:1234".parse().unwrap()),
+                json_headers(),
+                Bytes::from(payload),
+            ).await.unwrap_or_else(|_| panic!("valid JSON rejected"));
+            assert_eq!(status, StatusCode::CREATED);
+            assert_eq!(response.pin.len(), 6);
+            let value = serde_json::to_value(response).unwrap();
+            assert_eq!(value.as_object().unwrap().len(), 1);
+            assert!(value.get("pin").is_some());
+        }
+    }
+
+    #[tokio::test]
+    async fn rejects_invalid_json_and_wrong_content_type() {
+        for (headers, payload) in [(json_headers(), "not json"), (HeaderMap::new(), "{}")] {
+            let result = create_blob(
+                State(state().await),
+                ConnectInfo("127.0.0.1:1234".parse().unwrap()),
+                headers,
+                Bytes::from(payload),
+            ).await;
+            assert!(matches!(result, Err(ApiError::BadRequest)));
+        }
+    }
 }

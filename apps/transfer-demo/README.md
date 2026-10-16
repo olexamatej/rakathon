@@ -12,6 +12,9 @@ service embeds and serves these files from the same origin:
 
 ## Run it
 
+This legacy encrypted demo uploads to `/v1/encrypted-transfers`; it does not use
+the new opaque-JSON `/v1/transfers` endpoint or its six-character PINs.
+
 From the repository root, set a local-only HMAC secret and start the Rust API:
 
 ```sh
