@@ -1,0 +1,6 @@
+hostname: rakathon.denishromada.cz
+release: development
+revision: development
+webImage: rakathon-web
+apiImage: rakathon-api
+nodePort: 30080

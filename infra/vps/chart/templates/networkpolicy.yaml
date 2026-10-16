@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rakathon-api
+spec:
+  podSelector:
+    matchLabels: {app: rakathon-api}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: rakathon-web}
+      ports: [{port: 3000, protocol: TCP}]
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rakathon-web
+spec:
+  podSelector:
+    matchLabels: {app: rakathon-web}
+  policyTypes: [Ingress, Egress]
+  # The only NodePort address is the existing gateway's Docker bridge.
+  # Kube-proxy may SNAT traffic to the local node; node traffic is exempt.
+  ingress:
+    - from:
+        - ipBlock: {cidr: 172.20.0.0/16}
+      ports: [{port: 8080, protocol: TCP}]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: rakathon-api}
+      ports: [{port: 3000, protocol: TCP}]
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]

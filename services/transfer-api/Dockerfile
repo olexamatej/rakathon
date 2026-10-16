@@ -7,13 +7,15 @@ FROM rust:1-bookworm@sha256:e12566d5abc17a0da741628782cdb504b68b8961f5bfcf677936
 
 WORKDIR /build/services/transfer-api
 
+# Build context is the repository root (the binary embeds apps/transfer-demo).
 # Copy manifests first to keep dependency compilation cacheable.
 # The lock file is authoritative: cargo build --locked fails if later commits
 # drift from pinned dependency versions.
-COPY Cargo.toml Cargo.lock ./
+COPY services/transfer-api/Cargo.toml services/transfer-api/Cargo.lock ./
 
-COPY src ./src
-COPY migrations-sqlite ./migrations-sqlite
+COPY services/transfer-api/src ./src
+COPY services/transfer-api/migrations-sqlite ./migrations-sqlite
+COPY apps/transfer-demo /build/apps/transfer-demo
 
 # Bound parallelism so a 2 vCPU GitHub-hosted runner is not oversubscribed.
 RUN CARGO_BUILD_JOBS=2 CARGO_PROFILE_RELEASE_DEBUG=0 cargo build --release --locked \

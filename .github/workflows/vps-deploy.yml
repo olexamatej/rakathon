@@ -1,0 +1,171 @@
+name: Rakathon VPS release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      rollback_release:
+        description: 'Optional previously successful release ID (SHA-run-attempt); empty builds this master revision'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rakathon-vps-production
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # This reuses the existing isolated VPS runner. Never mount host paths/socket.
+  checks:
+    if: github.ref == 'refs/heads/master' && inputs.rollback_release == ''
+    uses: ./.github/workflows/application-ci.yml
+
+  validate:
+    if: github.ref == 'refs/heads/master' && inputs.rollback_release == ''
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install checksum-verified Helm
+        env:
+          HELM_VERSION: v3.22.1
+          HELM_SHA256: 4c29e286b279d170fa048ddfc3e4e83dcd069ca9c52102766ba672d7149e694d
+        run: |
+          curl -fSL --connect-timeout 10 --max-time 120 -o "$RUNNER_TEMP/helm.tgz" \
+            "https://get.helm.sh/helm-$HELM_VERSION-linux-arm64.tar.gz"
+          printf '%s  %s\n' "$HELM_SHA256" "$RUNNER_TEMP/helm.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/helm.tgz" -C "$RUNNER_TEMP" linux-arm64/helm
+          echo "$RUNNER_TEMP/linux-arm64" >> "$GITHUB_PATH"
+      - name: Validate Helm, scripts and deployment invariants
+        run: |
+          python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
+          helm lint --strict infra/vps/chart
+          helm template rakathon infra/vps/chart -n rakathon > "$RUNNER_TEMP/rakathon.yaml"
+          python3 infra/vps/scripts/validate.py "$RUNNER_TEMP/rakathon.yaml"
+          for script in infra/vps/scripts/*.sh; do bash -n "$script"; done
+          python3 -m unittest discover -s infra/vps/tests -v
+
+  build:
+    needs: [checks, validate]
+    # No billed image builds until one-time bootstrap/DNS/TLS is verified
+    # and VPS_DEPLOY_ENABLED is set in the repository variables.
+    if: vars.VPS_DEPLOY_ENABLED == 'true'
+    # Native ARM64 builds, off the memory-constrained production VPS.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: rakathon-web-dist
+          path: dist/
+      - name: Prepare release metadata
+        env:
+          RELEASE: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          mkdir bundle
+          python3 - <<'PY'
+          import json, os, pathlib
+          meta = {'release': os.environ['RELEASE'], 'revision': os.environ['GITHUB_SHA']}
+          for path in ('bundle/release.json', 'dist/release.json'):
+              pathlib.Path(path).write_text(json.dumps(meta) + '\n')
+          PY
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build backend with locked Rust dependencies
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: services/transfer-api/Dockerfile
+          platforms: linux/arm64
+          tags: rakathon-api:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          outputs: type=docker,dest=bundle/api.tar
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=rakathon-api-arm64
+          cache-to: type=gha,mode=max,scope=rakathon-api-arm64
+      - name: Build frontend from the tested web export
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infra/vps/web.Dockerfile
+          platforms: linux/arm64
+          tags: rakathon-web:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          outputs: type=docker,dest=bundle/web.tar
+          provenance: false
+          sbom: false
+      - name: Test packaged containers before release
+        env:
+          RELEASE: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash infra/vps/scripts/test-containers.sh
+      - name: Package the two images (no secrets or host commands)
+        run: tar -czf release-bundle.tgz -C bundle api.tar web.tar release.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rakathon-release
+          path: release-bundle.tgz
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    environment: vps-production
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: rakathon-release
+      - name: Deploy with pinned host key and forced command
+        env:
+          VPS_DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+          VPS_SSH_HOST: ${{ vars.VPS_SSH_HOST }}
+          VPS_DEPLOY_ENABLED: ${{ vars.VPS_DEPLOY_ENABLED }}
+        run: |
+          if [[ "$VPS_DEPLOY_ENABLED" != true ]]; then
+            echo '::error::VPS bootstrap/DNS/TLS/deploy authorization is not complete. Images built, but nothing deployed.'
+            exit 1
+          fi
+          bash infra/vps/scripts/deploy-ci.sh deploy
+      - name: Verify public TLS, frontend and backend release
+        env:
+          RELEASE: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python3 infra/vps/scripts/smoke.py https://rakathon.denishromada.cz "$RELEASE"
+          echo "Deployed https://rakathon.denishromada.cz — $RELEASE" >> "$GITHUB_STEP_SUMMARY"
+
+  rollback:
+    if: github.ref == 'refs/heads/master' && inputs.rollback_release != '' && vars.VPS_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    environment: vps-production
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Restore an existing frontend/backend pair, retaining SQLite
+        env:
+          VPS_DEPLOY_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+          VPS_SSH_HOST: ${{ vars.VPS_SSH_HOST }}
+          ROLLBACK_RELEASE: ${{ inputs.rollback_release }}
+        run: bash infra/vps/scripts/deploy-ci.sh rollback
+      - name: Verify public rollback
+        env:
+          ROLLBACK_RELEASE: ${{ inputs.rollback_release }}
+        run: python3 infra/vps/scripts/smoke.py https://rakathon.denishromada.cz "$ROLLBACK_RELEASE"
