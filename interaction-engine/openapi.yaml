@@ -1,0 +1,548 @@
+openapi: 3.1.0
+info:
+  title: Drug Interaction API
+  version: 0.1.0
+  description: |
+    Resolves drug names and checks unique unordered pairs for known interactions.
+    Only pairs with known interactions are returned. A missing pair means no
+    interaction was found in the available knowledge sources, not proof of safety.
+    This contract does not assess interactions requiring three or more drugs,
+    or patient-specific factors such as dose, route, age, or medical conditions.
+    No authentication is required by this initial contract.
+    The initial implementation uses model knowledge without web search or
+    retrieval from a curated interaction database. Clinical findings and evidence
+    labels are unverified; source references are empty. Coverage reports pairs
+    considered by the model rather than a verified database search.
+servers:
+  - url: /
+    description: Relative to the deployment host; no hosted service is specified yet.
+security: []
+tags:
+  - name: Interactions
+    description: Pairwise checks for a submitted list of drug names.
+paths:
+  /interaction-checks:
+    post:
+      operationId: checkDrugInteractions
+      tags: [Interactions]
+      summary: Check pairwise interactions between drug names
+      description: |
+        Accepts generic or brand names. Names must be nonblank after trimming.
+        Names that cannot be resolved uniquely are reported alongside results;
+        the service must not silently choose a candidate for an ambiguous name.
+
+        Each input has a resolution entry at its zero-based input index. Inputs
+        resolving to the same drug share a response-local drug ID and are checked
+        only once. There are no self-pairs. A-B and B-A are the same pair.
+        A combination product is one resolved drug with its active ingredients
+        listed; ingredient-level evidence is aggregated under the submitted
+        product pair. Interactions within a single product are outside scope.
+
+        For m distinct resolved drugs, all m*(m-1)/2 pairs are evaluated. The
+        interactions array contains at most one record per unordered pair, with
+        one or more findings. It contains no records for pairs without known
+        interactions. Interaction and finding order has no semantic meaning.
+
+        Unknown, ambiguous, or unsupported names do not fail the request. HTTP
+        200 is returned even if fewer than two distinct drugs resolve, in which
+        case there are no evaluated pairs and interactions is empty. A partial
+        response means at least one input could not be resolved. Service failures
+        preventing evaluation of resolved pairs return 503 instead of silently
+        presenting incomplete coverage as a completed check.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InteractionCheckRequest'
+            example:
+              drugs: [warfarin, ibuprofen, unknown-drug-name]
+      responses:
+        '200':
+          description: |
+            Check completed for all distinct resolved drugs. Inspect status,
+            resolutions, and coverage to determine which inputs were assessed.
+          headers:
+            X-Interaction-Source:
+              description: Origin of the interaction findings in this implementation.
+              schema:
+                type: string
+                const: model-knowledge
+            X-Sources-Verified:
+              description: Whether clinical claims were verified against retrieved sources.
+              schema:
+                type: string
+                const: 'false'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InteractionCheckResponse'
+              examples:
+                partial:
+                  summary: Illustrative result with an unrecognized input
+                  description: Clinical wording is illustrative, not a curated drug record.
+                  value:
+                    status: partial
+                    checkedAt: '2026-10-16T12:00:00Z'
+                    resolutions:
+                      - inputIndex: 0
+                        inputName: warfarin
+                        status: resolved
+                        drugId: drug-1
+                      - inputIndex: 1
+                        inputName: ibuprofen
+                        status: resolved
+                        drugId: drug-2
+                      - inputIndex: 2
+                        inputName: unknown-drug-name
+                        status: unrecognized
+                        message: No matching drug was found.
+                        candidates: []
+                    drugs:
+                      - id: drug-1
+                        name: warfarin
+                        activeIngredients: [warfarin]
+                      - id: drug-2
+                        name: ibuprofen
+                        activeIngredients: [ibuprofen]
+                    coverage:
+                      uniqueResolvedDrugs: 2
+                      evaluatedPairs: 1
+                      interactingPairs: 1
+                    interactions:
+                      - drugIds: [drug-1, drug-2]
+                        severity: major
+                        findings:
+                          - summary: Potential increased bleeding risk.
+                            severity: major
+                            clinicalEffects: [Increased bleeding risk]
+                            recommendations:
+                              - action: use_alternative
+                                description: Review the combination with a clinician.
+                            evidence:
+                              level: unknown
+                              references: []
+                        externalLinks:
+                          - provider: Drugs.com
+                            url: https://www.drugs.com/drug_interactions.html
+                            scope: general
+                    externalLinks:
+                      - provider: Medscape
+                        url: https://reference.medscape.com/drug-interactionchecker
+                        scope: general
+                noKnownInteractions:
+                  summary: Empty results still report evaluation coverage
+                  value:
+                    status: complete
+                    checkedAt: '2026-10-16T12:00:00Z'
+                    resolutions:
+                      - inputIndex: 0
+                        inputName: Example drug A
+                        status: resolved
+                        drugId: drug-1
+                      - inputIndex: 1
+                        inputName: Example drug B
+                        status: resolved
+                        drugId: drug-2
+                    drugs:
+                      - id: drug-1
+                        name: Example drug A
+                        activeIngredients: [Example ingredient A]
+                      - id: drug-2
+                        name: Example drug B
+                        activeIngredients: [Example ingredient B]
+                    coverage:
+                      uniqueResolvedDrugs: 2
+                      evaluatedPairs: 1
+                      interactingPairs: 0
+                    interactions: []
+                    externalLinks: []
+        '400':
+          description: Malformed JSON or a request violating the input schema.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: Request body exceeds the server's byte-size limit.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '415':
+          description: Content-Type must be application/json.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Request rate or simultaneous-check capacity limit exceeded.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying.
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Drug resolution or interaction evaluation is temporarily unavailable.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying, when known.
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unexpected server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  schemas:
+    InteractionCheckRequest:
+      type: object
+      additionalProperties: false
+      required: [drugs]
+      properties:
+        drugs:
+          type: array
+          minItems: 2
+          maxItems: 50
+          description: |
+            Generic or brand names, including combination product names.
+            Duplicate names are allowed and deduplicated after resolution.
+            Name support depends on the underlying drug catalog; the service
+            does not infer a country or silently resolve regional ambiguity.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+            pattern: '\S'
+    InteractionCheckResponse:
+      type: object
+      required: [status, checkedAt, resolutions, drugs, coverage, interactions, externalLinks]
+      properties:
+        status:
+          type: string
+          enum: [complete, partial]
+          description: |
+            complete means every input resolved; partial means at least one did
+            not. Neither value asserts completeness of medical knowledge.
+        checkedAt:
+          type: string
+          format: date-time
+          description: Time of the check, not the last update of its knowledge sources.
+        resolutions:
+          type: array
+          minItems: 2
+          maxItems: 50
+          description: One entry per input, in the original input order.
+          items:
+            $ref: '#/components/schemas/DrugResolution'
+        drugs:
+          type: array
+          maxItems: 50
+          description: Distinct resolved drugs, ordered by first appearance in the input.
+          items:
+            $ref: '#/components/schemas/ResolvedDrug'
+        coverage:
+          $ref: '#/components/schemas/Coverage'
+        interactions:
+          type: array
+          maxItems: 1225
+          description: Only known interacting unordered pairs; no duplicate or self-pairs.
+          items:
+            $ref: '#/components/schemas/PairInteraction'
+        externalLinks:
+          type: array
+          description: |
+            External interaction checkers for the resolved regimen or general use.
+            Only regimen and general scopes are allowed here. May be empty.
+          items:
+            $ref: '#/components/schemas/ExternalLink'
+            properties:
+              scope:
+                enum: [regimen, general]
+    DrugResolution:
+      oneOf:
+        - $ref: '#/components/schemas/SuccessfulResolution'
+        - $ref: '#/components/schemas/ResolutionIssue'
+      discriminator:
+        propertyName: status
+        mapping:
+          resolved: '#/components/schemas/SuccessfulResolution'
+          unrecognized: '#/components/schemas/ResolutionIssue'
+          ambiguous: '#/components/schemas/ResolutionIssue'
+          unsupported: '#/components/schemas/ResolutionIssue'
+    SuccessfulResolution:
+      type: object
+      required: [inputIndex, inputName, status, drugId]
+      properties:
+        inputIndex:
+          $ref: '#/components/schemas/InputIndex'
+        inputName:
+          type: string
+          description: Exact name as submitted, before trimming or normalization.
+        status:
+          const: resolved
+          type: string
+        drugId:
+          type: string
+          minLength: 1
+          description: References an entry in the response drugs array.
+    ResolutionIssue:
+      type: object
+      required: [inputIndex, inputName, status, message, candidates]
+      properties:
+        inputIndex:
+          $ref: '#/components/schemas/InputIndex'
+        inputName:
+          type: string
+          description: Exact name as submitted.
+        status:
+          type: string
+          enum: [unrecognized, ambiguous, unsupported]
+          description: |
+            unrecognized means no match; ambiguous means multiple possible
+            matches; unsupported means identified but unavailable for checking.
+        message:
+          type: string
+          minLength: 1
+        candidates:
+          type: array
+          description: |
+            Possible names for client-assisted correction, never automatically
+            assessed. Empty when no suggestions are available. Resubmitting a
+            candidate name does not guarantee that ambiguity will be resolved.
+          items:
+            type: string
+            minLength: 1
+    InputIndex:
+      type: integer
+      minimum: 0
+      maximum: 49
+    ResolvedDrug:
+      type: object
+      required: [id, name, activeIngredients]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: Unique within this response; not a persistent drug identifier.
+        name:
+          type: string
+          minLength: 1
+          description: Canonical name selected by name resolution.
+        activeIngredients:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+    Coverage:
+      type: object
+      required: [uniqueResolvedDrugs, evaluatedPairs, interactingPairs]
+      properties:
+        uniqueResolvedDrugs:
+          type: integer
+          minimum: 0
+          maximum: 50
+          description: m, equal to the length of drugs.
+        evaluatedPairs:
+          type: integer
+          minimum: 0
+          maximum: 1225
+          description: Always m*(m-1)/2, including pairs with no known interaction.
+        interactingPairs:
+          type: integer
+          minimum: 0
+          maximum: 1225
+          description: Equal to the length of interactions; never exceeds evaluatedPairs.
+    PairInteraction:
+      type: object
+      required: [drugIds, severity, findings, externalLinks]
+      properties:
+        drugIds:
+          type: array
+          minItems: 2
+          maxItems: 2
+          uniqueItems: true
+          description: |
+            Exactly two distinct IDs from drugs. Order has no clinical meaning;
+            IDs are emitted in their order of appearance in the drugs array.
+          items:
+            type: string
+            minLength: 1
+        severity:
+          $ref: '#/components/schemas/Severity'
+          description: |
+            Highest known severity among findings, ordered contraindicated,
+            major, moderate, minor. unknown is used only if every finding has
+            unknown severity; inspect findings for unclassified effects.
+        findings:
+          type: array
+          minItems: 1
+          description: Distinct effects or mechanisms for this pair, with supporting evidence.
+          items:
+            $ref: '#/components/schemas/InteractionFinding'
+        externalLinks:
+          type: array
+          description: |
+            External checkers for this pair, with general fallback links when
+            pair-specific links are unavailable. Only pair and general scopes
+            are allowed here. May be empty.
+          items:
+            $ref: '#/components/schemas/ExternalLink'
+            properties:
+              scope:
+                enum: [pair, general]
+    Severity:
+      type: string
+      enum: [contraindicated, major, moderate, minor, unknown]
+      description: |
+        API classification, normalized from source data. contraindicated means
+        a source explicitly classifies concurrent use as contraindicated; major
+        means a potentially serious effect; moderate means a clinically relevant
+        effect that may require management; minor means a limited clinical
+        effect; unknown means severity has not been classified. Unknown does not
+        mean low risk. Source classifications may differ.
+    InteractionFinding:
+      type: object
+      required: [summary, severity, clinicalEffects, recommendations, evidence]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+        severity:
+          $ref: '#/components/schemas/Severity'
+        mechanism:
+          type: string
+          minLength: 1
+          description: Known mechanism, omitted when unavailable.
+        clinicalEffects:
+          type: array
+          description: Potential clinical effects; empty if unavailable.
+          items:
+            type: string
+            minLength: 1
+        recommendations:
+          type: array
+          description: Source-supported management guidance; empty if unavailable.
+          items:
+            $ref: '#/components/schemas/Recommendation'
+        evidence:
+          $ref: '#/components/schemas/Evidence'
+    Recommendation:
+      type: object
+      required: [action, description]
+      properties:
+        action:
+          type: string
+          enum: [avoid_combination, use_alternative, monitor, adjust_dose, separate_administration, no_action, consult_clinician, other]
+        description:
+          type: string
+          minLength: 1
+          description: Explanation including any source-supported conditions or qualifications.
+    Evidence:
+      type: object
+      required: [level, references]
+      properties:
+        level:
+          type: string
+          enum: [established, limited, theoretical, unknown]
+          description: |
+            established means consistent clinical support; limited means sparse
+            or inconsistent clinical support; theoretical means a predicted
+            interaction without direct clinical support; unknown means evidence
+            strength was not classified. Evidence strength is separate from severity.
+        references:
+          type: array
+          description: |
+            Sources supporting this finding, not merely links to external
+            checkers. Empty when no citable reference is available.
+          items:
+            $ref: '#/components/schemas/Reference'
+    Reference:
+      type: object
+      required: [title, url]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        url:
+          type: string
+          format: uri
+          pattern: '^https?://'
+        publisher:
+          type: string
+          minLength: 1
+        sourceSeverity:
+          type: string
+          minLength: 1
+          description: Original severity label used by this source, when available.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Source update time, when supplied by the source.
+    ExternalLink:
+      type: object
+      required: [provider, url, scope]
+      properties:
+        provider:
+          type: string
+          minLength: 1
+          examples: [Drugs.com, Medscape]
+        url:
+          type: string
+          format: uri
+          pattern: '^https?://'
+          description: Public checker URL; a deep link only when the provider supports it.
+        scope:
+          type: string
+          enum: [pair, regimen, general]
+          description: |
+            pair opens results prefilled for the enclosing pair; regimen opens
+            results prefilled for all resolved drugs; general opens a checker
+            requiring manual drug entry. A link does not imply integration,
+            endorsement, or that the provider supplied the returned findings.
+    Problem:
+      type: object
+      description: RFC 9457 problem details. HTTP status and status must agree.
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          format: uri
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        errors:
+          type: array
+          description: Optional field-level validation errors.
+          items:
+            type: object
+            required: [pointer, message]
+            properties:
+              pointer:
+                type: string
+                description: JSON Pointer to the invalid request value, e.g. /drugs/0.
+              message:
+                type: string

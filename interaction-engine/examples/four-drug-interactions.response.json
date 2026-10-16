@@ -1,0 +1,317 @@
+{
+  "checkedAt": "2026-10-16T19:07:28Z",
+  "coverage": {
+    "evaluatedPairs": 6,
+    "interactingPairs": 5,
+    "uniqueResolvedDrugs": 4
+  },
+  "drugs": [
+    {
+      "activeIngredients": [
+        "warfarin"
+      ],
+      "id": "drug-1",
+      "name": "warfarin"
+    },
+    {
+      "activeIngredients": [
+        "ibuprofen"
+      ],
+      "id": "drug-2",
+      "name": "ibuprofen"
+    },
+    {
+      "activeIngredients": [
+        "aspirin"
+      ],
+      "id": "drug-3",
+      "name": "aspirin"
+    },
+    {
+      "activeIngredients": [
+        "fluconazole"
+      ],
+      "id": "drug-4",
+      "name": "fluconazole"
+    }
+  ],
+  "externalLinks": [
+    {
+      "provider": "Drugs.com",
+      "scope": "general",
+      "url": "https://www.drugs.com/drug_interactions.html"
+    },
+    {
+      "provider": "Medscape",
+      "scope": "general",
+      "url": "https://reference.medscape.com/drug-interactionchecker"
+    }
+  ],
+  "interactions": [
+    {
+      "drugIds": [
+        "drug-1",
+        "drug-2"
+      ],
+      "externalLinks": [
+        {
+          "provider": "Drugs.com",
+          "scope": "general",
+          "url": "https://www.drugs.com/drug_interactions.html"
+        },
+        {
+          "provider": "Medscape",
+          "scope": "general",
+          "url": "https://reference.medscape.com/drug-interactionchecker"
+        }
+      ],
+      "findings": [
+        {
+          "clinicalEffects": [
+            "Gastrointestinal bleeding",
+            "Other serious bleeding"
+          ],
+          "evidence": {
+            "level": "established",
+            "references": []
+          },
+          "mechanism": "Ibuprofen causes gastrointestinal mucosal injury and inhibits platelet function, adding to warfarin's anticoagulant effect.",
+          "recommendations": [
+            {
+              "action": "avoid_combination",
+              "description": "Avoid when possible; ask the prescriber about an alternative pain reliever."
+            },
+            {
+              "action": "monitor",
+              "description": "If combined under supervision, monitor for bleeding; a therapeutic INR does not eliminate the risk."
+            }
+          ],
+          "severity": "major",
+          "summary": "Ibuprofen increases bleeding risk with warfarin."
+        }
+      ],
+      "severity": "major"
+    },
+    {
+      "drugIds": [
+        "drug-1",
+        "drug-3"
+      ],
+      "externalLinks": [
+        {
+          "provider": "Drugs.com",
+          "scope": "general",
+          "url": "https://www.drugs.com/drug_interactions.html"
+        },
+        {
+          "provider": "Medscape",
+          "scope": "general",
+          "url": "https://reference.medscape.com/drug-interactionchecker"
+        }
+      ],
+      "findings": [
+        {
+          "clinicalEffects": [
+            "Gastrointestinal bleeding",
+            "Other serious bleeding"
+          ],
+          "evidence": {
+            "level": "established",
+            "references": []
+          },
+          "mechanism": "Aspirin inhibits platelet function and can damage gastrointestinal mucosa, adding to warfarin's anticoagulant effect.",
+          "recommendations": [
+            {
+              "action": "consult_clinician",
+              "description": "Use together only when the prescriber determines that the benefit warrants the bleeding risk."
+            },
+            {
+              "action": "monitor",
+              "description": "Monitor for bleeding; a therapeutic INR does not eliminate the risk."
+            }
+          ],
+          "severity": "major",
+          "summary": "Aspirin substantially increases bleeding risk with warfarin."
+        }
+      ],
+      "severity": "major"
+    },
+    {
+      "drugIds": [
+        "drug-1",
+        "drug-4"
+      ],
+      "externalLinks": [
+        {
+          "provider": "Drugs.com",
+          "scope": "general",
+          "url": "https://www.drugs.com/drug_interactions.html"
+        },
+        {
+          "provider": "Medscape",
+          "scope": "general",
+          "url": "https://reference.medscape.com/drug-interactionchecker"
+        }
+      ],
+      "findings": [
+        {
+          "clinicalEffects": [
+            "Elevated INR",
+            "Serious bleeding"
+          ],
+          "evidence": {
+            "level": "established",
+            "references": []
+          },
+          "mechanism": "Fluconazole inhibits CYP2C9-mediated metabolism of S-warfarin, increasing its anticoagulant effect.",
+          "recommendations": [
+            {
+              "action": "monitor",
+              "description": "Monitor INR closely when fluconazole is started, changed, or stopped."
+            },
+            {
+              "action": "adjust_dose",
+              "description": "The prescriber may need to adjust warfarin according to INR."
+            }
+          ],
+          "severity": "major",
+          "summary": "Fluconazole can markedly increase warfarin's anticoagulant effect."
+        }
+      ],
+      "severity": "major"
+    },
+    {
+      "drugIds": [
+        "drug-2",
+        "drug-3"
+      ],
+      "externalLinks": [
+        {
+          "provider": "Drugs.com",
+          "scope": "general",
+          "url": "https://www.drugs.com/drug_interactions.html"
+        },
+        {
+          "provider": "Medscape",
+          "scope": "general",
+          "url": "https://reference.medscape.com/drug-interactionchecker"
+        }
+      ],
+      "findings": [
+        {
+          "clinicalEffects": [
+            "Gastrointestinal ulceration",
+            "Gastrointestinal bleeding"
+          ],
+          "evidence": {
+            "level": "established",
+            "references": []
+          },
+          "mechanism": "Combined gastrointestinal injury and platelet inhibition increase bleeding risk.",
+          "recommendations": [
+            {
+              "action": "avoid_combination",
+              "description": "Avoid concurrent use unless specifically advised by a clinician."
+            }
+          ],
+          "severity": "major",
+          "summary": "Combining aspirin and ibuprofen increases gastrointestinal toxicity and bleeding."
+        },
+        {
+          "clinicalEffects": [
+            "Reduced cardioprotective antiplatelet effect of aspirin"
+          ],
+          "evidence": {
+            "level": "established",
+            "references": []
+          },
+          "mechanism": "Ibuprofen can competitively block aspirin's access to platelet cyclooxygenase-1, reducing irreversible platelet inhibition depending on timing and formulation.",
+          "recommendations": [
+            {
+              "action": "use_alternative",
+              "description": "If aspirin is used for cardiovascular protection, discuss an alternative to ibuprofen."
+            },
+            {
+              "action": "consult_clinician",
+              "description": "If both are necessary, ask a clinician or pharmacist about formulation-specific timing; repeated ibuprofen use may still interfere."
+            }
+          ],
+          "severity": "moderate",
+          "summary": "Ibuprofen may reduce aspirin's antiplatelet effect."
+        }
+      ],
+      "severity": "major"
+    },
+    {
+      "drugIds": [
+        "drug-2",
+        "drug-4"
+      ],
+      "externalLinks": [
+        {
+          "provider": "Drugs.com",
+          "scope": "general",
+          "url": "https://www.drugs.com/drug_interactions.html"
+        },
+        {
+          "provider": "Medscape",
+          "scope": "general",
+          "url": "https://reference.medscape.com/drug-interactionchecker"
+        }
+      ],
+      "findings": [
+        {
+          "clinicalEffects": [
+            "Increased ibuprofen exposure",
+            "Potential increase in gastrointestinal bleeding and kidney injury"
+          ],
+          "evidence": {
+            "level": "established",
+            "references": []
+          },
+          "mechanism": "Fluconazole inhibits CYP2C9, reducing metabolism of ibuprofen.",
+          "recommendations": [
+            {
+              "action": "monitor",
+              "description": "Monitor for ibuprofen adverse effects, particularly with repeated use."
+            },
+            {
+              "action": "adjust_dose",
+              "description": "A clinician may recommend reducing ibuprofen exposure or using an alternative."
+            }
+          ],
+          "severity": "moderate",
+          "summary": "Fluconazole increases ibuprofen exposure and may increase its adverse effects."
+        }
+      ],
+      "severity": "moderate"
+    }
+  ],
+  "resolutions": [
+    {
+      "drugId": "drug-1",
+      "inputIndex": 0,
+      "inputName": "warfarin",
+      "status": "resolved"
+    },
+    {
+      "drugId": "drug-2",
+      "inputIndex": 1,
+      "inputName": "ibuprofen",
+      "status": "resolved"
+    },
+    {
+      "drugId": "drug-3",
+      "inputIndex": 2,
+      "inputName": "aspirin",
+      "status": "resolved"
+    },
+    {
+      "drugId": "drug-4",
+      "inputIndex": 3,
+      "inputName": "fluconazole",
+      "status": "resolved"
+    }
+  ],
+  "status": "complete"
+}

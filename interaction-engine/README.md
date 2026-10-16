@@ -1,0 +1,111 @@
+# Drug Interaction API
+
+Rust/Axum server implementing [openapi.yaml](openapi.yaml). Each check starts a
+fresh `codex exec --ephemeral` process and requests schema-constrained JSON.
+Rust validates the result and constructs the public response.
+
+## Run
+
+Requires Rust 1.91+ and Codex CLI 0.163.0 (the version used for development),
+authenticated using `codex login` or the CLI's supported API-key authentication.
+Your existing Codex login is used; user configuration is ignored for inference.
+
+```sh
+cargo run --release
+```
+
+```sh
+curl http://127.0.0.1:3000/interaction-checks \
+  -H 'Content-Type: application/json' \
+  -d '{"drugs":["warfarin","ibuprofen","unknown-drug-name"]}'
+```
+
+`GET /openapi.yaml` serves the contract. `GET /healthz` checks the HTTP process;
+it does not make a model call or verify Codex authentication.
+
+| Environment variable | Default | Purpose |
+| --- | --- | --- |
+| `BIND_ADDR` | `127.0.0.1:3000` | HTTP listener |
+| `CODEX_BIN` | `codex` on PATH | Codex executable |
+| `CODEX_MODEL` | CLI default | Optional model override |
+| `CODEX_TIMEOUT_SECONDS` | `90` | Per-process deadline |
+| `MAX_CONCURRENT_CHECKS` | `4` | Maximum simultaneous Codex processes |
+| `RUST_LOG` | `info` | Server logging filter |
+
+Low reasoning effort is requested for latency. One model call evaluates the
+whole submitted list. There is no retry loop or per-pair subprocess fan-out.
+No authentication is required by the API, as agreed in the initial spec. The
+listener defaults to localhost. Requests beyond available capacity receive 429
+with `Retry-After`. Bodies are limited to 64 KiB.
+
+## Inference and response handling
+
+- Input is 2–50 drug name strings, each nonblank and at most 200 Unicode characters.
+- Unrecognized, ambiguous, and unsupported names are returned alongside results.
+- The internal model schema is generated from Rust types. The model supplies
+  name resolutions and clinical findings; Rust owns IDs, timestamps, pair counts,
+  severity aggregation, and external checker links.
+- Interactions are strictly pairwise. Duplicate aliases are consolidated;
+  reversed or repeated pair records are merged. Self-pairs, references to missing
+  drugs, malformed output, and incomplete evaluation cause 503.
+- No known interactions produces an empty array. A missing interaction does not
+  establish safety. Coverage counts describe pairs considered by the model,
+  not a verified search of a curated interaction database.
+- Success responses include `X-Interaction-Source: model-knowledge` and
+  `X-Sources-Verified: false`. Clinical effects and evidence labels come from
+  model knowledge and are not verified against current sources. References stay
+  empty. Checker links are fixed general entry points requiring manual input.
+
+## Codex restrictions
+
+Every invocation disables web search, shell execution, image/file viewing,
+plugins, connectors, MCP configuration, hooks, subagents, and memories. User
+configuration and execution rules are ignored; project instructions and the
+skills instruction catalog are excluded. The working directory is a fresh
+temporary directory outside the repository. Drug names travel through stdin
+as JSON data and never become command arguments or shell code.
+
+A named permission profile denies filesystem access except the minimal runtime
+paths, and disables command network access. Model execution tools are disabled
+independently, so the model has no shell or file-viewing tool with which to use
+those paths. The CLI fails rather than falling back if these settings are rejected.
+
+The CLI still needs its own host access to read authentication, start the
+process, and contact the model provider. Disabling model tools is distinct from
+putting the entire CLI process in a container. `--ephemeral` suppresses session
+files; temporary schema files and CLI logs are removed after each check. This
+does not make a claim about provider-side retention.
+
+Unexpected tool events, failed processes, invalid responses, or timeouts return
+a generic 503 without exposing model output or CLI diagnostics. Server logs do
+not include submitted names or raw responses. Processes are killed and reaped
+on timeout; concurrency permits remain held for background checks even when a
+client disconnects.
+
+CLI behavior can change between versions. Recheck restriction flags and the live
+smoke test before upgrading. Relevant official documentation:
+[non-interactive execution](https://learn.chatgpt.com/docs/non-interactive-mode)
+and [configuration](https://learn.chatgpt.com/docs/config-file/config-reference).
+
+## Verify
+
+```sh
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+```
+
+Tests use a fake executable rather than making paid model calls. They cover
+OpenAPI response conformance, pair invariants, partial resolution, invalid input,
+subprocess flags, invalid output, unexpected tool activity, timeout cleanup, and
+capacity limits. The subprocess tests require Unix and `/usr/bin/python3`.
+
+An optional live smoke test uses your configured Codex login and makes a real
+model call:
+
+```sh
+cargo test --test api live_codex_smoke -- --ignored --nocapture
+```
+
+Print the internal Structured Outputs schema with
+`cargo run --example model_schema`.
