@@ -556,7 +556,10 @@ async fn research_returns_all_outcomes_and_restricts_search_to_selected_site() {
     for outcome in ["found", "not_found", "inconclusive"] {
         let result = json!({"status": outcome, "url": if outcome == "found" { json!("https://www.drugs.com/drug-interactions/ibuprofen-with-warfarin-1310-0-2311-0.html") } else { Value::Null }, "summary": "Krátké shrnutí výsledku průzkumu."});
         let fixture = fake_codex("", &research_events(result.clone()));
-        let router = app(AppState::new(config(fixture.path().join("codex"))).unwrap());
+        let mut cfg = config(fixture.path().join("codex"));
+        cfg.model = Some("gpt-6.1-sol".into());
+        cfg.service_tier = Some("default".into());
+        let router = app(AppState::new(cfg).unwrap());
         let mut input = research_input();
         input["site"] = json!("https://www.drugs.com/drug_interactions.html");
         assert_matches_openapi(&input, "InteractionResearchRequest");
@@ -580,6 +583,8 @@ async fn research_returns_all_outcomes_and_restricts_search_to_selected_site() {
                 .unwrap();
         let args = invocation["args"].as_array().unwrap();
         for flag in [
+            "gpt-6-luna",
+            "service_tier=\"priority\"",
             "web_search=\"live\"",
             "tools.web_search.allowed_domains=[\"drugs.com\"]",
             "shell_tool",
@@ -587,6 +592,8 @@ async fn research_returns_all_outcomes_and_restricts_search_to_selected_site() {
         ] {
             assert!(args.iter().any(|a| a == flag), "missing {flag}");
         }
+        assert!(!args.iter().any(|a| a == "gpt-6.1-sol"));
+        assert!(!args.iter().any(|a| a == "service_tier=\"default\""));
         assert!(!args.iter().any(|a| a == "web_search=\"disabled\""));
         assert_eq!(invocation["input"]["drugs"], input["drugs"]);
         assert!(!PathBuf::from(invocation["cwd"].as_str().unwrap()).exists());

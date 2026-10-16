@@ -23,6 +23,8 @@ Webový skript používá `BROWSER=none`, aby fungoval i na Linuxu bez grafické
 Nové webové UI v `apps/patient-web/public/` lze spustit samostatně bez instalace závislostí:
 
 ```sh
+# Node.js 24; vyplňte GEMINI_API_KEY v .env
+cp .env.example .env # pouze pokud ještě neexistuje
 npm run web:patient
 # http://localhost:8081/pacient
 ```
@@ -36,14 +38,22 @@ Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva a v histo
 pokud je vyplněný, textové předání přidá sloupec **Kdy**.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
-`apps/patient-web/public/services.js` zatím rozpoznávání pouze simuluje: každý obrázek
-vrátí dvě ukázková léčiva; fotografie se neposílají na server. „Odeslat seznam“
-uloží text seznamu (včetně volitelného režimu a rozpisu užívání) jako JSON `{ text }`
-přes `POST /api/v1/transfers`. PIN vrací storage API a PWA jej zobrazí i uloží do
-historie až po úspěšném odeslání. Blob lze vyzvednout přes `GET /api/v1/transfers/{pin}`.
+Fotografie se odesílá přes `POST /api/transcribe` do serverového adaptéru Gemini
+3.6 Flash. Server načítá klíč `GEMINI_API_KEY` a model `GEMINI_MODEL` z kořenového
+`.env`; klíč se nikdy neposílá do prohlížeče. Rozpoznávání vrací pouze
+`[{"name":"Concor 5 mg","schedule":"1-0-0"}]`; nečitelné údaje jsou `null`.
+Viditelná síla zůstává v názvu. Samostatná síla a počet dávek v balení zůstávají
+prázdné a neblokují předání; řádek s nečitelným názvem je nutné odebrat a vyfotit znovu.
+Podrobnosti: [Gemini transcription](docs/gemini-transcription.md). „Odeslat seznam“
+uloží verzovaný strukturovaný JSON `{ version: 1, regimen, items }` přes
+`POST /api/v1/transfers`. Každá položka obsahuje pouze název, dávkování, počet
+dávek v balení a případný rozpis užívání; lékař tyto položky načte a vykreslí.
+PIN vrací storage API a PWA jej zobrazí i uloží do historie až po úspěšném
+odeslání. Blob lze vyzvednout přes `GET /api/v1/transfers/{pin}`. Lékař nadále
+umí načíst i dřívější textový formát `{ text }`.
 Používejte pouze syntetická data: storage nevynucuje šifrování ani expiraci.
-Lokální Node server je pouze statický; odesílání vyžaduje stejný origin s `/api`
-proxy na storage (jako v nasazení na VPS). Automatické opakování odeslání není zapnuté.
+Lokální Node server obsluhuje UI, rozpoznávání a proxy interakcí; předání seznamu
+vyžaduje stejný origin s `/api/v1/` proxy na storage. Automatické opakování odeslání není zapnuté.
 Při změně souborů UI zvyšte verzi cache v `apps/patient-web/public/sw.js`. Testy PWA jsou součástí
 `npm test`; samostatně je spustíte příkazem
 `node --test tests/patient.test.mjs tests/server.test.mjs`.
@@ -57,8 +67,13 @@ z `data/solid-tumors-regimens.json` s metadaty původu. Z lokálního
 Lékařské rozhraní je dostupné na `/lekar` ve stejném lokálním serveru. Nabízí
 lokální historii PINů, přímé úpravy léčiv v tabulce, našeptávání názvů ze SÚKL,
 režimy a kopírování seznamu po řádcích i do jednoho řádku.
-`doctor-services.js` zatím vrací stejný ukázkový seznam pro každý PIN a smyšlené
-interakce; není napojený na storage ani interaction API.
+Seznam se načítá ze storage podle skutečného PINu. Účinné látky se doplňují
+podle názvu léčiva z katalogu SÚKL a režim lze upravit přímo v přehledu.
+Změna látek zneplatní načtené interakce; úprava dávkování je zachová.
+Interakce se načítají z interaction API; po otevření podrobností se prohledají
+podporované weby. Jejich stav se zobrazuje v pills a odkaz se shrnutím se objeví
+jen u nalezené stránky. Lokální server používá proxy na `INTERACTION_API_URL`
+(výchozí `https://rakathon.josefkuchar.com`).
 
 ## Co funguje
 

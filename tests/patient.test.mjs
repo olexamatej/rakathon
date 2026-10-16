@@ -26,11 +26,11 @@ test('new users start with an empty main list and no submissions', () => {
 test('empty lists cannot be sent; every item must have valid data', () => {
   assert.equal(canSend([]), false);
   assert.equal(canSend([medicine()]), true);
-  for (const invalid of ['', '0', '-1', '1.5', 'abc', '1000000']) {
+  for (const invalid of ['0', '-1', '1.5', 'abc', '1000000']) {
     assert.equal(canSend([{ ...medicine(), dosesPerPackage: invalid }]), false);
   }
   assert.equal(canSend([{ ...medicine(), name: '  ' }]), false);
-  assert.equal(canSend([{ ...medicine(), dosage: '' }]), false);
+  assert.equal(canSend([{ ...medicine(), dosage: '', dosesPerPackage: '' }]), true);
   assert.throws(() => toText([]));
 });
 
@@ -139,8 +139,21 @@ test('text handoff includes only requested fields and keeps one row per medicine
   assert.ok(!text.includes('private'));
 });
 
-test('a photo can yield multiple medicines; recognition remains simulated', async () => {
-  const items = await recognizePhoto(new File(['synthetic fixture'], 'fixture.png', { type: 'image/png' }));
+test('a photo uses the transcription endpoint and preserves unknown fields', async t => {
+  const photo = new File(['synthetic fixture'], 'fixture.png', { type: 'image/png' });
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, '/api/transcribe');
+    assert.equal(options.method, 'POST');
+    assert.equal(options.body, photo);
+    assert.equal(options.headers['Content-Type'], 'image/png');
+    assert.equal(options.cache, 'no-store');
+    return Response.json([{ name: 'Concor 5 mg', schedule: '1-0-0' }, { name: 'X', schedule: null }]);
+  });
+  const items = await recognizePhoto(photo);
+  assert.equal(items[0].schedule, '1-0-0');
+  assert.equal(items[0].dosage, '');
+  assert.equal(items[0].dosesPerPackage, '');
+  assert.equal(items[1].schedule, undefined);
   assert.equal(items.length, 2);
   assert.equal(canSend(items), true);
   assert.notEqual(items[0].id, items[1].id);
@@ -164,4 +177,19 @@ test('optional API-provided schedule is passed to the handoff but never required
   assert.ok(canSend([{ ...medicine(), schedule: '1-0-0' }, medicine()]));
   assert.equal(toText([medicine()]).split('\n')[0], 'Název léčiva\tDosage\tPočet dávek v balení');
   assert.equal(toText([{ ...medicine(), schedule: '1-0-0' }, medicine()]).split('\n').slice(1).map(row => row.split('\t')[3]).join('|'), '1-0-0|');
+});
+
+
+test('recognition errors and invalid outputs never produce example medicines', async t => {
+  const photo = new File(['synthetic fixture'], 'fixture.png', { type: 'image/png' });
+  for (const response of [new Response('', { status: 429 }), Response.json({ items: [] }),
+    Response.json([{ name: 'X', schedule: '1-0-0', extra: true }]), new Response('{broken')]) {
+    t.mock.method(globalThis, 'fetch', async () => response);
+    await assert.rejects(recognizePhoto(photo));
+    t.mock.restoreAll();
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json([{ name: null, schedule: null }]));
+  const items = await recognizePhoto(photo);
+  assert.equal(items[0].name, '');
+  assert.equal(canSend(items), false);
 });

@@ -50,15 +50,18 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
   await send.click();
   const upload = await uploadPromise;
   expect(upload.status(), 'Patient upload must create a record').toBe(201);
+  const payload = JSON.parse(upload.request().postData());
+  expect(payload.version).toBe(1);
+  expect(payload.items).toEqual([{ name: draft.items[0].name, dosage: 'TEST', dosesPerPackage: '1' }]);
   const { pin } = await upload.json();
   expect(typeof pin === 'string' && /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
   await expect(page.locator('h1.pin')).toBeVisible();
   expect(await page.locator('h1.pin').textContent() === pin, 'Displayed PIN must match server receipt').toBe(true);
 
-  // Confirm that the issued PIN reads back the exact JSON sent by the browser.
+  // Confirm that the issued PIN reads back the exact structured list sent by the browser.
   const stored = await context.request.get(`/api/v1/transfers/${pin}`, { maxRedirects: 0 });
   expect(stored.status(), 'Issued PIN must retrieve the stored list').toBe(200);
-  expect(await stored.text() === upload.request().postData(), 'Stored bytes must match patient upload').toBe(true);
+  expect(await stored.json()).toEqual(payload);
 
   // A separate browser context has no patient draft or history: retrieval must use the API.
   const doctorContext = await context.browser().newContext();
@@ -68,10 +71,10 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
     await doctor.locator('#pin').fill(pin);
     await doctor.locator('#pin-submit').click();
     await expect(doctor.locator('#main table')).toBeVisible();
-    await expect(doctor.locator('#main .name')).toHaveText(draft.items[0].name);
+    await expect(doctor.locator('#main [data-field="name"]')).toHaveValue(draft.items[0].name);
     await expect(doctor.locator('#main tbody tr')).toHaveCount(1);
     await doctor.reload();
-    await expect(doctor.locator('#main .name')).toHaveText(draft.items[0].name);
+    await expect(doctor.locator('#main [data-field="name"]')).toHaveValue(draft.items[0].name);
   } finally {
     await doctorContext.close();
   }

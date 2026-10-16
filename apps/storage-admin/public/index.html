@@ -12,7 +12,7 @@
     <header><a href="/pacient" class="brand">PillGaze</a><span>Storage admin</span></header>
     <main>
       <h1>Uložené záznamy</h1>
-      <p class="note">Pouze JSON storage. Zobrazuje se HMAC otisk PINu, nikoli původní PIN nebo obsah záznamu.</p>
+      <p class="note">Debug zobrazení je řízené serverovým příznakem. PINy uložené před zapnutím režimu nelze zpětně obnovit.</p>
       <form id="login">
         <label for="password">Heslo administrátora</label>
         <input id="password" type="password" autocomplete="current-password" required maxlength="256">
@@ -20,13 +20,14 @@
       </form>
       <p id="status" role="status" aria-live="polite"></p>
       <section id="storage" hidden aria-label="Správa storage">
+        <label><input id="show-sensitive" type="checkbox" checked> Zobrazit PINy a uložený obsah (debug)</label>
         <div class="actions">
           <button id="refresh" type="button">Obnovit</button>
           <button id="logout" class="secondary" type="button">Odhlásit</button>
         </div>
         <div class="table-scroll">
           <table>
-            <thead><tr><th scope="col">Velikost</th><th scope="col">HMAC PINu</th><th scope="col">Akce</th></tr></thead>
+            <thead><tr><th scope="col">Velikost</th><th scope="col">PIN / HMAC</th><th scope="col">Uložený text</th><th scope="col">Akce</th></tr></thead>
             <tbody id="rows"></tbody>
           </table>
         </div>

@@ -13,6 +13,8 @@ use crate::{crypto, enforce_source_limit, store::BlobMetadata, ApiError, AppStat
 pub struct Pagination {
     #[serde(default)]
     offset: u32,
+    #[serde(default, rename = "includeSensitive")]
+    include_sensitive: bool,
 }
 
 #[derive(Serialize)]
@@ -20,6 +22,7 @@ pub struct Pagination {
 pub struct BlobList {
     items: Vec<BlobMetadata>,
     has_more: bool,
+    sensitive_enabled: bool,
 }
 
 async fn authorize(state: &AppState, address: SocketAddr, headers: &HeaderMap) -> Result<(), ApiError> {
@@ -45,10 +48,10 @@ pub async fn list_blobs(
     Query(pagination): Query<Pagination>,
 ) -> Result<Json<BlobList>, ApiError> {
     authorize(&state, address, &headers).await?;
-    let mut items = state.store.list_blobs(pagination.offset).await.map_err(|_| ApiError::Unavailable)?;
+    let mut items = state.store.list_blobs(pagination.offset, pagination.include_sensitive && state.admin_debug_visibility).await.map_err(|_| ApiError::Unavailable)?;
     let has_more = items.len() > 100;
     items.truncate(100);
-    Ok(Json(BlobList { items, has_more }))
+    Ok(Json(BlobList { items, has_more, sensitive_enabled: state.admin_debug_visibility }))
 }
 
 pub async fn delete_blob(
@@ -115,6 +118,7 @@ mod tests {
         AppState {
             store: TransferStore::new(pool), pepper: Arc::new(vec![42; 32]),
             admin_password_digest: Some(crypto::digest(&[42; 32], b"storage-admin:password:v1", b"synthetic-test-password")),
+            admin_debug_visibility: true,
         }
     }
 
@@ -127,8 +131,8 @@ mod tests {
     #[tokio::test]
     async fn metadata_only_and_delete_only_selected_blob() {
         let state = state().await;
-        state.store.create_blob(&[1; 32], b" {\"synthetic\":true} ", 1).await.unwrap();
-        state.store.create_blob(&[2; 32], b"null", 2).await.unwrap();
+        state.store.create_blob(&[1; 32], None, b" {\"synthetic\":true} ", 1).await.unwrap();
+        state.store.create_blob(&[2; 32], None, b"null", 2).await.unwrap();
         let address = "127.0.0.1:1234".parse().unwrap();
         let Json(list) = list_blobs(State(state.clone()), ConnectInfo(address), headers(), Query(Pagination::default()))
             .await.unwrap_or_else(|_| panic!("list rejected"));
@@ -145,7 +149,7 @@ mod tests {
         assert!(matches!(delete_blob(State(state.clone()), ConnectInfo(address), Path("invalid".to_owned()), headers()).await, Err(ApiError::BadRequest)));
         assert_eq!(state.store.get_blob(&[1; 32]).await.unwrap().unwrap(), b" {\"synthetic\":true} ");
         assert!(state.store.get_blob(&[2; 32]).await.unwrap().is_none());
-        assert_eq!(state.store.list_blobs(0).await.unwrap().len(), 1);
+        assert_eq!(state.store.list_blobs(0, false).await.unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -166,14 +170,14 @@ mod tests {
     async fn pagination_and_attempt_limit() {
         let state = state().await;
         for n in 0..102 {
-            state.store.create_blob(&[n; 32], b"null", 0).await.unwrap();
+            state.store.create_blob(&[n; 32], None, b"null", 0).await.unwrap();
         }
         let address = "127.0.0.1:1234".parse().unwrap();
         let Json(first) = list_blobs(State(state.clone()), ConnectInfo(address), headers(), Query(Pagination::default())).await
             .unwrap_or_else(|_| panic!("list rejected"));
         assert_eq!(first.items.len(), 100);
         assert!(first.has_more);
-        let Json(last) = list_blobs(State(state.clone()), ConnectInfo(address), headers(), Query(Pagination { offset: 100 })).await
+        let Json(last) = list_blobs(State(state.clone()), ConnectInfo(address), headers(), Query(Pagination { offset: 100, include_sensitive: false })).await
             .unwrap_or_else(|_| panic!("list rejected"));
         assert_eq!(last.items.len(), 2);
         assert!(!last.has_more);

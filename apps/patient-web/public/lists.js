@@ -18,7 +18,7 @@ const isReceipt = value => value && typeof value.pin === 'string'
 const isItems = items => Array.isArray(items)
   && items.every(item => item && isId(item.id)
     && isText(item.name, 120) && isText(item.dosage, 120)
-    && (item.schedule === undefined || isText(item.schedule, 20))
+    && (item.schedule === undefined || isText(item.schedule, 120))
     && isText(item.dosesPerPackage, 6))
   && new Set(items.map(item => item.id)).size === items.length;
 const isRegimen = value => value === undefined || isText(value, 200);
@@ -77,14 +77,18 @@ export function recordSubmission(state, items, receipt, regimen = '') {
   return entry;
 }
 
-// `schedule` is optional, comes from the API and is never edited ("1-0-0" or "4x").
+// Photo transcription provides name (including visible strength) and optional schedule.
+// Missing strength/package information remains empty, never guessed to satisfy validation.
 export function canSend(items) {
-  return items.length > 0 && items.every(item => item.name.trim() && item.dosage.trim()
-    && /^[1-9]\d{0,5}$/.test(item.dosesPerPackage));
+  return items.length > 0 && items.every(item => item.name.trim()
+    && (item.dosesPerPackage === '' || /^[1-9]\d{0,5}$/.test(item.dosesPerPackage)));
 }
 
+export const medicineSummary = item => [item.dosage,
+  item.dosesPerPackage ? `${item.dosesPerPackage} dávek v balení` : '', item.schedule].filter(Boolean).join(' · ');
+
 export function toText(items, regimen = '') {
-  if (!canSend(items)) throw new Error('Doplňte název, dosage a počet dávek u každého léčiva.');
+  if (!canSend(items)) throw new Error('Doplňte názvy léčiv a opravte neplatné údaje.');
   const clean = value => value.trim().replace(/[\t\r\n]+/g, ' ');
   const regimenLine = regimen.trim() ? [`Režim onkologické léčby\t${clean(regimen)}`] : [];
   const withSchedule = items.some(item => item.schedule?.trim());

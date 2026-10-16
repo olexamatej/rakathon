@@ -1,4 +1,4 @@
-import { createState, loadState, saveState, recordSubmission, canSend, toText } from './lists.js';
+import { createState, loadState, saveState, recordSubmission, canSend, medicineSummary } from './lists.js';
 import { recognizePhoto, sendList, loadRegimens } from './services.js';
 
 const app = document.querySelector('#app');
@@ -71,7 +71,7 @@ function historyView() {
     ${state.submissions.length ? `<div class="history-list">${state.submissions.map(entry => `
       <details class="submission"><summary><span>${escape(date(entry.sentAt))} v ${escape(time(entry.sentAt))}<small>${itemCount(entry.items.length)}</small></span>
         <code>${escape(entry.pin)}</code></summary>
-        ${entry.regimen ? `<p class="submission-regimen">Režim: <strong>${escape(entry.regimen)}</strong></p>` : ''}<ul>${entry.items.map(item => `<li><strong>${escape(item.name)}</strong><span>${escape(item.dosage)} · ${escape(item.dosesPerPackage)} dávek v balení${item.schedule ? ` · ${escape(item.schedule)}` : ''}</span></li>`).join('')}</ul>
+        ${entry.regimen ? `<p class="submission-regimen">Režim: <strong>${escape(entry.regimen)}</strong></p>` : ''}<ul>${entry.items.map(item => `<li><strong>${escape(item.name)}</strong><span>${escape(medicineSummary(item))}</span></li>`).join('')}</ul>
       </details>`).join('')}</div>`
       : `<div class="empty-history">${icon('history')}<h2>Zatím žádná odeslání</h2></div>`}`;
 }
@@ -99,8 +99,8 @@ function editor() {
       ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
         <legend class="list-heading">Léčiva v seznamu <span>${itemCount(state.items.length)}</span></legend>${state.items.map((item, index) => `
         <article class="medicine"><div class="medicine-info">
-          <strong>${escape(item.name)}</strong>
-          <span>${escape(item.dosage)} · ${escape(item.dosesPerPackage)} dávek v balení${item.schedule ? ` · ${escape(item.schedule)}` : ''}</span></div>
+          <strong>${escape(item.name || 'Nečitelný název léčiva')}</strong>
+          <span>${escape(medicineSummary(item))}</span></div>
           <button type="button" class="icon-button" data-action="remove" data-id="${escape(item.id)}" aria-label="Odstranit léčivo ${escape(item.name)}">${icon('trash')}</button>
         </article>`).join('')}</fieldset>`
       : `<div class="empty-list">${icon('list')}<strong>Seznam je prázdný</strong></div>`}
@@ -358,7 +358,15 @@ app.addEventListener('submit', async event => {
   render();
   let entry;
   try {
-    const receipt = await sendList(toText(items, regimen));
+    // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
+    const payload = {
+      version: 1,
+      regimen,
+      items: items.map(({ name, dosage, dosesPerPackage, schedule }) => ({
+        name, dosage, dosesPerPackage, ...(schedule ? { schedule } : {}),
+      })),
+    };
+    const receipt = await sendList(payload);
     entry = recordSubmission(state, items, receipt, regimen);
     persist();
   } catch (error) {

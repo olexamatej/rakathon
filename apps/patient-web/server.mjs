@@ -1,6 +1,8 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { loadEnvFile } from 'node:process';
+import { MAX_IMAGE_BYTES, TranscriptionError, transcribeImage } from '../../services/transcription/gemini.mjs';
 
 const files = {
   '/pacient': ['index.html', 'text/html'],
@@ -46,25 +48,112 @@ function loadRegimenData() {
   return regimenData;
 }
 
-// Distinct medicine names from the SÚKL catalogue, for autocomplete only (names never restrict input).
-let suklNames;
-function loadSuklNames() {
-  suklNames ??= readFile(new URL('../../data/sukl/medications.json', import.meta.url), 'utf8')
+// Medicine names and their active substances from the SÚKL catalogue. Names feed autocomplete (they
+// never restrict input); substances map a name to its active substances. A name can have several
+// catalogue variants, so the most common substance list wins.
+const sentenceCase = text => text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+let suklData;
+function loadSuklData() {
+  suklData ??= readFile(new URL('../../data/sukl/medications.json', import.meta.url), 'utf8')
     .then(text => {
-      const records = JSON.parse(text);
-      return JSON.stringify([...new Set(records.map(record => record.name).filter(Boolean))].sort());
+      const variants = new Map(); // name -> Map(substance list JSON -> count)
+      for (const record of JSON.parse(text)) {
+        if (!record.name) continue;
+        const substances = (record.activeSubstances || []).map(entry => entry.name || entry.inn).filter(Boolean).map(sentenceCase);
+        const counts = variants.get(record.name) ?? new Map();
+        const key = JSON.stringify(substances);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+        variants.set(record.name, counts);
+      }
+      const names = [...variants.keys()].sort();
+      const substances = {};
+      for (const name of names) {
+        const [best] = [...variants.get(name)].sort((a, b) => b[1] - a[1])[0];
+        const list = JSON.parse(best);
+        if (list.length) substances[name] = list;
+      }
+      return { names: JSON.stringify(names), substances: JSON.stringify(substances) };
     })
-    .catch(error => { suklNames = undefined; throw error; });
-  return suklNames;
+    .catch(error => { suklData = undefined; throw error; });
+  return suklData;
 }
 
-export function createAppServer() {
+const INTERACTION_BODY_LIMIT = 64 * 1024;
+const problem = (res, status, title, detail) => {
+  res.writeHead(status, { ...securityHeaders, 'Cache-Control': 'no-store', 'Content-Type': 'application/problem+json; charset=utf-8' });
+  res.end(JSON.stringify({ type: 'about:blank', title, status, detail }));
+};
+
+// Same-origin proxy for the interaction engine endpoints (interaction-engine/openapi.yaml): the browser avoids
+// CORS and the CSP stays `connect-src 'self'`. The upstream is read per request so tests can stub it.
+async function proxyInteractionEngine(req, res, upstreamPath) {
+  if (req.method !== 'POST') return problem(res, 405, 'Nepovolená metoda', 'Tato metoda není povolena.');
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > INTERACTION_BODY_LIMIT) return problem(res, 413, 'Příliš velký požadavek', 'Požadavek je příliš velký.');
+    chunks.push(chunk);
+  }
+  const upstream = (process.env.INTERACTION_API_URL || 'https://rakathon.josefkuchar.com').replace(/\/$/, '');
+  try {
+    const response = await fetch(`${upstream}${upstreamPath}`, {
+      method: 'POST',
+      headers: { 'Content-Type': req.headers['content-type'] || 'application/json' },
+      body: Buffer.concat(chunks),
+      signal: AbortSignal.timeout(30_000),
+    });
+    const headers = { ...securityHeaders, 'Cache-Control': 'no-store' };
+    for (const name of ['content-type', 'retry-after', 'content-language']) {
+      if (response.headers.has(name)) headers[name] = response.headers.get(name);
+    }
+    res.writeHead(response.status, headers);
+    res.end(Buffer.from(await response.arrayBuffer()));
+  } catch {
+    problem(res, 502, 'Služba interakcí není dostupná', 'Službu pro kontrolu interakcí se nepodařilo zavolat. Zkuste to znovu.');
+  }
+}
+
+async function recognizeImage(req, res, transcriber) {
+  if (req.method !== 'POST') return problem(res, 405, 'Nepovolená metoda', 'Použijte POST s fotografií.');
+  res.setHeader('Cache-Control', 'no-store');
+  const mimeType = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  if (!['image/jpeg', 'image/png', 'image/webp', 'application/octet-stream'].includes(mimeType)) {
+    return problem(res, 415, 'Nepodporovaný obrázek', 'Pošlete přímo fotografii JPEG, PNG nebo WebP.');
+  }
+  if (Number(req.headers['content-length']) > MAX_IMAGE_BYTES) return problem(res, 413, 'Příliš velká fotografie', 'Vyberte snímek do 20 MB.');
+  const chunks = [];
+  let size = 0;
+  try {
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > MAX_IMAGE_BYTES) return problem(res, 413, 'Příliš velká fotografie', 'Vyberte snímek do 20 MB.');
+      chunks.push(chunk);
+    }
+    const rows = await transcriber(Buffer.concat(chunks));
+    res.writeHead(200, { ...securityHeaders, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify(rows));
+  } catch (error) {
+    if (error instanceof TranscriptionError) return problem(res, error.status, 'Rozpoznávání fotografie', error.message);
+    problem(res, 502, 'Rozpoznávání fotografie', 'Fotografii se nepodařilo zpracovat. Zkuste to znovu.');
+  }
+}
+
+export function createAppServer({ transcriber = transcribeImage } = {}) {
   return createServer(async (req, res) => {
     let path;
     try {
       path = new URL(req.url, 'http://localhost').pathname;
     } catch {
       res.writeHead(400).end('Neplatná adresa.');
+      return;
+    }
+    if (path === '/api/transcribe') {
+      await recognizeImage(req, res, transcriber);
+      return;
+    }
+    if (path === '/api/interaction-checks' || path === '/api/interaction-research') {
+      await proxyInteractionEngine(req, res, path.replace('/api', ''));
       return;
     }
     if (!['GET', 'HEAD'].includes(req.method)) {
@@ -75,9 +164,10 @@ export function createAppServer() {
       res.writeHead(302, { Location: '/pacient' }).end();
       return;
     }
-    if (path === '/sukl-names.json') {
+    if (path === '/sukl-names.json' || path === '/sukl-substances.json') {
       try {
-        const body = await loadSuklNames();
+        const data = await loadSuklData();
+        const body = path === '/sukl-names.json' ? data.names : data.substances;
         res.writeHead(200, { ...securityHeaders, 'Content-Type': 'application/json; charset=utf-8' });
         res.end(req.method === 'HEAD' ? undefined : body);
       } catch {
@@ -112,6 +202,8 @@ export function createAppServer() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  try { loadEnvFile(fileURLToPath(new URL('../../.env', import.meta.url))); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
   const port = Number(process.env.PORT || 8081);
   const server = createAppServer();
   server.on('error', error => {

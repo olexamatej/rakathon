@@ -1,0 +1,68 @@
+openapi: 3.1.0
+info:
+  title: PillGaze photo transcription (patient Node server)
+  version: 1.0.0
+paths:
+  /api/transcribe:
+    post:
+      summary: Transcribe medicine names and patient schedules from a photograph
+      description: Separate from opaque Rust storage. Responses are never cached.
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: {type: string, format: binary, maxLength: 20971520}
+          image/png:
+            schema: {type: string, format: binary, maxLength: 20971520}
+          image/webp:
+            schema: {type: string, format: binary, maxLength: 20971520}
+      responses:
+        '200':
+          description: Minimal transcription; empty array if no medications are visible
+          headers:
+            Cache-Control:
+              schema: {type: string, const: no-store}
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [name, schedule]
+                  properties:
+                    name:
+                      type: [string, 'null']
+                      minLength: 1
+                      maxLength: 120
+                      description: Visible medicine name including strength; null if unreadable
+                    schedule:
+                      type: [string, 'null']
+                      minLength: 1
+                      maxLength: 120
+                      description: Written patient schedule; null if absent or unreadable
+              example: [{name: Concor 5 mg, schedule: 1-0-0}]
+        '400': {$ref: '#/components/responses/Problem'}
+        '405': {$ref: '#/components/responses/Problem'}
+        '413': {$ref: '#/components/responses/Problem'}
+        '415': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/Problem'}
+        '502': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/Problem'}
+        '504': {$ref: '#/components/responses/Problem'}
+components:
+  responses:
+    Problem:
+      description: Invalid image, unavailable provider, invalid output or missing configuration
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            required: [type, title, status, detail]
+            properties:
+              type: {type: string}
+              title: {type: string}
+              status: {type: integer}
+              detail: {type: string}

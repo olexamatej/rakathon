@@ -12,6 +12,7 @@ COPY e2e/package.json e2e/package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund && npm cache clean --force
 COPY --from=api /build/target/debug/pillgaze-transfer-api /usr/local/bin/pillgaze-transfer-api
 COPY e2e/*.mjs ./
+COPY services/transcription/gemini.mjs /work/services/transcription/gemini.mjs
 COPY apps/patient-web/server.mjs /work/apps/patient-web/server.mjs
 COPY apps/patient-web/public /work/apps/patient-web/public
 COPY apps/storage-admin/public /work/apps/storage-admin/public

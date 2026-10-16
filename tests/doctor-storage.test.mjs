@@ -26,7 +26,7 @@ test('patient upload and doctor retrieval use the same server PIN and exact snap
     assert.equal(url, '/api/v1/transfers/01Z9QW');
     return Response.json(snapshot);
   });
-  const receipt = await sendList(toText(items, 'FOLFOX4'));
+  const receipt = await sendList({ version: 1, regimen: 'FOLFOX4', items });
   const received = await fetchListByPin(receipt.pin.toLowerCase());
   assert.deepEqual(received, { regimen: 'FOLFOX4', items });
   const list = addList(createDoctorState(), { pin: receipt.pin, ...received });
@@ -37,10 +37,17 @@ test('patient upload and doctor retrieval use the same server PIN and exact snap
 });
 
 test('malformed stored data cannot become a partial or demo patient list', () => {
+  const malformedStructured = [
+    { version: 1, items: [] },
+    { version: 1, items: [{ name: '', dosage: '', dosesPerPackage: '1' }] },
+    { version: 1, items: [{ name: 'X', dosage: '10 mg', dosesPerPackage: '0' }] },
+    { version: 1, items: [{ name: 'X', dosage: '10 mg', dosesPerPackage: '1', schedule: 'x'.repeat(121) }] },
+  ];
   for (const value of [null, {}, { text: '' }, { text: 'arbitrary JSON text' },
+    ...malformedStructured,
     { text: toText(items) + '\ninvalid row' },
     { text: toText(items).replace('30', '0') },
-    { text: toText(items).replace('1-0-0', 'x'.repeat(21)) },
+    { text: toText(items).replace('1-0-0', 'x'.repeat(121)) },
     { text: toText(items).replace(items[0].name, 'x'.repeat(121)) }]) {
     assert.throws(() => parsePatientList(value), /platný formát/);
   }
@@ -68,4 +75,14 @@ test('retrieval errors are readable and never replaced by demo data or retried',
     t.mock.method(globalThis, 'fetch', async () => new Response('{broken'));
     await assert.rejects(fetchListByPin('ABC234'), /platný seznam/);
   });
+});
+
+
+test('minimal recognized medicines reach the doctor without invented fields', () => {
+  const items = [{ name: 'Concor 5 mg', dosage: '', dosesPerPackage: '', schedule: 'Každé pondělí večer 1 tableta' }];
+  const payload = { version: 1, items };
+  assert.deepEqual(parsePatientList(payload).items, items);
+  assert.deepEqual(parsePatientList({ text: toText(items) }).items, items);
+  const list = addList(createDoctorState(), { pin: 'ABC234', ...parsePatientList(payload) });
+  assert.deepEqual(list.items.map(({ id, ...item }) => item), items);
 });

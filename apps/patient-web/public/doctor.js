@@ -16,7 +16,7 @@ export const suklLink = item => (/^https:\/\//.test(item.suklUrl || '') ? item.s
 
 const isItem = item => item && /^[a-z0-9-]{8,80}$/.test(item.id)
   && isText(item.name, 120) && isText(item.dosage, 120) && isText(item.dosesPerPackage, 6)
-  && optionalText(item.schedule, 20) && optionalText(item.suklCode, 20) && optionalText(item.suklUrl, 500)
+  && optionalText(item.schedule, 120) && optionalText(item.suklCode, 20) && optionalText(item.suklUrl, 500)
   && (item.substances === undefined || (Array.isArray(item.substances) && item.substances.length <= 30
     && item.substances.every(name => isText(name, 120))));
 const isList = list => list && /^[a-z0-9-]{8,80}$/.test(list.id) && isPin(list.pin)
@@ -62,9 +62,8 @@ export function touch(list) {
 export function validateItem(item) {
   const errors = {};
   if (!item.name.trim()) errors.name = 'Vyplňte název.';
-  if (!item.dosage.trim()) errors.dosage = 'Vyplňte sílu / dávkování.';
-  if (!/^[1-9]\d{0,5}$/.test(item.dosesPerPackage.trim())) errors.dosesPerPackage = 'Zadejte kladné celé číslo.';
-  if (item.schedule && item.schedule.length > 20) errors.schedule = 'Nejvýše 20 znaků.';
+  if (item.dosesPerPackage.trim() && !/^[1-9]\d{0,5}$/.test(item.dosesPerPackage.trim())) errors.dosesPerPackage = 'Zadejte kladné celé číslo.';
+  if (item.schedule && item.schedule.length > 120) errors.schedule = 'Nejvýše 120 znaků.';
   if (item.suklCode && !/^\d{7}$/.test(item.suklCode.trim())) errors.suklCode = 'Kód SÚKL má 7 číslic.';
   return errors;
 }
@@ -82,3 +81,38 @@ export function formatMedicineLines(items) {
 // Everything on one line: "NAME DOSAGE SCHEDULE, NAME DOSAGE SCHEDULE, ...".
 export const formatMedicineInline = items => items
   .map(item => [medicineText(item), item.schedule?.trim()].filter(Boolean).join(' ')).join(', ');
+
+const fold = value => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const indexes = new WeakMap(); // substances map -> Map(folded name -> substance list)
+
+// Active substances for a typed medicine name: exact catalogue name first, then the longest catalogue
+// name the text starts with ("IBALGIN 400 mg" -> IBALGIN). Returns undefined when nothing matches.
+export function lookupSubstances(map, name) {
+  if (!indexes.has(map)) indexes.set(map, new Map(Object.entries(map).map(([key, list]) => [fold(key), list])));
+  const index = indexes.get(map);
+  const text = fold(name);
+  if (!text) return undefined;
+  if (index.has(text)) return index.get(text);
+  let best;
+  for (const [key, list] of index) {
+    if (text.startsWith(`${key} `) && (!best || key.length > best.key.length)) best = { key, list };
+  }
+  return best?.list;
+}
+
+// Fills `substances` from the catalogue. Items that already have substances (from the API) are kept
+// unless `replace` is set; returns whether anything changed.
+export function applySubstances(items, map, { replace = false } = {}) {
+  let changed = false;
+  for (const item of items) {
+    if (item.substances?.length && !replace) continue;
+    const found = lookupSubstances(map, item.name);
+    if (found) {
+      if (JSON.stringify(item.substances) !== JSON.stringify(found)) { item.substances = [...found]; changed = true; }
+    } else if (replace && item.substances) {
+      delete item.substances;
+      changed = true;
+    }
+  }
+  return changed;
+}
