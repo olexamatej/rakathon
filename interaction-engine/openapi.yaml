@@ -243,16 +243,20 @@ paths:
         two seconds while 202 is returned. Exact drug strings and order determine
         identity; equivalent supported site URLs/domains use the canonical domain.
         After expiry, the next identical POST starts fresh work.
-        Uses a fresh agent with live web search restricted to one selected
-        site. Accepts precisely two drug names and either a canonical domain or
+        Uses the Medscape checker JSON APIs directly for reference.medscape.com;
+        other sites use a fresh agent with live web search restricted to the site. Accepts precisely two drug names and either a canonical domain or
         the exact checker URL from the site enum. Returned site is canonical.
-        found means a dedicated pair page was retrieved, even if that page reports
-        no known interaction. Generic checkers, homepages and single-drug articles
+        found means a dedicated pair page or validated Medscape pair API response
+        was retrieved, even if the source reports no known interaction. Generic checkers, homepages and single-drug articles
         do not qualify. not_found means the search found no dedicated page, not
         proof of safety. inconclusive means access restrictions, ambiguous names
         or insufficient accessible evidence prevented a reliable result.
         The summary is in Czech and limited to 1–3 short sentences. Clinical
-        claims must come from the retrieved pair page. Findings are agent-reported,
+        claims must come from the retrieved source. Medscape requires exact name
+        matches, validates returned pair names, and uses a tool-free model only
+        for Czech summarization. Its URL identifies the pair-specific JSON API
+        request; access failures or unresolved names return inconclusive.
+        Findings are source-based,
         not independently medically verified. Service/model failures and timeouts
         return a retained 503. Shares CODEX_TIMEOUT_SECONDS and MAX_CONCURRENT_CHECKS with
         interaction checks (defaults: 90 seconds, 4 concurrent processes).
@@ -284,7 +288,7 @@ paths:
             Content-Language:
               schema: {type: string, const: cs}
             X-Interaction-Source:
-              schema: {type: string, const: web-search}
+              schema: {type: string, enum: [web-search, medscape-api]}
           content:
             application/json:
               schema:
@@ -391,7 +395,7 @@ components:
           type: [string, 'null']
           format: uri
           maxLength: 4096
-          description: Retrieved HTTPS page dedicated to the exact pair, or null.
+          description: Retrieved HTTPS pair page or Medscape pair-specific JSON API URL, or null.
         summary:
           type: string
           minLength: 1

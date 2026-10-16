@@ -104,8 +104,9 @@ with `Retry-After`; existing requests can still be polled when the queue is full
 
 ## External-site research
 
-`POST /interaction-research` queues a fresh agent to research exactly two
-names on one supported site using live web search:
+`POST /interaction-research` queues research for exactly two names on one
+supported site. Medscape uses its checker JSON endpoints directly; other sites
+use a fresh agent with live web search:
 
 ```sh
 curl http://127.0.0.1:3000/interaction-research \
@@ -120,7 +121,8 @@ response always uses the canonical domain.
 
 Responses contain `drugs`, `site`, `checkedAt`, `status`, `url`, and `summary`:
 
-- `found`: the agent reports retrieving a dedicated page for that pair; `url`
+- `found`: a dedicated page for that pair was retrieved (or a validated Medscape
+  checker API response); `url`
   contains its HTTPS address on the selected site. The short Czech summary
   describes the interaction, severity, and precautions where the page provides
   them. A page explicitly reporting no known interaction can also qualify.
@@ -129,12 +131,29 @@ Responses contain `drugs`, `site`, `checkedAt`, `status`, `url`, and `summary`:
 - `inconclusive`: access restrictions, ambiguous names, or insufficient
   accessible evidence prevented a reliable answer; `url` is null.
 
-Generic checkers and homepages do not qualify as result URLs. The agent is
+Medscape is a special case: the server resolves each name using the public
+checker typeahead API and requires one exact match (case/whitespace insensitive).
+Brand names map to the generic record returned by Medscape; partial names,
+ambiguous names, and two aliases of the same record return `inconclusive`.
+It then calls `druginteraction.do?action=getMultiInteraction&ids=...`, validates
+that every returned record names the resolved pair, and uses a tool-free model
+call only to summarize those records in Czech. An explicitly empty API response
+returns `found` with a qualified no-record summary. The result URL points to the
+actual pair-specific JSON request. No browser, login, cookies, or new server
+configuration is required. HTTP access/transport failures return `inconclusive`;
+malformed data or mismatched pairs fail closed with 503. These undocumented
+endpoints may change or be blocked from a hosting provider; deployment should
+include a live check. The server makes these HTTPS requests directly; model
+command network access stays disabled. Redirects are disabled, each HTTP request
+has a 15-second limit and a 1 MiB response limit, and the overall operation shares
+the configured research deadline.
+
+For other sites, generic checkers and homepages do not qualify as result URLs. The agent is
 instructed to retrieve the actual pair page and use only its clinical claims;
 the server validates URL structure, host, status consistency, summary length,
 and that the returned URL appeared in the web tool results.
 These are agent-reported findings, not independent clinical verification.
-Search is configured with a domain filter for the selected site. The endpoint
+Search is configured with a domain filter for the selected site. The web-search path
 requires a completed web-search tool event and rejects other tool activity.
 The Code Mode host is enabled for research because CLI 0.163 requires it to
 expose web tools; Code Mode execution remains disabled. Live retrieval is
@@ -146,7 +165,8 @@ Research shares the existing model, service tier, `CODEX_TIMEOUT_SECONDS`
 receive 429 when the queue is full, and return a retained 503 for model/process
 failures, timeouts, or invalid output. Completed negative and inconclusive
 research returns 200. Responses declare `Content-Language: cs`,
-`X-Interaction-Source: web-search`, and `Cache-Control: no-store`.
+`X-Interaction-Source: web-search` (or `medscape-api` for Medscape), and
+`Cache-Control: no-store`.
 
 Web-search settings follow the official
 [Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).

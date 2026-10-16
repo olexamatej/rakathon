@@ -1,5 +1,6 @@
 mod codex;
 mod jobs;
+mod medscape;
 pub mod model;
 pub mod report;
 mod research;

@@ -672,6 +672,34 @@ async fn live_research_smoke() {
     println!("{body}");
 }
 
+#[tokio::test]
+#[ignore = "calls Medscape and an authenticated Codex CLI"]
+async fn live_medscape_research_smoke() {
+    let database = tempfile::tempdir().unwrap();
+    let mut cfg = Config::from_env().unwrap();
+    cfg.jobs_path = database.path().join("jobs.sqlite3");
+    let router = app(AppState::new(cfg).unwrap());
+    let (status, headers, body) = send_path(
+        router,
+        "/interaction-research",
+        json!({"drugs": ["warfarin", "ibuprofen"], "site": "reference.medscape.com"}).to_string(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_matches_openapi(&body, "InteractionResearchResponse");
+    assert_eq!(headers["x-interaction-source"], "medscape-api");
+    assert_eq!(body["status"], "found", "{body}");
+    let url = url::Url::parse(body["url"].as_str().unwrap()).unwrap();
+    assert_eq!(url.host_str(), Some("reference.medscape.com"));
+    assert_eq!(url.path(), "/druginteraction.do");
+    assert!(
+        url.query_pairs()
+            .any(|(k, v)| k == "ids" && v == "342182,343289")
+    );
+    println!("{body}");
+}
+
 #[cfg(unix)]
 #[tokio::test]
 async fn research_shares_capacity_with_checks_and_times_out() {
