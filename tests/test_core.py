@@ -1,8 +1,10 @@
 import csv
 import io
 import json
+import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import numpy as np
@@ -171,6 +173,27 @@ class ModelTests(unittest.TestCase):
 
 
 class PersistenceTests(unittest.TestCase):
+    def test_database_connections_are_closed_after_each_operation(self):
+        connections = []
+        connect = sqlite3.connect
+
+        def track_connection(*args, **kwargs):
+            connection = connect(*args, **kwargs)
+            connections.append(connection)
+            return connection
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_fixture(root, synthetic_tables())
+            with patch("app.sqlite3.connect", side_effect=track_connection):
+                workspace = Workspace(root, root / "state")
+                workspace.save_review({"patient_id": "P0001", "status": "relevant", "note": ""})
+                workspace.read_reviews()
+            self.assertEqual(len(connections), 4)
+            for connection in connections:
+                with self.assertRaises(sqlite3.ProgrammingError):
+                    connection.execute("SELECT 1")
+
     def test_roundtrip_conflict_and_safe_export(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import RLock
@@ -54,7 +55,7 @@ class Workspace:
         self.state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.database = self.state_dir / "reviews.sqlite3"
         self.lock = RLock()
-        with sqlite3.connect(self.database) as db:
+        with closing(sqlite3.connect(self.database)) as db, db:
             db.execute("CREATE TABLE IF NOT EXISTS reviews (dataset TEXT, patient_id TEXT, status TEXT, note TEXT, "
                        "concerns TEXT, updated_at TEXT, PRIMARY KEY(dataset, patient_id))")
         self.database.chmod(0o600)
@@ -62,7 +63,7 @@ class Workspace:
         self.analysis = analyze(self.tables, self.reviews)
 
     def read_reviews(self):
-        with sqlite3.connect(self.database) as db:
+        with closing(sqlite3.connect(self.database)) as db:
             return {p: {"status": s, "note": n, "concerns": json.loads(c), "updated_at": t}
                     for p, s, n, c, t in db.execute("SELECT patient_id,status,note,concerns,updated_at FROM reviews WHERE dataset=?",
                                                    (self.tables["fingerprint"],))}
@@ -86,7 +87,7 @@ class Workspace:
                 raise FileExistsError("Hodnocení se mezitím změnilo. Obnovte stránku před další úpravou.")
             updated = {**self.reviews, patient_id: review}
             analysis = analyze(self.tables, updated)
-            with sqlite3.connect(self.database) as db:
+            with closing(sqlite3.connect(self.database)) as db, db:
                 db.execute("INSERT OR REPLACE INTO reviews VALUES (?,?,?,?,?,?)",
                            (self.tables["fingerprint"], patient_id, status, note, json.dumps(review["concerns"]), review["updated_at"]))
             self.reviews, self.analysis = updated, analysis
