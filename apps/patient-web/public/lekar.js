@@ -85,11 +85,6 @@ const SEVERITY = {
   minor: { label: 'Mírná', icon: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>' },
   unknown: { label: 'Neznámá', icon: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/>' },
 };
-const ACTIONS = {
-  avoid_combination: 'Vyhnout se kombinaci', use_alternative: 'Použít alternativu', monitor: 'Sledovat',
-  adjust_dose: 'Upravit dávku', separate_administration: 'Oddělit podání', no_action: 'Bez opatření',
-  consult_clinician: 'Konzultovat s lékařem', other: 'Jiné',
-};
 const EVIDENCE = { established: 'potvrzené', limited: 'omezené', theoretical: 'teoretické', unknown: 'neurčené' };
 
 function findingView(finding) {
@@ -98,7 +93,6 @@ function findingView(finding) {
     <p class="finding-summary">${escape(finding.summary)}</p>
     ${finding.mechanism ? `<p class="finding-text"><strong>Mechanismus:</strong> ${escape(finding.mechanism)}</p>` : ''}
     ${finding.clinicalEffects?.length ? `<ul class="finding-effects">${finding.clinicalEffects.map(effect => `<li>${escape(effect)}</li>`).join('')}</ul>` : ''}
-    ${finding.recommendations?.length ? `<ul class="finding-recommendations">${finding.recommendations.map(rec => `<li><span class="action">${escape(ACTIONS[rec.action] || ACTIONS.other)}</span> ${escape(rec.description)}</li>`).join('')}</ul>` : ''}
     <p class="finding-meta">Důkazy: ${escape(EVIDENCE[finding.evidence?.level] || EVIDENCE.unknown)}${references.map(ref => ` · <a href="${escape(ref.url)}" target="_blank" rel="noopener noreferrer">${escape(ref.title)} ↗</a>`).join('')}</p>
   </section>`;
 }
@@ -117,13 +111,21 @@ const SITE_STATE = {
   error: { label: 'chyba', icon: '!' },
 };
 
-function sitePill({ list, row }, site) {
+const SITE_SHORT = { 'reference.medscape.com': 'medscape.com' }; // keeps the pill row on one line
+
+function sitePill({ list, row }, site, index) {
   const entry = research.get(researchKey(list, row.names, site));
   const state = entry?.status === 'done' ? entry.data.status : entry?.status || 'queued';
   const meta = SITE_STATE[state];
+  // Hover/focus shows the whole answer of the agent, not just the state.
+  const answer = entry?.status === 'done' ? entry.data.summary : entry?.status === 'error' ? `${entry.error} Klikněte pro opakování.` : '';
+  const tipId = `site-tip-${index}`;
   const tag = state === 'error' ? 'button' : 'span';
-  const retry = state === 'error' ? ` type="button" data-action="research-site" data-site="${escape(site)}" title="${escape(entry.error)}" aria-label="${escape(site)}: ${meta.label}. Zkusit znovu."` : '';
-  return `<li><${tag} class="site-pill state-${state}"${retry}>${meta.icon ? `<span class="pill-icon" aria-hidden="true">${meta.icon}</span>` : '<span class="spinner" aria-hidden="true"></span>'}${escape(site)}<span class="site-status">${meta.label}</span></${tag}></li>`;
+  const attrs = ` aria-describedby="${tipId}"${state === 'error'
+    ? ` type="button" data-action="research-site" data-site="${escape(site)}" aria-label="${escape(site)}: ${meta.label}. Zkusit znovu."`
+    : ' tabindex="0"'}`;
+  return `<li class="site-item"><${tag} class="site-pill state-${state}"${attrs}>${meta.icon ? `<span class="pill-icon" aria-hidden="true">${meta.icon}</span>` : '<span class="spinner" aria-hidden="true"></span>'}${escape(SITE_SHORT[site] || site)}<span class="sr-only"> – ${meta.label}</span></${tag}>
+    <span class="pill-tip" id="${tipId}" role="tooltip"><strong>${escape(site)} · ${meta.label}</strong>${answer ? `<span>${escape(answer)}</span>` : ''}</span></li>`;
 }
 
 function siteResult({ list, row }, site) {
@@ -140,7 +142,7 @@ function detailsView(target) {
   const finished = entries.filter(entry => entry?.status === 'done' || entry?.status === 'error').length;
   const results = RESEARCH_SITES.map(site => siteResult(target, site)).join('');
   return `<p class="research-progress" aria-live="polite">Hotovo ${finished} z ${RESEARCH_SITES.length} stránek</p>
-    <ul class="site-pills" aria-label="Stav hledání na stránkách">${RESEARCH_SITES.map(site => sitePill(target, site)).join('')}</ul>
+    <ul class="site-pills" aria-label="Stav hledání na stránkách">${RESEARCH_SITES.map((site, index) => sitePill(target, site, index)).join('')}</ul>
     ${results ? `<ul class="site-results" aria-label="Nalezené výsledky">${results}</ul>` : ''}`;
 }
 
@@ -156,9 +158,9 @@ function interactionCard(row, list) {
     <div class="interaction-body">
       <p class="pair"><strong>${escape(row.a)}</strong><span aria-hidden="true">+</span><span class="sr-only">a</span><strong>${escape(row.b)}</strong></p>
       <p class="summary">${escape(severity.label)}</p>
+      <button type="button" class="small-button details-button" data-action="details" data-key="${escape(rowKey(list, row.names))}">${icon('globe')} Podrobnosti z webu</button>
     </div>
     <div class="findings">${row.findings.map(findingView).join('')}</div>
-    <div class="card-footer"><button type="button" class="small-button" data-action="details" data-key="${escape(rowKey(list, row.names))}">${icon('globe')} Podrobnosti z webu</button></div>
   </article>`;
 }
 
@@ -521,6 +523,35 @@ $('#main').addEventListener('change', async event => {
 const detailsDialog = $('#details-dialog');
 detailsDialog.addEventListener('close', () => { detailsTarget = null; });
 $('#details-close').addEventListener('click', () => detailsDialog.close());
+// The tooltip is `position: fixed` and placed by hand: an absolute one would stretch the dialog's
+// scroll area and make the dialog jump when hovering the last pills.
+function showPillTip(item) {
+  const tip = item.querySelector('.pill-tip');
+  const pill = item.querySelector('.site-pill');
+  if (!tip || !pill) return;
+  item.classList.add('tip-open');
+  const rect = pill.getBoundingClientRect();
+  tip.style.top = `${rect.bottom + 6}px`;
+  tip.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - tip.offsetWidth - 8))}px`;
+}
+const hidePillTip = item => item.classList.remove('tip-open');
+detailsDialog.addEventListener('mouseover', event => {
+  const item = event.target.closest('.site-item');
+  if (item) showPillTip(item);
+});
+detailsDialog.addEventListener('mouseout', event => {
+  const item = event.target.closest('.site-item');
+  if (item && !item.contains(event.relatedTarget)) hidePillTip(item);
+});
+detailsDialog.addEventListener('focusin', event => {
+  const item = event.target.closest('.site-item');
+  if (item) showPillTip(item);
+});
+detailsDialog.addEventListener('focusout', event => {
+  const item = event.target.closest('.site-item');
+  if (item) hidePillTip(item);
+});
+
 detailsDialog.addEventListener('click', event => {
   const retry = event.target.closest('[data-action="research-site"]');
   if (retry && detailsTarget) runResearch(detailsTarget.list, detailsTarget.row.names, [retry.dataset.site]);
