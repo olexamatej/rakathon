@@ -3,7 +3,7 @@
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // TODO(server): GET the list stored under this PIN. Resolve to { sentAt, regimen, items } where each
-// item is { name, dosage, dosesPerPackage, schedule?, suklCode?, suklUrl? }; reject with a message
+// item is { name, dosage, dosesPerPackage, schedule?, substances?: [active substance names] }; reject with a message
 // the doctor can read when the PIN is unknown or expired.
 // shortcut: the same fixed demo list for every PIN; the real API decides when a PIN is unknown.
 export async function fetchListByPin(pin) {
@@ -12,11 +12,23 @@ export async function fetchListByPin(pin) {
     sentAt: new Date().toISOString(),
     regimen: 'FOLFOX4',
     items: [
-      { name: 'WARFARIN ORION', dosage: '3 mg', dosesPerPackage: '100', schedule: '0-0-1', suklCode: '0094113' },
-      { name: 'IBALGIN', dosage: '200 mg', dosesPerPackage: '12', schedule: '3x', suklCode: '0254290' },
-      { name: 'Metformin', dosage: '500 mg', dosesPerPackage: '30' },
+      { name: 'WARFARIN ORION', dosage: '3 mg', dosesPerPackage: '100', schedule: '0-0-1', substances: ['Warfarin sodný'] },
+      { name: 'IBALGIN', dosage: '200 mg', dosesPerPackage: '12', schedule: '3x', substances: ['Ibuprofen'] },
+      { name: 'LIPERTANCE', dosage: '10 mg / 5 mg / 5 mg', dosesPerPackage: '90', schedule: '1x', substances: ['Perindopril', 'Amlodipin', 'Indapamid'] },
+      { name: 'Metformin', dosage: '500 mg', dosesPerPackage: '30', substances: ['Metformin'] },
     ],
   };
+}
+
+let suklNames;
+
+// Medicine names from the SÚKL catalogue for autocomplete; resolves to [] when unavailable.
+export function loadSuklNames() {
+  suklNames ??= fetch('/sukl-names.json').then(response => {
+    if (!response.ok) throw new Error('Katalog léčiv není dostupný.');
+    return response.json();
+  }).catch(() => { suklNames = undefined; return []; });
+  return suklNames;
 }
 
 let regimenDrugs;

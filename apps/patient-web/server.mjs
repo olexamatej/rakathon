@@ -11,7 +11,7 @@ const files = {
   '/lekar.css': ['lekar.css', 'text/css'],
   '/doctor.js': ['doctor.js', 'text/javascript'],
   '/doctor-services.js': ['doctor-services.js', 'text/javascript'],
-  '/regimen-combo.js': ['regimen-combo.js', 'text/javascript'],
+  '/autocomplete.js': ['autocomplete.js', 'text/javascript'],
   '/app.js': ['app.js', 'text/javascript'],
   '/lists.js': ['lists.js', 'text/javascript'],
   '/services.js': ['services.js', 'text/javascript'],
@@ -46,6 +46,18 @@ function loadRegimenData() {
   return regimenData;
 }
 
+// Distinct medicine names from the SÚKL catalogue, for autocomplete only (names never restrict input).
+let suklNames;
+function loadSuklNames() {
+  suklNames ??= readFile(new URL('../../data/sukl/medications.json', import.meta.url), 'utf8')
+    .then(text => {
+      const records = JSON.parse(text);
+      return JSON.stringify([...new Set(records.map(record => record.name).filter(Boolean))].sort());
+    })
+    .catch(error => { suklNames = undefined; throw error; });
+  return suklNames;
+}
+
 export function createAppServer() {
   return createServer(async (req, res) => {
     let path;
@@ -61,6 +73,16 @@ export function createAppServer() {
     }
     if (path === '/') {
       res.writeHead(302, { Location: '/pacient' }).end();
+      return;
+    }
+    if (path === '/sukl-names.json') {
+      try {
+        const body = await loadSuklNames();
+        res.writeHead(200, { ...securityHeaders, 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(req.method === 'HEAD' ? undefined : body);
+      } catch {
+        res.writeHead(500).end('Seznam léčiv není dostupný.');
+      }
       return;
     }
     if (path === '/regimens.json' || path === '/regimen-drugs.json') {
