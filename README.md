@@ -30,6 +30,8 @@ npm run web:patient
 Fotografie z galerie nebo fotoaparátu přidají léčiva do seznamu. Na počítači
 fotoaparát otevře náhled webkamery, na telefonu systémový fotoaparát. Položky lze
 odstranit; seznam a historii odeslání uchovává localStorage tohoto prohlížeče.
+Volitelný režim onkologické léčby má našeptávání z HemOncKB a uchovává se také
+v historii odeslání. Poslední PIN lze znovu otevřít a zkopírovat.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
 `apps/patient-web/public/services.js` zatím rozpoznávání a odesílání pouze simuluje: každý obrázek
@@ -38,6 +40,10 @@ na server; PIN nepředává data lékaři. Pro zkoušení používejte ukázkov�
 Při změně souborů UI zvyšte verzi cache v `apps/patient-web/public/sw.js`. Testy PWA jsou součástí
 `npm test`; samostatně je spustíte příkazem
 `node --test tests/patient.test.mjs tests/server.test.mjs`.
+
+Našeptávání používá pouze názvy z `data/solid-tumors-regimens.json`; dataset
+obsahuje metadata původu. Z lokálního `data/dataverse_files.zip` jej obnovíte
+příkazem `python3 scripts/extract_solid_tumors.py`; zdrojový ZIP není v Gitu.
 
 ## Co funguje
 

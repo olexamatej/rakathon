@@ -19,9 +19,10 @@ const isItems = items => Array.isArray(items)
     && isText(item.name, 120) && isText(item.dosage, 120)
     && isText(item.dosesPerPackage, 6))
   && new Set(items.map(item => item.id)).size === items.length;
+const isRegimen = value => value === undefined || isText(value, 200);
 const isSubmission = value => value && isId(value.id) && isReceipt(value)
-  && isItems(value.items) && canSend(value.items);
-const isState = state => state && isItems(state.items) && Array.isArray(state.submissions)
+  && isItems(value.items) && canSend(value.items) && isRegimen(value.regimen);
+const isState = state => state && isItems(state.items) && isRegimen(state.regimen) && Array.isArray(state.submissions)
   && state.submissions.every(isSubmission)
   && new Set(state.submissions.map(entry => entry.id)).size === state.submissions.length;
 
@@ -66,8 +67,9 @@ export function saveState(storage, state) {
   storage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function recordSubmission(state, items, receipt) {
+export function recordSubmission(state, items, receipt, regimen = '') {
   const entry = { id: newId(), pin: receipt?.pin, sentAt: receipt?.sentAt, items: structuredClone(items) };
+  if (regimen.trim()) entry.regimen = regimen.trim();
   if (!isSubmission(entry)) throw new Error('Neplatná odpověď při odeslání seznamu.');
   state.submissions.unshift(entry);
   return entry;
@@ -78,9 +80,10 @@ export function canSend(items) {
     && /^[1-9]\d{0,5}$/.test(item.dosesPerPackage));
 }
 
-export function toText(items) {
+export function toText(items, regimen = '') {
   if (!canSend(items)) throw new Error('Doplňte název, dosage a počet dávek u každého léčiva.');
   const clean = value => value.trim().replace(/[\t\r\n]+/g, ' ');
-  return ['Název léčiva\tDosage\tPočet dávek v balení',
+  const regimenLine = regimen.trim() ? [`Režim onkologické léčby\t${clean(regimen)}`] : [];
+  return [...regimenLine, 'Název léčiva\tDosage\tPočet dávek v balení',
     ...items.map(item => [item.name, item.dosage, item.dosesPerPackage].map(clean).join('\t'))].join('\n');
 }

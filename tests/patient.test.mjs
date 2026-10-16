@@ -150,3 +150,15 @@ test('a photo can yield multiple medicines; the demo returns a six-character PIN
   await assert.rejects(recognizePhoto(new File(['text'], 'test.txt', { type: 'text/plain' })));
   await assert.rejects(sendList(''));
 });
+
+test('optional oncology regimen is stored, validated and handed off', () => {
+  const state = createState();
+  state.regimen = 'FOLFOX';
+  const storage = new Map();
+  const fake = { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), key: () => null, length: 0 };
+  saveState(fake, state);
+  assert.equal(loadState(fake).state.regimen, 'FOLFOX');
+  assert.throws(() => saveState(fake, { ...state, regimen: 'x'.repeat(201) }));
+  assert.equal(toText([medicine()], ' FOLFOX\n').split('\n')[0], 'Režim onkologické léčby\tFOLFOX');
+  assert.equal(recordSubmission(state, [medicine()], { pin: 'ABC234', sentAt: new Date().toISOString() }, 'FOLFOX').regimen, 'FOLFOX');
+});
