@@ -431,7 +431,7 @@ mod blob_tests {
             pins.push(receipt["pin"].as_str().unwrap().to_owned());
         }
         assert_ne!(pins[0], pins[1]);
-        assert_eq!(state.store.list_blobs(0).await.unwrap().len(), 2);
+        assert_eq!(state.store.list_blobs(0, false).await.unwrap().len(), 2);
         for pin in &pins {
             let response = get_blob(
                 State(state.clone()),
@@ -446,7 +446,7 @@ mod blob_tests {
         assert!(state.store.delete_blob(&first_digest).await.unwrap());
         assert!(state.store.get_blob(&first_digest).await.unwrap().is_none());
         assert_eq!(state.store.get_blob(&second_digest).await.unwrap().unwrap(), payload.as_bytes());
-        assert_eq!(state.store.list_blobs(0).await.unwrap().len(), 1);
+        assert_eq!(state.store.list_blobs(0, false).await.unwrap().len(), 1);
     }
 
     #[tokio::test]

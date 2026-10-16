@@ -145,10 +145,10 @@ mod tests {
             .connect("sqlite::memory:").await.unwrap();
         crate::migrate(&pool).await.unwrap();
         let store = TransferStore::new(pool);
-        store.create_blob(&[1; 32], b"old", 10).await.unwrap();
-        store.create_blob(&[2; 32], b"new", 10).await.unwrap();
+        store.create_blob(&[1; 32], None, b"old", 10).await.unwrap();
+        store.create_blob(&[2; 32], None, b"new", 10).await.unwrap();
 
-        let rows = store.list_blobs(0).await.unwrap();
+        let rows = store.list_blobs(0, false).await.unwrap();
         assert_eq!(rows[0].pin_digest, "02".repeat(32));
         assert_eq!(rows[1].pin_digest, "01".repeat(32));
     }
