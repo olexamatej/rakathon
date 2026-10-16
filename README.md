@@ -9,10 +9,12 @@ Node.js 22.13+ (ověřeno na 24), npm. Bez účtu, API klíčů a backendu.
 ```sh
 npm ci
 npm start          # QR kód pro Expo Go; telefon a počítač na stejné síti
-npm run web       # pacient i náhled lékaře v prohlížeči
+npm run web       # webový server; vypsanou adresu otevřete ručně v prohlížeči
 ```
 
 `npm run android` otevře Android emulátor; `npm run ios` vyžaduje macOS s Xcode. Použité Expo SDK 57 odpovídá doporučení pro Expo Go na fyzickém telefonu během přechodu na SDK 58 ([Expo, 16. 10. 2026](https://docs.expo.dev/get-started/create-a-project/)).
+
+Webový skript používá `BROWSER=none`, aby fungoval i na Linuxu bez grafického prostředí, kde automatické `xdg-open` selhává kódem 3. Na Linuxu/macOS otevřete vypsanou adresu (obvykle `http://localhost:8081`) ručně. V PowerShellu spusťte `$env:BROWSER='none'; npx expo start --web`.
 
 ## Co funguje
 
