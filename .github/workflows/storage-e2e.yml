@@ -6,33 +6,24 @@ on:
   pull_request:
     branches: [main, pillgaze]
   workflow_dispatch:
-    inputs:
-      live:
-        description: 'Test deployed rakathon.denishromada.com (creates one synthetic record)'
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: storage-e2e-${{ inputs.live && 'production' || github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  group: storage-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   storage:
     name: Patient upload and authenticated storage admin
-    # A fresh hosted VM has browsers and can reach the public deployment without
-    # weakening the Hetzner runner's network isolation. Live secrets only on main.
-    if: ${{ !inputs.live || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}
+    # Docker builds run on an ephemeral VM, preserving the Hetzner runner's
+    # isolation. The test container itself has no network access beyond loopback.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
-        working-directory: e2e
         shell: bash
-    env:
-      CI: 'true'
     steps:
       - name: Check out test and application sources
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -40,32 +31,29 @@ jobs:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
+            /.dockerignore
             /e2e/
             /apps/patient-web/
             /apps/storage-admin/
             /services/transfer-api/
             /data/regimens.json
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: '24'
-          package-manager-cache: false
-      - name: Set up Rust stable
-        if: ${{ !inputs.live }}
-        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1.16.1
-        with:
-          cache-workspaces: services/transfer-api -> services/transfer-api/target
-      - name: Build real storage backend
-        if: ${{ !inputs.live }}
-        env:
-          CARGO_BUILD_JOBS: '2'
-        run: cargo build --locked --manifest-path ../services/transfer-api/Cargo.toml
-      - name: Install locked browser test dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Install Chromium and system dependencies
-        run: npx --no-install playwright install --with-deps --only-shell chromium
-      - name: Test patient to storage admin flow
-        env:
-          E2E_BASE_URL: ${{ inputs.live && 'https://rakathon.denishromada.com' || '' }}
-          STORAGE_ADMIN_PASSWORD: ${{ inputs.live && secrets.STORAGE_ADMIN_PASSWORD || '' }}
-        run: npm test
+      - name: Build isolated application and browser test image
+        run: docker build --file e2e/Dockerfile --tag pillgaze-storage-e2e .
+      - name: Test patient to storage admin flow without external network
+        run: |
+          docker run --rm --name storage-e2e --init \
+            --network none --read-only --user 1000:1000 \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --cpus 2 --memory 2g --pids-limit 256 --shm-size 128m \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m \
+            pillgaze-storage-e2e
+          printf '%s\n' \
+            'Patient storage E2E passed: 101 → 102 records, server PIN and stored payload verified.' \
+            'Disposable non-root container, network disabled, temporary SQLite; no production access.' \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove test container after interruption
+        if: always()
+        run: |
+          if docker container inspect storage-e2e > /dev/null 2>&1; then
+            docker container rm --force storage-e2e
+          fi

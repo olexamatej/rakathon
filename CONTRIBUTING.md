@@ -118,7 +118,7 @@ Deployment automation needs a defined target and credentials scoped to that targ
 neither workflow deploys the application.
 
 The browser storage flow is checked separately by
-[Patient storage E2E](e2e/README.md), using a fresh GitHub hosted VM and the real
-Rust API with disposable SQLite. A manual main-only live mode checks the deployed
-website using the `STORAGE_ADMIN_PASSWORD` Actions secret; it creates one synthetic
-record and does not deploy.
+[Patient storage E2E](e2e/README.md). Each push/PR starts a disposable non-root
+container on a GitHub hosted VM, running the checked-out frontend and real Rust
+API with temporary SQLite. The runtime has no external network, host mounts,
+Docker socket or published ports. No production services or secrets are used.

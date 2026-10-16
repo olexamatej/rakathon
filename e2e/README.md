@@ -1,25 +1,37 @@
 # Patient → storage admin browser test
 
-`storage.spec.mjs` uses Chromium, the patient PWA, the admin UI and the real Rust
-storage API. It logs in before sending, counts **all** admin pages, seeds a unique
-synthetic patient draft in localStorage, clicks **Odeslat seznam** once, checks the
-server-issued PIN displayed by the patient UI, reads back identical JSON using
-that PIN, reloads the authenticated admin, and requires exactly one additional
-record with a new HMAC digest. Nothing intercepts or mocks storage requests.
-Photo recognition is outside this scenario.
+The Chromium scenario logs into storage admin, counts every page, submits a unique
+synthetic patient draft by clicking **Odeslat seznam**, verifies the displayed
+server-issued PIN and exact JSON read back through that PIN, then reloads admin
+and requires **exactly one additional record**. The real Rust storage API handles
+all requests; nothing mocks uploads or PINs. OCR is outside this scenario.
 
-## Automatic CI
+`.github/workflows/storage-e2e.yml` runs automatically on pushes and PRs to
+main/pillgaze, and can also be started manually without inputs or secrets.
+It builds the checked-out Rust API and browser test image on a fresh GitHub hosted
+Ubuntu VM. This keeps Docker out of the existing Hetzner runner.
 
-`.github/workflows/storage-e2e.yml` runs on pushes and PRs to main/pillgaze using
-a fresh GitHub hosted Ubuntu VM. This preserves the Hetzner runner's intentional
-block on the deployed website. Local mode starts the checked-out Rust backend
-with a random test HMAC secret, disposable SQLite DB seeded with 101 synthetic
-rows to exercise pagination, fixed test-only admin
-password, and a Node same-origin gateway serving the checked-out UI. It binds
-only loopback ports 4180/4181. It neither deploys nor needs production secrets.
-Dependency setup follows [Playwright's CI guide](https://playwright.dev/docs/ci).
+Each run starts a disposable **non-root container with networking disabled**,
+a read-only root, dropped capabilities, no privilege escalation, bounded CPU,
+memory and processes, temporary storage, no host mounts, no Docker socket and no
+published ports. Patient UI, admin and API communicate only over container
+loopback ports 4180/4181. The API gets a random HMAC secret, a fixed test-only
+password and temporary SQLite. Its 101 synthetic baseline rows also exercise
+pagination; the test verifies 101 → 102 records. The container and database are
+removed after the test, including on failure. No production URL, production
+credential or production database is used; `E2E_BASE_URL` is explicitly rejected.
 
-To run in a development sandbox with Node 24, Rust and Chromium dependencies:
+To reproduce the CI run on a development machine with Docker:
+
+```sh
+docker build -f e2e/Dockerfile -t pillgaze-storage-e2e .
+docker run --rm --init --network none --read-only --user 1000:1000 \
+  --cap-drop ALL --security-opt no-new-privileges \
+  --cpus 2 --memory 2g --pids-limit 256 --shm-size 128m \
+  --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m pillgaze-storage-e2e
+```
+
+For local development in a non-root sandbox with Node 24, Rust and Chromium:
 
 ```sh
 cargo build --locked --manifest-path services/transfer-api/Cargo.toml
@@ -29,22 +41,7 @@ npx --no-install playwright install --with-deps --only-shell chromium
 npm test
 ```
 
-`E2E_API_BINARY` can override the compiled backend path. Do not run repo code as
-the Docker-enabled VPS host user; use a disposable non-root sandbox.
-
-## Deliberate live check
-
-Add repository Actions secret `STORAGE_ADMIN_PASSWORD` with the existing storage
-admin password through GitHub's secret settings. Never commit or print it.
-Run **Patient storage E2E → Run workflow**, choose branch **main** and enable
-`live`. Live mode is restricted to main and the canonical HTTPS origin. It does
-not build/start local services. A missing secret fails the job rather than
-silently skipping the test. The test step alone receives the secret.
-
-Each live run leaves **one synthetic record** for inspection. No automatic
-retries, scheduled production writes, deletion, trace, screenshot, video, saved
-browser session, or artifact upload. Keep runs at least one minute apart; the
-API rate limit is shared behind the proxy. The test bounds pagination at 2000
-records. Concurrent real uploads/deletions between snapshots correctly fail the
-strict +1 assertion; rerun deliberately during a quiet period after diagnosis.
-The local gateway and database are removed when Playwright stops its web server.
+`E2E_API_BINARY` can override the compiled backend path. Do not run repository
+code as the Docker-enabled VPS host user. No retries, traces, screenshots, saved
+sessions or artifact uploads are enabled. Dependency setup follows the
+[Playwright CI guide](https://playwright.dev/docs/ci).

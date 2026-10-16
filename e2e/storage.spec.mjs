@@ -30,7 +30,7 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
   await expect(admin.getByLabel('Heslo administrátora')).toBeVisible();
   // fill() can echo its argument in Playwright's failure call log.
   await admin.evaluate(password => { document.getElementById('password').value = password; },
-    process.env.E2E_BASE_URL ? process.env.STORAGE_ADMIN_PASSWORD : 'local-e2e-password');
+    'local-e2e-password');
   await adminAction(admin, () => admin.getByRole('button', { name: 'Přihlásit', exact: true }).click());
   const before = await inventory(admin);
 
@@ -66,5 +66,5 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
   expect(after.length, 'Storage admin total must grow by exactly one').toBe(before.length + 1);
   expect(after.filter(digest => !before.includes(digest)).length, 'Exactly one new storage row must appear').toBe(1);
   expect(before.every(digest => after.includes(digest)), 'Existing rows must remain present').toBe(true);
-  // Live mode leaves its single synthetic record for inspection; never delete other records.
+  console.info(`Storage admin: ${before.length} → ${after.length} records; PIN and stored payload verified.`);
 });
