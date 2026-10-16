@@ -20,7 +20,7 @@ export async function recognizePhoto(file) {
   // shortcut: every photo returns two fake medicines; replace when recognition is connected.
   await new Promise(resolve => setTimeout(resolve, 1100));
   return [
-    { id: newId(), name: 'Ukázkové léčivo Alfa', dosage: '500 mg', dosesPerPackage: '30' },
+    { id: newId(), name: 'Ukázkové léčivo Alfa', dosage: '500 mg', dosesPerPackage: '30', schedule: '1-0-0' },
     { id: newId(), name: 'Ukázkové léčivo Beta', dosage: '10 mg', dosesPerPackage: '20' },
   ];
 }

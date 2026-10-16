@@ -107,7 +107,7 @@ input:disabled { opacity: .7; }
 .submission li span { color: var(--muted); font-size: 12px; }
 .empty-history { text-align: center; padding: 28px 12px; }
 .empty-history svg { width: 40px; height: 40px; color: #7c917b; margin-bottom: 12px; }
-.pin-screen { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; text-align: center; padding: 20px 12px max(20px, env(safe-area-inset-bottom)); }
+.pin-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; text-align: center; padding: 20px 12px max(20px, env(safe-area-inset-bottom)); }
 .pin { font-size: clamp(36px, 10vw, 60px); letter-spacing: .16em; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .pin-actions { display: grid; gap: 10px; width: min(320px, 100%); }
 .pin-actions button { min-height: 52px; font-size: 16px; }

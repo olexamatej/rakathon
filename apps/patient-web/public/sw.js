@@ -1,5 +1,5 @@
 // Bump the cache version when changing the application shell.
-const CACHE = 'pillgaze-patient-v31';
+const CACHE = 'pillgaze-patient-v37';
 const SHELL = ['/pacient', '/styles.css', '/app.js', '/lists.js', '/services.js',
   '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 self.addEventListener('install', event => {
