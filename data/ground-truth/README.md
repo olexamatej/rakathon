@@ -48,6 +48,60 @@ choosing one. SÚKL codes are **candidates**, not adjudicated product identifier
 `selectedCode` is deliberately null. Do not treat source aliases, handwriting
 substitutions, or name-only matches as evidence of therapeutic equivalence.
 
+## Refined SÚKL matching (schema 1.1)
+
+`refine_matching.py` rebuilds only the SÚKL links from the saved visual fields.
+It uses a separate SÚKL alias table (fixing the Helicid catalogue-alias bug),
+converts g/mg/µg, and expands a shared trailing unit such as `75/25 mg`.
+Combination order and concentration denominators are preserved. It never
+converts ambiguous handwritten g into mg or borrows printed-list strengths.
+Dosage form is not a structured visual label in this dataset, so it is not used
+to narrow identities based on the catalogue's form.
+
+The `sukl` object contains:
+
+| Field | Meaning |
+| --- | --- |
+| `status` | Evidence class, described below. |
+| `candidateCodes` | Strict or review-only candidates, depending on `status`. |
+| `nameCandidateCodes` | Name-based lookup results, including records with conflicting strengths; these are review aids only. |
+| `packTextMatchingCodes` | Candidates whose pack text matches after whitespace/case normalization. Pack qualifiers are preserved. |
+| `preferredCandidateCodes` | Pack-matching candidates when pack size is present, otherwise all candidates. Empty for exclusions and pack mismatches. |
+| `normalizedName` | Name supplied to the lookup after explicit spelling/branding aliases. |
+| `matchBasis` | Evidence used, such as normalized name and strength. |
+| `reviewReasons` | Explicit missing-data, alias, notation, conflict or pack-mismatch reasons. |
+| `resolution` | Whether metadata gives one candidate, multiple candidates, a pack mismatch, or needs review/is unresolved. |
+| `selectedCode` | Reserved for adjudication; remains null. |
+
+Status meanings:
+
+- `candidates`: normalized name and strength match.
+- `review_candidates`: a qualifier/abbreviation, generic name, or notation needs
+  review. Kreon's missing U and Vessel Due F's LSU/SU notation remain here.
+- `name_only_candidates`: visual strength/unit or SÚKL strength is missing.
+- `excluded_uncertain_strength`: uncertainty prevents strength matching;
+  name candidates remain available for review.
+- `strength_mismatch`: the supported name lookup found no matching strength.
+- `name_not_found`: no supported exact name/alias lookup found a product.
+- `not_in_local_dataset`: one of the identified supplement names is absent from
+  this local snapshot. This is not a claim about every SÚKL resource or date.
+
+`unique_metadata_candidate` is a resolution, not a human-confirmed identity.
+For strict matching metrics, use `status == "candidates"`; review-only/name-only
+candidate lists must not be counted as confirmed product matches.
+`suklMatchingSummary` counts these statuses separately for each image region.
+
+Rebuild and verify deterministically:
+
+```sh
+python3 data/ground-truth/refine_matching.py
+python3 data/ground-truth/refine_matching.py --check
+python3 -m unittest discover -s data/ground-truth -p 'test_*.py'
+```
+
+Rebuilding checks the SÚKL source hash and preserves image annotations, catalogue
+links and source metadata. A changed source snapshot requires explicit review.
+
 Before a locked evaluation, review the labels against the images and mark
 `humanReviewed` only after actual review. Keep all regions of an image and all
 members of a `splitGroup` in the same split. For unseen-product evaluation, also

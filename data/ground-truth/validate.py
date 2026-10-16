@@ -65,8 +65,13 @@ def main():
             assert set(item["catalogue"]["rowIds"]) <= catalogue
             assert set(item["catalogue"]["nameOnlyRowIds"]) <= catalogue
             assert set(item["sukl"]["candidateCodes"]) <= sukl
+            assert set(item["sukl"]["nameCandidateCodes"]) <= sukl
+            assert set(item["sukl"]["preferredCandidateCodes"]) <= set(item["sukl"]["candidateCodes"])
             assert set(item["sukl"]["packTextMatchingCodes"]) <= set(item["sukl"]["candidateCodes"])
             assert item["sukl"]["selectedCode"] is None
+            if item["sukl"]["resolution"] == "unique_metadata_candidate":
+                assert item["sukl"]["status"] == "candidates"
+                assert len(item["sukl"]["preferredCandidateCodes"]) == 1
     assert counts["medication_package"] == data["summary"]["packageImages"]
     assert counts["medication_list"] == data["summary"]["listImages"]
     assert len(images) == data["summary"]["totalImages"]
