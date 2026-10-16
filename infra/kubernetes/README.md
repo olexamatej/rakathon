@@ -55,3 +55,8 @@ helm template --set secretProvider.enabled=false \
 
 CI enforces the same checks in `chart-lint` (see
 `.github/workflows/container-deploy.yml`).
+# Active deployment
+
+The active single-node VPS Helm chart is [`../vps/chart`](../vps/README.md).
+The Azure/Flux manifests below are retained historical scaffolding, not the
+current release configuration. Master releases use `.github/workflows/vps-deploy.yml`.

@@ -6,6 +6,10 @@ Use `main` as the primary application branch. Fetch `origin/main` before integra
 changes and avoid force-pushing shared branches. The original prognosis project is
 archived on `legacy-prognosis`.
 
+`master` is the VPS **release** branch: every push rebuilds and deploys the
+frontend and API after checks. Promote current `main` with a normal merge;
+do not force-push release history. See [`infra/vps/README.md`](infra/vps/README.md).
+
 ## Repository conventions
 
 - Follow `.editorconfig`; source files use UTF-8 and LF line endings.
@@ -48,15 +52,15 @@ archived on `legacy-prognosis`.
   teammates are developing it.
 - Keep the doctor-facing browser client in `apps/doctor-web/`, the Rust transfer
   service in `services/transfer-api/`, the shared OpenAPI contract in
-  `packages/api-contract/`, and Azure deployment work in `infra/azure/`.
+   `packages/api-contract/`, and active VPS deployment work in `infra/vps/`.
 - Read [`architecture.md`](architecture.md) before changing a cross-component
   boundary. Update the OpenAPI contract when API behavior changes and coordinate
   the matching patient, doctor, and service updates.
-- The Rust transfer service currently runs locally with SQLite. Azure
-  PostgreSQL storage and public deployment are future work. Do not send real
+- The Rust transfer service uses SQLite; VPS k3s is the deployment target.
+  PostgreSQL storage and production approval are future work. Do not send real
   patient data to the local prototype.
 - Commit the Rust crate's `Cargo.lock` with dependency changes. The Rust CI job
-  compiles its targets on the isolated ARM64 runner.
+  tests its targets with `--locked` on the isolated ARM64 runner.
 
 Before pushing application changes, use Node.js 24 and run:
 

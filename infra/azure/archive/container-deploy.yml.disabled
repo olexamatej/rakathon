@@ -1,3 +1,4 @@
+# Retired Azure workflow, kept as historical reference. NOT a GitHub workflow.
 name: PillGaze container CI/CD
 
 # Builds the transfer API container image, scans it, pushes it to the

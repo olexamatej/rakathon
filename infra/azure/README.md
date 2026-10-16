@@ -1,5 +1,10 @@
 # Azure deployment — PillGaze transfer API
 
+> **Retired deployment target.** The active application release is now the
+> [VPS Kubernetes setup](../vps/README.md), deploying both services from `master`.
+> This directory is historical scaffolding, not a live or verified Azure deployment.
+> Do not run these bootstrap instructions for the current task.
+
 Target stack: AKS + ACR + Key Vault with Flux GitOps implementation files
 stored in this repository. Azure authentication is restricted; use the team
 owner's Cloud Shell (interactive `az login` is blocked by tenant CA policy on

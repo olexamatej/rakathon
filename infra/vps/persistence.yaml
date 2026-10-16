@@ -1,0 +1,38 @@
+# Installed once by the host administrator, NOT owned by the Helm release.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rakathon
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rakathon-data
+spec:
+  capacity: {storage: 1Gi}
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef: {namespace: rakathon, name: rakathon-data}
+  local: {path: /var/lib/rakathon/data}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - {key: kubernetes.io/hostname, operator: In, values: [rakathon-vps]}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rakathon-data
+  namespace: rakathon
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: ""
+  volumeName: rakathon-data
+  resources:
+    requests: {storage: 1Gi}

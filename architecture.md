@@ -199,3 +199,11 @@ the Azure region and resource sizes before provisioning.
 - The server decrypting, indexing, searching, or modifying medication lists.
 - Production deployment or public exposure before authentication boundaries,
   rate limits, cleanup, monitoring scrubbing, and recovery have been reviewed.
+# Deployment decision update
+
+The deployment target has changed from Azure to **local ARM64 k3s on the Hetzner
+VPS**, serving the frontend and transfer API at `rakathon.denishromada.cz`.
+Code is based on current `main`; `master` pushes trigger complete image rebuilds
+and releases. See [the active VPS guide](infra/vps/README.md). Azure-specific
+deployment sections below are historical proposals, not active infrastructure.
+Application boundaries and SQLite/prototype limitations remain unchanged.

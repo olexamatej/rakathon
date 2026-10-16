@@ -1,0 +1,16 @@
+.git
+.github
+knowledge-base
+node_modules
+**/target
+**/.secrets
+**/.env
+**/.env.*
+**/*.key
+**/*.pem
+**/*.sqlite*
+**/*.db
+**/*.log
+assets
+.expo
+infra/azure
