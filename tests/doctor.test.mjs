@@ -1,0 +1,75 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  createDoctorState, loadDoctorState, saveDoctorState, addList, validateItem,
+  normalizePin, isPin, suklLink, HISTORY_LIMIT, DOCTOR_STORAGE_KEY,
+} from '../apps/patient-web/public/doctor.js';
+import { fetchListByPin, fetchInteractions } from '../apps/patient-web/public/doctor-services.js';
+
+const memory = () => {
+  const map = new Map();
+  return { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, value) };
+};
+const item = (extra = {}) => ({ name: 'Ibalgin', dosage: '200 mg', dosesPerPackage: '12', ...extra });
+
+test('PIN input is normalised and validated like patient PINs', () => {
+  assert.equal(normalizePin(' abc-234 '), 'ABC234');
+  assert.ok(isPin('ABC234'));
+  assert.ok(isPin('0A1BC2'));
+  for (const bad of ['ABC23', 'ABC2345', 'ABC23!', 'abc234']) assert.ok(!isPin(bad), bad);
+});
+
+test('history is stored locally, newest first, one entry per PIN, and capped', () => {
+  const state = createDoctorState();
+  const first = addList(state, { pin: 'ABC234', items: [item()], regimen: 'FOLFOX' });
+  addList(state, { pin: 'DEF567', items: [item()] });
+  const again = addList(state, { pin: 'ABC234', items: [item(), item({ name: 'X' })] });
+  assert.deepEqual(state.lists.map(list => list.pin), ['ABC234', 'DEF567']);
+  assert.notEqual(first.id, again.id);
+  const storage = memory();
+  saveDoctorState(storage, state);
+  assert.deepEqual(loadDoctorState(storage), state);
+  const big = createDoctorState();
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for (let i = 0; i < HISTORY_LIMIT + 5; i++) addList(big, { pin: alphabet[i % 32] + alphabet[Math.floor(i / 32)] + 'AAAA', items: [] });
+  assert.equal(big.lists.length, HISTORY_LIMIT);
+});
+
+test('broken stored history is rejected instead of being overwritten', () => {
+  const storage = memory();
+  storage.setItem(DOCTOR_STORAGE_KEY, JSON.stringify({ lists: [{ id: 'x' }] }));
+  assert.throws(() => loadDoctorState(storage));
+  assert.equal(memory().getItem(DOCTOR_STORAGE_KEY), null);
+  assert.throws(() => saveDoctorState(storage, { lists: [{ id: 'x' }] }));
+  assert.throws(() => addList(createDoctorState(), { pin: 'ABC234', items: [{ name: 'x'.repeat(121), dosage: 'a', dosesPerPackage: '1' }] }));
+});
+
+test('item edits are validated; SÚKL code and link are optional', () => {
+  assert.deepEqual(validateItem(item()), {});
+  assert.deepEqual(validateItem(item({ schedule: '1-0-0', suklCode: '0254290' })), {});
+  assert.deepEqual(Object.keys(validateItem(item({ name: ' ', dosage: '', dosesPerPackage: '0', suklCode: '12' }))).sort(),
+    ['dosage', 'dosesPerPackage', 'name', 'suklCode']);
+  assert.equal(suklLink(item()), '');
+  assert.match(suklLink(item({ suklCode: '0254290' })), /^https:\/\/prehledy\.sukl\.cz\/.*0254290$/);
+  assert.equal(suklLink(item({ suklUrl: 'https://example.test/x', suklCode: '0254290' })), 'https://example.test/x');
+  assert.match(suklLink(item({ suklUrl: 'javascript:alert(1)', suklCode: '0254290' })), /^https:\/\/prehledy/);
+  assert.equal(suklLink(item({ suklUrl: 'javascript:alert(1)' })), '');
+});
+
+test('placeholder doctor API returns a list for a PIN and interaction pairs', async () => {
+  const list = await fetchListByPin('ABC234');
+  assert.ok(list.items.length > 0 && list.items.every(entry => entry.name && entry.dosage && entry.dosesPerPackage));
+  assert.ok((await fetchListByPin('AAAAAA')).items.length > 0);
+  const items = [item(), item({ name: 'Warfarin' }), item({ name: 'Metformin' })];
+  const result = await fetchInteractions(items, { name: 'FOLFOX', drugs: ['Oxaliplatin', 'Fluorouracil'] });
+  assert.equal(result.medicines.length, 3); // one card per pair, not per substance
+  assert.deepEqual(result.medicines.map(row => [row.a, row.b]).slice(0, 2), [['Ibalgin', 'Warfarin'], ['Ibalgin', 'Metformin']]);
+  assert.equal(result.regimen.name, 'FOLFOX');
+  assert.equal(result.regimen.interactions.length, 6);
+  for (const row of [...result.medicines, ...result.regimen.interactions]) {
+    assert.ok(['high', 'moderate', 'low', 'unknown'].includes(row.severity));
+    assert.ok(row.summary && row.links.every(link => link.url.startsWith('https://') && link.title && link.description));
+  }
+  assert.equal((await fetchInteractions(items, null)).regimen, null);
+  assert.deepEqual((await fetchInteractions([item()], null)).medicines, []);
+});

@@ -2,13 +2,41 @@ export function formatSize(bytes) {
   return `${new Intl.NumberFormat('cs-CZ').format(bytes)} B`;
 }
 
-export function createClient(fetcher = globalThis.fetch) {
-  // Memory only: never localStorage, sessionStorage, URLs or service-worker caches.
+export function createClient(fetcher = globalThis.fetch, storage, now = Date.now) {
+  // Tab-scoped only; never localStorage, URLs or service-worker caches.
+  const key = 'pillgaze-storage-admin-session';
+  const lifetime = 15 * 60 * 1000;
   let password = '';
+  let expiresAt = 0;
+  function logout() {
+    password = '';
+    expiresAt = 0;
+    try { storage?.removeItem(key); } catch { /* Storage may be disabled. */ }
+  }
+  try {
+    const saved = JSON.parse(storage?.getItem(key) || 'null');
+    if (saved && typeof saved.password === 'string' && saved.password
+      && Number.isFinite(saved.expiresAt) && saved.expiresAt > now()
+      && saved.expiresAt <= now() + lifetime) {
+      password = saved.password;
+      expiresAt = saved.expiresAt;
+    } else logout();
+  } catch { logout(); }
   return {
-    login(value) { password = value; },
-    logout() { password = ''; },
+    login(value) {
+      password = value;
+      expiresAt = now() + lifetime;
+      try { storage?.setItem(key, JSON.stringify({ password, expiresAt })); } catch { /* Fall back to memory. */ }
+    },
+    logout,
+    remaining() { return password ? Math.max(0, expiresAt - now()) : 0; },
     async request(path, method = 'GET') {
+      if (password && now() >= expiresAt) {
+        logout();
+        const error = new Error('Přihlášení vypršelo. Přihlaste se znovu.');
+        error.status = 401;
+        throw error;
+      }
       if (!password) throw new Error('Nejdřív se přihlaste.');
       const response = await fetcher(`/api/v1/admin/blobs${path}`, {
         method,
@@ -18,6 +46,7 @@ export function createClient(fetcher = globalThis.fetch) {
         redirect: 'error',
       });
       if (!response.ok) {
+        if (response.status === 401) logout();
         const error = new Error(response.status === 401 ? 'Nesprávné heslo.'
           : response.status === 429 ? 'Příliš mnoho požadavků. Počkejte alespoň minutu.'
           : response.status === 404 ? 'Záznam neexistuje nebo administrace není zapnutá.'
@@ -31,7 +60,9 @@ export function createClient(fetcher = globalThis.fetch) {
 }
 
 if (typeof document !== 'undefined') {
-  const client = createClient();
+  let storage;
+  try { storage = window.sessionStorage; } catch { /* Fall back to memory. */ }
+  const client = createClient(globalThis.fetch, storage);
   const element = (id) => document.getElementById(id);
   let offset = 0;
   let busy = false;
@@ -127,7 +158,7 @@ if (typeof document !== 'undefined') {
     client.login(element('password').value);
     element('password').value = '';
     clearTimeout(sessionTimer);
-    sessionTimer = setTimeout(() => logout('Přihlášení vypršelo. Přihlaste se znovu.'), 15 * 60 * 1000);
+    sessionTimer = setTimeout(() => logout('Přihlášení vypršelo. Přihlaste se znovu.'), client.remaining());
     run(load);
   });
   element('logout').addEventListener('click', () => logout());
@@ -142,5 +173,14 @@ if (typeof document !== 'undefined') {
     offset += 100;
     try { await load(); } catch (error) { offset = previous; throw error; }
   }));
-  window.addEventListener('pagehide', () => logout());
+  if (client.remaining()) {
+    sessionTimer = setTimeout(() => logout('Přihlášení vypršelo. Přihlaste se znovu.'), client.remaining());
+    run(load);
+  }
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      if (!client.remaining()) logout('Přihlášení vypršelo. Přihlaste se znovu.');
+      else run(load);
+    }
+  });
 }

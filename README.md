@@ -36,16 +36,28 @@ Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva a v histo
 pokud je vyplněný, textové předání přidá sloupec **Kdy**.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
-`apps/patient-web/public/services.js` zatím rozpoznávání a odesílání pouze simuluje: každý obrázek
-vrátí dvě ukázková léčiva a PIN vzniká lokálně. Fotografie ani seznam se neposílají
-na server; PIN nepředává data lékaři. Pro zkoušení používejte ukázková data.
+`apps/patient-web/public/services.js` zatím rozpoznávání pouze simuluje: každý obrázek
+vrátí dvě ukázková léčiva; fotografie se neposílají na server. „Odeslat seznam“
+uloží text seznamu (včetně volitelného režimu a rozpisu užívání) jako JSON `{ text }`
+přes `POST /api/v1/transfers`. PIN vrací storage API a PWA jej zobrazí i uloží do
+historie až po úspěšném odeslání. Blob lze vyzvednout přes `GET /api/v1/transfers/{pin}`.
+Používejte pouze syntetická data: storage nevynucuje šifrování ani expiraci.
+Lokální Node server je pouze statický; odesílání vyžaduje stejný origin s `/api`
+proxy na storage (jako v nasazení na VPS). Automatické opakování odeslání není zapnuté.
 Při změně souborů UI zvyšte verzi cache v `apps/patient-web/public/sw.js`. Testy PWA jsou součástí
 `npm test`; samostatně je spustíte příkazem
 `node --test tests/patient.test.mjs tests/server.test.mjs`.
 
-Našeptávání používá pouze názvy z `data/solid-tumors-regimens.json`; dataset
-obsahuje metadata původu. Z lokálního `data/dataverse_files.zip` jej obnovíte
-příkazem `python3 scripts/extract_solid_tumors.py`; zdrojový ZIP není v Gitu.
+Našeptávání a přehled látek režimu používají `data/regimens.json`, zmenšený výpis
+z `data/solid-tumors-regimens.json` s metadaty původu. Z lokálního
+`data/dataverse_files.zip` obnovíte zdroj příkazem
+`python3 scripts/extract_solid_tumors.py` a výpis příkazem
+`python3 scripts/slim_regimens.py`; zdrojový ZIP není v Gitu.
+
+Lékařské rozhraní je dostupné na `/lekar` ve stejném lokálním serveru. Nabízí
+lokální historii PINů, úpravy léčiv a režimu, odkazy SÚKL a přehled interakcí.
+`doctor-services.js` zatím vrací stejný ukázkový seznam pro každý PIN a smyšlené
+interakce; není napojený na storage ani interaction API.
 
 ## Co funguje
 

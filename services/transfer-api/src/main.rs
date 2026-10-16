@@ -273,6 +273,8 @@ async fn create_blob(
         return Err(ApiError::BadRequest);
     }
 
+    // Every POST is an independent upload, even for byte-identical payloads.
+    // Retry only PIN collisions; never reuse a PIN based on the payload.
     for _ in 0..10 {
         let pin = crypto::new_pin().map_err(|_| ApiError::Unavailable)?;
         let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
@@ -403,6 +405,42 @@ mod blob_tests {
             let body = axum::body::to_bytes(response.into_body(), MAX_BODY_BYTES).await.unwrap();
             assert_eq!(&body[..], payload.as_bytes());
         }
+    }
+
+    #[tokio::test]
+    async fn identical_uploads_have_distinct_pins_and_independent_storage() {
+        let state = state().await;
+        let app = storage_router(state.clone());
+        let payload = " {\"photos\":[\"synthetic-photo\"],\"text\":\"same list\"}\n";
+        let mut pins = Vec::new();
+        for _ in 0..2 {
+            let mut request = Request::builder().method("POST").uri("/v1/transfers")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(axum::body::Body::from(payload)).unwrap();
+            request.extensions_mut().insert(ConnectInfo("127.0.0.1:1234".parse::<SocketAddr>().unwrap()));
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::CREATED);
+            let body = axum::body::to_bytes(response.into_body(), MAX_BODY_BYTES).await.unwrap();
+            let receipt: serde_json::Value = serde_json::from_slice(&body).unwrap();
+            pins.push(receipt["pin"].as_str().unwrap().to_owned());
+        }
+        assert_ne!(pins[0], pins[1]);
+        assert_eq!(state.store.list_blobs(0).await.unwrap().len(), 2);
+        for pin in &pins {
+            let response = get_blob(
+                State(state.clone()),
+                ConnectInfo("127.0.0.1:1234".parse().unwrap()),
+                Path(pin.clone()),
+            ).await.unwrap_or_else(|_| panic!("lookup failed"));
+            let body = axum::body::to_bytes(response.into_body(), MAX_BODY_BYTES).await.unwrap();
+            assert_eq!(&body[..], payload.as_bytes());
+        }
+        let first_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pins[0].as_bytes());
+        let second_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pins[1].as_bytes());
+        assert!(state.store.delete_blob(&first_digest).await.unwrap());
+        assert!(state.store.get_blob(&first_digest).await.unwrap().is_none());
+        assert_eq!(state.store.get_blob(&second_digest).await.unwrap().unwrap(), payload.as_bytes());
+        assert_eq!(state.store.list_blobs(0).await.unwrap().len(), 1);
     }
 
     #[tokio::test]

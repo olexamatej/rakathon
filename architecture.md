@@ -6,7 +6,7 @@
 
 | Area | Responsibility |
 | --- | --- |
-| `apps/patient-web/` | Patient PWA: photos, medication list, regimen, local history. Recognition and upload currently remain simulated until integration. |
+| `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same local static server. Recognition, doctor retrieval and doctor interactions remain simulated. |
 | Root `App.tsx`, `src/` | Separate older Expo prototype; preserve its entry points. |
 | `apps/doctor-web/` | Doctor-facing browser UI area. |
 | `services/transfer-api/` | Rust/Axum opaque JSON storage backed by SQLite. |
@@ -28,6 +28,13 @@ limit (1,048,576 bytes). The proxy must permit the same limit when deployed.
 PINs are six random Crockford Base32 characters, stored only as HMAC digests;
 collisions do not overwrite data. Keep `TRANSFER_HMAC_SECRET` outside source
 control and images; rotation invalidates outstanding PINs.
+
+The patient PWA sends `{ "text": "…" }`, where text is the current tab-separated
+list including optional regimen and schedules, without photographs or local IDs.
+It records a local snapshot and displays the returned PIN only after a valid 201
+response. The receipt timestamp is client-side; storage returns only the PIN.
+No automatic retry or offline upload queue is used. The local Node static server
+does not proxy `/api`; integrated uploads require the same-origin VPS proxy.
 
 Admin-only endpoints, enabled with `STORAGE_ADMIN_PASSWORD`:
 `GET /v1/admin/blobs` lists paginated size/HMAC metadata;

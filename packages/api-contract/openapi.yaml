@@ -12,6 +12,10 @@ paths:
     post:
       operationId: createTransfer
       summary: Store an opaque JSON blob
+      description: >-
+        Every successful POST creates a separate stored blob with a distinct PIN,
+        even for byte-identical payloads. No content deduplication or idempotency;
+        repeated submissions are independent copies.
       requestBody:
         required: true
         content:

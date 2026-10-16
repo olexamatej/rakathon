@@ -134,7 +134,8 @@ mod tests {
             .await.unwrap_or_else(|_| panic!("list rejected"));
         let json = serde_json::to_value(&list).unwrap();
         assert_eq!(list.items.len(), 2);
-        assert_eq!(list.items[0].size_bytes, 20);
+        assert_eq!(list.items[0].pin_digest, "02".repeat(32));
+        assert_eq!(list.items[0].size_bytes, 4);
         assert_eq!(json["items"][0].as_object().unwrap().len(), 2);
         assert!(json["items"][0].get("payload").is_none());
         let digest = list.items[0].pin_digest.clone();
@@ -142,8 +143,8 @@ mod tests {
             .await.unwrap_or_else(|_| panic!("delete rejected")), StatusCode::NO_CONTENT);
         assert!(matches!(delete_blob(State(state.clone()), ConnectInfo(address), Path(digest), headers()).await, Err(ApiError::NotFound)));
         assert!(matches!(delete_blob(State(state.clone()), ConnectInfo(address), Path("invalid".to_owned()), headers()).await, Err(ApiError::BadRequest)));
-        assert!(state.store.get_blob(&[1; 32]).await.unwrap().is_none());
-        assert_eq!(state.store.get_blob(&[2; 32]).await.unwrap().unwrap(), b"null");
+        assert_eq!(state.store.get_blob(&[1; 32]).await.unwrap().unwrap(), b" {\"synthetic\":true} ");
+        assert!(state.store.get_blob(&[2; 32]).await.unwrap().is_none());
         assert_eq!(state.store.list_blobs(0).await.unwrap().len(), 1);
     }
 

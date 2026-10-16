@@ -14,7 +14,9 @@ No medication schema, wrapper, or encryption envelope is required.
 PINs use six random Crockford Base32 characters. Collisions never overwrite data;
 only keyed PIN digests are stored in SQLite. GET is repeatable and does not delete
 or consume the blob. There is no expiry, public DELETE, revocation, or idempotency key.
-Each successful POST creates a new blob, including retries.
+Each successful POST creates a separate database row with a distinct PIN, even
+when the request bytes (including photos or lists) are identical. There is no
+content-based deduplication, including retries. Copies can be deleted independently.
 
 ```sh
 curl http://127.0.0.1:3000/v1/transfers \

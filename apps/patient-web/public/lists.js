@@ -13,7 +13,8 @@ const isDate = value => typeof value === 'string' && Number.isFinite(Date.parse(
 const isId = value => typeof value === 'string' && /^[a-z0-9-]{8,80}$/.test(value);
 const isText = (value, limit) => typeof value === 'string' && value.length <= limit;
 const isReceipt = value => value && typeof value.pin === 'string'
-  && /^[A-Z2-9]{6}$/.test(value.pin) && isDate(value.sentAt);
+  // Keep old simulated PINs readable; services.js strictly validates new storage PINs.
+  && /^[A-Z0-9]{6}$/.test(value.pin) && isDate(value.sentAt);
 const isItems = items => Array.isArray(items)
   && items.every(item => item && isId(item.id)
     && isText(item.name, 120) && isText(item.dosage, 120)

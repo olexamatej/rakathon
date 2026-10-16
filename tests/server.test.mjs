@@ -20,10 +20,17 @@ test('patient routes, PWA assets and private-file boundaries', async t => {
     assert.equal(response.status, 200);
     assert.match(await response.text(), /lang="cs"/);
   }
+  for (const path of ['/lekar', '/lekar/', '/lekar.js', '/lekar.css', '/doctor.js', '/doctor-services.js', '/regimen-combo.js']) {
+    assert.equal((await fetch(base + path)).status, 200, path);
+  }
+  assert.match(await (await fetch(base + '/lekar')).text(), /PIN pacienta/);
   const regimens = await (await fetch(base + '/regimens.json')).json();
   assert.ok(regimens.length > 1000 && regimens.every(name => typeof name === 'string'));
   assert.ok(regimens.includes('A-CMF'));
   assert.ok(!regimens.some(name => /bevacizumab-[a-z]{4}\)/.test(name)), 'biosimilar copies are excluded');
+  const drugs = await (await fetch(base + '/regimen-drugs.json')).json();
+  assert.ok(Array.isArray(drugs['A-CMF']) && drugs['A-CMF'].includes('Doxorubicin'));
+  assert.deepEqual(Object.keys(drugs).sort(), regimens);
   const manifest = await (await fetch(base + '/manifest.webmanifest')).json();
   assert.equal(manifest.start_url, '/pacient');
   assert.equal(manifest.display, 'standalone');

@@ -16,8 +16,12 @@ only with synthetic data; use a strong random password for anything else.
 
 The form sends the password as a Bearer header on each API request over HTTPS.
 The API checks a keyed password digest in constant time. The browser keeps the
-password only in memory, clears the field on submit, and clears access on logout,
-reload, navigation or after 15 minutes. This is not a server-side session: anyone
+password in tab-scoped `sessionStorage`, clears the field on submit, and restores
+access after refresh in the same tab. Logout, a rejected password or expiry clears
+it; the original 15-minute deadline is not extended by refresh. Closing the tab
+normally clears storage (browser session restoration may restore it until expiry).
+If storage is blocked, login works in memory only. Same-origin JavaScript can
+read this storage, so use a trusted browser and synthetic data. This is not a server-side session: anyone
 knowing the password can call the API directly until it is changed and the API
 restarted. No cookies means cross-site forms cannot authenticate deletions.
 API responses and static admin assets use `Cache-Control: no-store`; there is no
