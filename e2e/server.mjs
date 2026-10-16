@@ -16,6 +16,7 @@ const api = spawn(resolve(process.env.E2E_API_BINARY || '../services/transfer-ap
     PILLGAZE_DB_PATH: join(directory, 'storage.sqlite3'),
     TRANSFER_HMAC_SECRET: randomBytes(32).toString('hex'),
     STORAGE_ADMIN_PASSWORD: 'local-e2e-password',
+    STORAGE_ADMIN_DEBUG_VISIBILITY: 'true',
   },
   stdio: ['ignore', 'ignore', 'pipe'],
 });

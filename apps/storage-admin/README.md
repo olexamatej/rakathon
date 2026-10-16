@@ -36,6 +36,10 @@ respect `Retry-After: 60`; the UI does not automatically retry or poll.
 - `DELETE /api/v1/admin/blobs/{pinDigest}`: hard delete one blob, returning 204;
   unknown digest returns 404, malformed digest 400. Requires the admin password;
   the digest is not an authorization credential. Legacy rows are untouched.
+- `DELETE /api/v1/admin/blobs`: hard delete all blobs across all pages with one
+  database statement; returns 204 even when empty. The **Smazat vše** button next
+  to **Obnovit** requires confirmation, then reloads the first page. This invalidates
+  all current storage PINs. Authentication, rate limits and no-store apply as above.
 
 The public `/api` prefix is removed by the existing frontend proxy.
 Delete removes the live row, not necessarily old SQLite pages/WAL or backups;

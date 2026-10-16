@@ -5,7 +5,7 @@ info:
   description: >-
     Store opaque JSON and retrieve its exact bytes using a six-character PIN.
     No expiry, consumption, revocation, or encryption enforcement. Synthetic data only.
-    Optional password-protected admin lists metadata and deletes selected blobs.
+    Optional password-protected admin lists metadata and deletes selected or all blobs.
     Responses use Cache-Control: no-store. Never log payloads, PINs or admin credentials.
 paths:
   /v1/transfers:
@@ -64,13 +64,35 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
   /v1/admin/blobs:
+    delete:
+      operationId: deleteAllAdminBlobs
+      summary: Hard delete every opaque JSON blob across all pages
+      description: >-
+        Requires the admin password and shares the admin rate limit. A single
+        database statement removes all current blobs, invalidating their PINs.
+        Does not delete legacy encrypted transfers, schema, credentials or backups.
+        Deleting an empty storage succeeds. Concurrent later uploads remain possible.
+      security:
+        - StorageAdminPassword: []
+      responses:
+        '204':
+          description: All current blobs deleted; no response body.
+        '401':
+          description: Missing or invalid admin password.
+        '404':
+          description: Admin endpoints disabled.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
     get:
       operationId: listAdminBlobs
-      summary: List opaque JSON storage metadata only
+      summary: List opaque JSON storage metadata with optional debug content
       description: >-
         Enabled only when STORAGE_ADMIN_PASSWORD is configured. Requires its
-        value as a Bearer credential over HTTPS. No original PINs or payloads
-        are returned. Admin calls share a 60/minute socket-IP rate limit.
+        value as a Bearer credential over HTTPS. Original PINs and payloads are
+        returned only with includeSensitive=true and STORAGE_ADMIN_DEBUG_VISIBILITY=true.
+        Older rows may have no stored PIN. Admin calls share a 60/minute socket-IP rate limit.
       security:
         - StorageAdminPassword: []
       parameters:
@@ -81,15 +103,20 @@ paths:
             minimum: 0
             maximum: 4294967295
             default: 0
+        - name: includeSensitive
+          in: query
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
-          description: At most 100 metadata rows, ordered by digest.
+          description: At most 100 rows, newest first.
           content:
             application/json:
               schema:
                 type: object
                 additionalProperties: false
-                required: [items, hasMore]
+                required: [items, hasMore, sensitiveEnabled]
                 properties:
                   items:
                     type: array
@@ -106,8 +133,16 @@ paths:
                           type: integer
                           minimum: 0
                           description: Exact JSON payload byte count, not database disk usage.
+                        pin:
+                          $ref: '#/components/schemas/Pin'
+                        payload:
+                          type: string
+                          description: Exact stored JSON text, available only in debug mode.
                   hasMore:
                     type: boolean
+                  sensitiveEnabled:
+                    type: boolean
+                    description: Whether the server permits sensitive debug visibility.
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

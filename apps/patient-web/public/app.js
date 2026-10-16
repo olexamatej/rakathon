@@ -111,6 +111,7 @@ function editor() {
       <ul id="regimen-list" role="listbox" aria-label="Návrhy režimů" hidden></ul></div></section>`
       : `<button type="button" class="add-link" data-action="add-regimen" ${busy ? 'disabled' : ''}>${icon('plus')} Přidat režim onkologické léčby</button>`}
     <section class="photo-section" aria-labelledby="photo-title"><div class="section-heading"><h2 id="photo-title">Přidejte fotografie</h2></div>
+      <p>Ukázkový režim: každá fotografie přidá tři připravená léčiva. Odeslaný seznam si lékař načte pomocí PINu.</p>
       <div class="photo-actions"><button type="button" class="secondary" data-action="gallery" ${busy ? 'disabled' : ''}>${icon('image')} Z galerie</button>
         <button type="button" class="secondary" data-action="camera" ${busy ? 'disabled' : ''}>${icon('camera')} Vyfotit</button></div>
       <input type="file" id="camera" accept="image/*" capture="environment" hidden ${busy ? 'disabled' : ''}>
@@ -174,7 +175,7 @@ async function addPhotos(files) {
       image.src = job.url;
       await image.decode().catch(() => { throw new Error('Fotku nelze přečíst. Zkuste JPEG, PNG nebo WebP.'); });
       render();
-      const result = await recognizePhoto(job.file);
+      const result = await recognizePhoto(job.file, { mode: 'demo' });
       const items = Array.isArray(result) ? result : result.items;
       const regimen = Array.isArray(result) ? '' : String(result.regimen || '').trim().slice(0, 200);
       job.count = items.length;
@@ -359,14 +360,7 @@ app.addEventListener('submit', async event => {
   let entry;
   try {
     // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
-    const payload = {
-      version: 1,
-      regimen,
-      items: items.map(({ name, dosage, dosesPerPackage, schedule }) => ({
-        name, dosage, dosesPerPackage, ...(schedule ? { schedule } : {}),
-      })),
-    };
-    const receipt = await sendList(payload);
+    const receipt = await sendList({ items, regimen });
     entry = recordSubmission(state, items, receipt, regimen);
     persist();
   } catch (error) {

@@ -1,8 +1,11 @@
 # Gemini photo transcription
 
-The patient PWA's photo/gallery flow calls Gemini **3.6 Flash** through the Node
-server. It no longer returns hard-coded example medicines. This does not change
-the separate older Expo prototype at the repository root.
+The Gemini **3.6 Flash** adapter runs through the Node server. The patient PWA
+currently explicitly selects `{ mode: 'demo' }` to provide three complete synthetic
+medicines for the PIN handoff demonstration. That mode makes no Gemini request.
+Calling `recognizePhoto(file)` without the demo option retains real transcription
+and never replaces errors with mock results. This does not change the separate
+older Expo prototype at the repository root.
 
 ## Run
 

@@ -54,6 +54,11 @@ impl TransferStore {
         Ok(result.rows_affected() == 1)
     }
 
+    pub async fn delete_all_blobs(&self) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM blob_transfers").execute(&self.pool).await?;
+        Ok(())
+    }
+
     // Payloads are not unique: identical uploads must occupy separate rows.
     // False means a PIN collision. Never overwrite an existing payload.
     pub async fn create_blob(
