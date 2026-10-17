@@ -55,7 +55,7 @@ test('future local expiry checks HEAD, preserves available flow and clears consu
   await page.reload();
   await expectFresh(page);
   await expect(page.locator('.current-submission')).toContainText('Platnost do');
-  await expect(page.locator('.current-submission')).toContainText('Nedostupnost zjištěna');
+  await expect(page.locator('.current-submission')).not.toContainText('Nedostupnost zjištěna');
   await expect(page.locator('.current-submission')).not.toContainText('Platnost vypršela');
   expect(checks).toBe(3);
 });
@@ -272,7 +272,17 @@ test('expired local copy shows dates and explicitly reuploads the displayed snap
   });
   await page.reload();
   await expectFresh(page);
+  await expect(page.locator('.expired-heading')).toHaveCSS('color', 'rgb(164, 56, 50)');
+  await expect(page.locator('.expired-icon')).toBeVisible();
+  expect(await page.locator('.validity-date').evaluate(date => date.previousElementSibling.tagName)).toBe('H1');
+  expect(await page.locator('[data-action="reupload"]').evaluate(button => button.previousElementSibling.classList.contains('validity-date'))).toBe(true);
+  await expect(page.locator('time[datetime="2026-10-17T12:00:00Z"]')).toBeHidden();
+  const copyHelp = page.getByRole('button', { name: 'Informace o lokální kopii' });
+  await copyHelp.click();
+  await expect(copyHelp).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('time[datetime="2026-10-17T12:00:00Z"]')).toBeVisible();
+  await copyHelp.click();
+  await expect(page.locator('#local-copy-info')).toBeHidden();
   await expect(page.locator('time[datetime="2026-10-01T12:00:00Z"]')).toBeVisible();
   expect(writes).toEqual([]);
   await page.getByRole('button', { name: 'Znovu nahrát a získat nový PIN' }).click();
