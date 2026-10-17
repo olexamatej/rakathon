@@ -139,7 +139,7 @@ function render(focus = false) {
     <p class="validity-info generated-at" id="local-copy-info" ${localCopyInfoOpen ? '' : 'hidden'}>Lokální kopie pochází z nahrání <time datetime="${escape(receipt.sentAt)}">${escape(formatDate(receipt.sentAt))}</time>.</p>` : ''}
     ${!receipt.expired ? `<button class="primary" data-action="renew" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
     <p class="validity-info" id="validity-info" ${validityInfoOpen ? '' : 'hidden'}>Data jsou uchována pouze dokud nejsou zobrazena zdravotníkem, nebo do uvedeného data platnosti. Pokud je vaše plánovaná návštěva až po konci platnosti, musíte platnost před návštěvou prodloužit.</p>` : ''}
-    ${receipt.expired ? `<p class="notice">Původní PIN už nelze použít pro předání lékaři. Zde vidíte pouze lokální kopii uloženou v tomto zařízení, nikoli aktuálně sdílený seznam. Datum jejího nahrání najdete pod otazníkem u platnosti. Zkontrolujte, zda jsou léky stále aktuální. Seznam můžete zahodit, nebo jej znovu nahrát a získat nový PIN.</p>` : ''}
+    ${receipt.expired ? `<p class="notice">Původní PIN už nelze použít pro předání lékaři. Zde vidíte pouze lokální kopii uloženou v tomto zařízení, nikoli aktuálně sdílený seznam. Zkontrolujte, zda jsou léky stále aktuální. Seznam můžete zahodit, nebo jej znovu nahrát a získat nový PIN.</p>` : ''}
     ${receipt.expired ? `<div class="saved-list"><h2>Uložený seznam léčiv:</h2>
     ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
     ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>` : ''}
