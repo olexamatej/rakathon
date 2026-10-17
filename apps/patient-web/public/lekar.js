@@ -225,7 +225,7 @@ function cellInput(item, field, label, attributes = {}) {
 
 function listView(list) {
   return `<div class="list-head"><button type="button" class="icon-button close-list" data-action="close-list" aria-label="Zavřít aktuální seznam" title="Zavřít aktuální seznam">${icon('close')}</button><h1>Seznam léčiv</h1>
-      <p>PIN <code>${escape(list.pin)}</code> · ${list.sentAt ? 'odesláno' : 'načteno'} ${escape(date(list.sentAt || list.loadedAt))} v ${escape(time(list.sentAt || list.loadedAt))} · ${itemCount(list.items.length)}</p></div>
+      <p>PIN <code>${escape(list.pin)}</code> · ${list.sentAt ? 'odesláno' : 'načteno'} ${escape(date(list.sentAt || list.loadedAt))} v ${escape(time(list.sentAt || list.loadedAt))} · ${itemCount(list.items.length)}</p><div id="pin-entry"></div></div>
     ${regimenRow(list)}
     ${list.items.length ? `<div class="table-wrap"><table class="med-table"><thead><tr>
         <th>Léčivo</th><th>Síla / dávkování</th><th>Kdy</th><th>Léčivé látky</th><th><span class="sr-only">Akce</span></th></tr></thead><tbody>
@@ -244,9 +244,12 @@ function listView(list) {
 }
 
 function render() {
+  const pinForm = $('#pin-form');
   const list = currentList();
   $('#main').innerHTML = list ? listView(list)
-    : `<div class="doc-empty">${icon('list')}<strong>Zadejte PIN pacienta</strong>Seznam léčiv se zobrazí zde.</div>`;
+    : '<div class="list-head"><h1>Seznam léčiv</h1><div id="pin-entry"></div></div>';
+  // Move the existing form to preserve its listeners, value and loading/error state.
+  $('#pin-entry').append(pinForm);
   document.title = `${list ? `PIN ${list.pin}` : 'Lékař'} · PillGaze`;
   document.querySelectorAll('.cell-input[data-field="name"]').forEach(input => medicineNames.bind(input));
   document.querySelectorAll('.regimen-input').forEach(input => regimenNames.bind(input));

@@ -18,11 +18,13 @@ test('close clears the displayed PIN, list and shared link without deleting stor
   });
   await page.goto('/lekar?pin=ABC234&source=test');
   await expect(page.locator('#main code')).toHaveText('ABC234');
+  await expect(page.locator('.list-head #pin-form')).toBeVisible();
+  await expect(page.locator('.doc-side')).toHaveCount(0);
   await expect(page.locator('#main tbody tr')).toHaveCount(2);
   const close = page.getByRole('button', { name: 'Zavřít aktuální seznam', exact: true });
   await close.focus();
   await page.keyboard.press('Enter');
-  await expect(page.locator('#main')).toContainText('Zadejte PIN pacienta');
+  await expect(page.locator('#main')).toContainText('PIN pacienta');
   await expect(page.locator('#main code')).toHaveCount(0);
   await expect(page.locator('#main tbody tr')).toHaveCount(0);
   await expect(page.locator('#interactions-slot')).toHaveCount(0);
