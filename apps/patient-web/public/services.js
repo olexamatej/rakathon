@@ -13,20 +13,9 @@ export function loadRegimens() {
 }
 
 // The transcription API returns only name + schedule; map unknown legacy UI fields to empty strings.
-export async function recognizePhoto(file, { mode = 'transcription' } = {}) {
+export async function recognizePhoto(file) {
   if (!file?.type.startsWith('image/')) throw new Error('Vyberte prosím fotografii.');
   if (file.size > 20 * 1024 * 1024) throw new Error('Fotografie je příliš velká. Vyberte snímek do 20 MB.');
-  // The patient demo explicitly requests these complete synthetic medicines.
-  // Keep real transcription available without silently falling back after failures.
-  if (mode === 'demo') {
-    await new Promise(resolve => setTimeout(resolve, 1100));
-    return [
-      { id: newId(), name: 'PARALEN', dosage: '500 mg', dosesPerPackage: '24', schedule: '1-0-1' },
-      { id: newId(), name: 'IBALGIN', dosage: '400 mg', dosesPerPackage: '30', schedule: '0-1-0' },
-      { id: newId(), name: 'LETROX', dosage: '50 mikrogramů', dosesPerPackage: '100', schedule: '1-0-0' },
-    ];
-  }
-  if (mode !== 'transcription') throw new Error('Neplatný režim rozpoznávání.');
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('Použijte fotografii JPEG, PNG nebo WebP.');
   let response;
   try {

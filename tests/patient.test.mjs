@@ -182,7 +182,7 @@ test('optional API-provided schedule is passed to the handoff but never required
 
 test('recognition errors and invalid outputs never produce example medicines', async t => {
   const photo = new File(['synthetic fixture'], 'fixture.png', { type: 'image/png' });
-  for (const response of [new Response('', { status: 429 }), Response.json({ items: [] }),
+  for (const response of [new Response('', { status: 429 }), new Response('', { status: 503 }), Response.json({ items: [] }),
     Response.json([{ name: 'X', schedule: '1-0-0', extra: true }]), new Response('{broken')]) {
     t.mock.method(globalThis, 'fetch', async () => response);
     await assert.rejects(recognizePhoto(photo));
@@ -192,4 +192,15 @@ test('recognition errors and invalid outputs never produce example medicines', a
   const items = await recognizePhoto(photo);
   assert.equal(items[0].name, '');
   assert.equal(canSend(items), false);
+});
+
+test('legacy demo option cannot bypass the real transcription endpoint', async t => {
+  const photo = new File(['synthetic fixture'], 'fixture.png', { type: 'image/png' });
+  const request = t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, '/api/transcribe');
+    assert.equal(options.body, photo);
+    return new Response('', { status: 503 });
+  });
+  await assert.rejects(recognizePhoto(photo, { mode: 'demo' }));
+  assert.equal(request.mock.callCount(), 1);
 });

@@ -1,5 +1,18 @@
 # Rakathon / PillGaze — kontext pro dalšího agenta
 
+### Aktualizace 17. 10. 2026 — úplné odstranění demo rozpoznávání
+
+- Z pacientského `services.js` odstraněna celá demo větev a její tři
+  připravené léky. `recognizePhoto` vždy volá `/api/transcribe`;
+  ani starý argument `{mode: 'demo'}` už nemůže vrátit lokální příklady.
+- Test přenosu používá syntetickou odpověď pouze v testu, nikoli v klientovi.
+  Regrese ověřuje, že 503 i při starém demo argumentu skončí chybou.
+- Dříve uložené seznamy v localStorage nejsou automaticky mazány: z názvu
+  léčiva nelze bezpečně poznat skutečný záznam od dřívější demo položky.
+  Staré ukázkové položky je nutné smazat v UI; čistý prohlížeč začíná prázdný.
+- Předchozí zjištění o externí 503 platí do nového ověření po změně její
+  konfigurace; při tomto úklidu se externí modelové požadavky neposílají.
+
 ### Aktualizace 17. 10. 2026 — produkční napojení fotografií, externí služba blokuje rozpoznání
 
 - Frontend oprava **bf30163** je pushnutá v main a nasazená: kamera i galerie

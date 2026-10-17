@@ -7,9 +7,14 @@ import { addList, createDoctorState } from '../apps/patient-web/public/doctor.js
 
 const validPayload = { items: [{ name: 'Syntetické léčivo', dosage: '10 mg', dosesPerPackage: '30' }] };
 
-test('photo mock uploads a complete structured list readable by the actual doctor parser', async t => {
-  const items = await recognizePhoto(new File(['synthetic image'], 'photo.jpg', { type: 'image/jpeg' }), { mode: 'demo' });
-  assert.deepEqual(items.map(item => item.name), ['PARALEN', 'IBALGIN', 'LETROX']);
+test('transcribed photo uploads a structured list readable by the actual doctor parser', async t => {
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, '/api/transcribe');
+    assert.equal(options.method, 'POST');
+    return Response.json([{ name: 'Syntetické léčivo 10 mg', schedule: '1-0-0' }]);
+  });
+  const items = await recognizePhoto(new File(['synthetic image'], 'photo.jpg', { type: 'image/jpeg' }));
+  assert.deepEqual(items.map(item => item.name), ['Syntetické léčivo 10 mg']);
   const expected = items.map(({ id, ...item }) => item);
   let stored;
   t.mock.method(globalThis, 'fetch', async (_, options) => {
