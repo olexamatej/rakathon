@@ -5,6 +5,7 @@ import { loadEnvFile } from 'node:process';
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const DEFAULT_ENGINE_URL = 'https://rakathon.josefkuchar.com';
+const DEFAULT_BACKEND_URL = 'https://rakathon.denishromada.com';
 const engineUrl = () => (process.env.TRANSCRIBE_API_URL || process.env.INTERACTION_API_URL || DEFAULT_ENGINE_URL).replace(/\/$/, '');
 
 const files = {
@@ -34,6 +35,68 @@ const securityHeaders = {
   'Referrer-Policy': 'no-referrer',
   'Content-Security-Policy': "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
 };
+
+const adminFiles = {
+  '/storage-admin': ['index.html', 'text/html'],
+  '/storage-admin/': ['index.html', 'text/html'],
+  '/storage-admin/app.mjs': ['app.mjs', 'text/javascript'],
+  '/storage-admin/styles.css': ['styles.css', 'text/css'],
+};
+
+function backendOrigin(value) {
+  if (!value) return null;
+  const url = new URL(value);
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
+      url.pathname !== '/' || url.search || url.hash) {
+    throw new Error('WEB_BACKEND_URL musí být HTTP(S) origin bez cesty, hesla nebo query.');
+  }
+  return url.origin;
+}
+
+// A fixed upstream and explicit routes: never turn the development server into an open proxy.
+async function proxyBackend(req, res, origin, path) {
+  let methods;
+  if (path === '/api/v1/transfers') methods = ['POST'];
+  else if (/^\/api\/v1\/transfers\/[A-Za-z0-9]+$/.test(path)) methods = ['GET', 'HEAD'];
+  else if (/^\/api\/v1\/admin\/blobs(?:\/[a-f0-9]{64})?$/.test(path)) methods = ['GET', 'HEAD', 'DELETE'];
+  else if (['/api/health/live', '/api/health/ready'].includes(path)) methods = ['GET', 'HEAD'];
+  else if (['/api/transcribe', '/api/interaction-checks', '/api/interaction-research'].includes(path)) methods = ['POST'];
+  else return problem(res, 404, 'Nenalezeno', 'Tato API cesta není dostupná.');
+  if (!methods.includes(req.method)) {
+    res.setHeader('Allow', methods.join(', '));
+    return problem(res, 405, 'Nepovolená metoda', 'Tato metoda není povolena.');
+  }
+  const limit = path === '/api/transcribe' ? MAX_IMAGE_BYTES : 1024 * 1024;
+  if (Number(req.headers['content-length']) > limit) return problem(res, 413, 'Příliš velký požadavek', 'Požadavek je příliš velký.');
+  try {
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > limit) return problem(res, 413, 'Příliš velký požadavek', 'Požadavek je příliš velký.');
+      chunks.push(chunk);
+    }
+    const headers = {};
+    if (req.headers['content-type']) headers['Content-Type'] = req.headers['content-type'];
+    // Only storage admin needs user credentials. Never forward cookies or proxy headers.
+    if (path.startsWith('/api/v1/admin/') && req.headers.authorization) headers.Authorization = req.headers.authorization;
+    const query = new URL(req.url, 'http://localhost').search;
+    const response = await fetch(`${origin}${path}${query}`, {
+      method: req.method, headers,
+      body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks),
+      redirect: 'error', signal: AbortSignal.timeout(path === '/api/transcribe' ? 130_000 : 35_000),
+    });
+    const responseHeaders = { ...securityHeaders, 'Cache-Control': 'no-store' };
+    for (const name of ['content-type', 'retry-after', 'content-language', 'allow']) {
+      if (response.headers.has(name)) responseHeaders[name] = response.headers.get(name);
+    }
+    const body = Buffer.from(await response.arrayBuffer());
+    res.writeHead(response.status, responseHeaders);
+    res.end(req.method === 'HEAD' ? undefined : body);
+  } catch {
+    problem(res, 502, 'Backend není dostupný', 'Nasazený backend se nepodařilo zavolat.');
+  }
+}
 
 // Only regimen names and their drugs leave the data directory. data/regimens.json is the slim
 // extract of solid-tumors-regimens.json (scripts/slim_regimens.py), so no extra data is loaded.
@@ -150,13 +213,18 @@ async function recognizeImage(req, res) {
   }
 }
 
-export function createAppServer() {
+export function createAppServer({ backendUrl = process.env.WEB_BACKEND_URL } = {}) {
+  const backend = backendOrigin(backendUrl);
   return createServer(async (req, res) => {
     let path;
     try {
       path = new URL(req.url, 'http://localhost').pathname;
     } catch {
       res.writeHead(400).end('Neplatná adresa.');
+      return;
+    }
+    if (backend && path.startsWith('/api/')) {
+      await proxyBackend(req, res, backend, path);
       return;
     }
     if (path === '/api/transcribe') {
@@ -173,6 +241,17 @@ export function createAppServer() {
     }
     if (path === '/') {
       res.writeHead(302, { Location: '/pacient' }).end();
+      return;
+    }
+    if (backend && Object.hasOwn(adminFiles, path)) {
+      const [name, type] = adminFiles[path];
+      try {
+        const body = await readFile(new URL(`../storage-admin/public/${name}`, import.meta.url));
+        res.writeHead(200, { ...securityHeaders, 'Cache-Control': 'no-store', 'Content-Type': `${type}; charset=utf-8` });
+        res.end(req.method === 'HEAD' ? undefined : body);
+      } catch {
+        res.writeHead(500).end('Soubor administrace není dostupný.');
+      }
       return;
     }
     if (path === '/sukl-names.json' || path === '/sukl-substances.json') {
@@ -216,12 +295,19 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try { loadEnvFile(fileURLToPath(new URL('../../.env', import.meta.url))); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   const port = Number(process.env.PORT || 8081);
-  const server = createAppServer();
+  const remote = process.argv.includes('--remote');
+  const backendUrl = process.env.WEB_BACKEND_URL || (remote ? DEFAULT_BACKEND_URL : undefined);
+  const server = createAppServer({ backendUrl });
   server.on('error', error => {
     console.error(`Server nelze spustit: ${error.message}`);
     process.exitCode = 1;
   });
-  server.listen(port, process.env.HOST || '0.0.0.0', () => {
+  server.listen(port, process.env.HOST || (backendUrl ? '127.0.0.1' : '0.0.0.0'), () => {
     console.log(`PillGaze: http://localhost:${port}/pacient`);
+    console.log(`Lékař: http://localhost:${port}/lekar`);
+    if (backendUrl) {
+      console.log(`Storage admin: http://localhost:${port}/storage-admin`);
+      console.log(`Backend: ${backendOrigin(backendUrl)} — uploady a mazání mění nasazená data; používejte jen syntetická data.`);
+    }
   });
 }

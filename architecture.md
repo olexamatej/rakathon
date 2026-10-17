@@ -35,7 +35,14 @@ tab-separated payloads. Patient and doctor share validation for this format. Unk
 It records a local snapshot and displays the returned PIN only after a valid 201
 response. The receipt timestamp is client-side; storage returns only the PIN.
 No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
-storage uploads under `/api/v1/` require the same-origin VPS proxy.
+storage uploads under `/api/v1/` use the same-origin VPS proxy in deployment.
+For local UI development, `npm run web:remote` (or `WEB_BACKEND_URL` set to a
+deployed HTTP(S) origin) proxies the allowlisted `/api/` endpoints to that origin,
+including storage, transcription and interactions. The local server also serves
+the checked-out storage admin assets in this mode and binds to loopback by default.
+This changes no API contract or production CORS; requests affect deployed data,
+not a temporary local database. Credentials are forwarded only to admin routes;
+cookies and forwarding headers are not forwarded. Redirects and retries are disabled.
 
 Admin-only endpoints, enabled with `STORAGE_ADMIN_PASSWORD`:
 `GET /v1/admin/blobs` lists paginated size/HMAC metadata;

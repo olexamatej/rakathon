@@ -6,6 +6,13 @@ existing 1 MiB widening migration still applies when updating an older API.
 
 ## Authentication
 
+For local admin UI against the deployed API, run `npm run web:remote` at the
+repository root and open `http://localhost:8081/storage-admin`. Assets come from
+your checkout; API calls go to the deployed backend through the local same-origin
+proxy. Enter the existing admin password in the form. Deletions affect live data,
+including **Smazat vše**; this is not a disposable database. See the root README
+for `WEB_BACKEND_URL` overrides. Use synthetic data only.
+
 Set `STORAGE_ADMIN_PASSWORD` on the **transfer API**, using its protected external
 environment file, not Git or the admin image. No default password is built in;
 when unset, both admin endpoints return 404. Use the agreed hackathon password

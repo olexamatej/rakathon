@@ -20,6 +20,33 @@ npm start           # nebo npm run web / npm run web:patient
 # http://localhost:8081/lekar   — lékař
 ```
 
+### Lokální UI proti nasazenému backendu
+
+```sh
+npm run web:remote
+# http://localhost:8081/pacient
+# http://localhost:8081/lekar
+# http://localhost:8081/storage-admin
+```
+
+Všechna tři UI a katalogy se načítají z vašeho checkoutu. Lokální server proxyuje
+API požadavky přes HTTPS na `https://rakathon.denishromada.com`, včetně storage,
+přepisu fotografií a interakcí. Prohlížeč zůstává na localhostu, takže není potřeba
+CORS ani lokální backend, databáze nebo klíč Gemini. Remote režim má přednost před
+`TRANSCRIBE_API_URL` a `INTERACTION_API_URL`; nemění demo/real režim rozpoznávání v UI.
+
+**Nejde o sandbox dat:** odeslané seznamy se ukládají na nasazeném backendu,
+PINy fungují i na veřejném webu a admin mazání mění živou databázi. Používejte jen
+syntetická data. Admin vyžaduje stávající heslo zadané do formuláře; nedávejte je
+do konfigurace ani Gitu. Respektujte `Retry-After`; proxy požadavky automaticky neopakuje.
+
+Vlastní nasazený backend nastavíte přes `WEB_BACKEND_URL` v lokálním `.env`
+(HTTP(S) origin **bez `/api`**, cesty nebo credentials). Tato proměnná zapíná proxy
+i pro `npm start`. `PORT` mění port; remote režim naslouchá jen na `127.0.0.1`.
+Pro sdílení do LAN lze výslovně nastavit `HOST`, ale tím zpřístupníte i proxy
+a admin na vaší síti; webkamera mimo localhost vyžaduje HTTPS.
+Bez remote režimu a bez `WEB_BACKEND_URL` zůstává dosavadní chování serveru.
+
 ## Pacientská PWA
 
 Webové UI je v `apps/patient-web/public/`. Pro skutečné rozpoznávání fotografií
@@ -62,8 +89,9 @@ PIN vrací storage API a PWA jej zobrazí po úspěšném odeslání. Blob lze v
 přes `GET /api/v1/transfers/{pin}`. Lékař nadále
 umí načíst i dřívější textový formát `{ text }`.
 Používejte pouze syntetická data: storage nevynucuje šifrování ani expiraci.
-Lokální Node server obsluhuje UI, proxy rozpoznávání fotografií a proxy interakcí; předání seznamu
-vyžaduje stejný origin s `/api/v1/` proxy na storage. Automatické opakování odeslání není zapnuté.
+Lokální Node server obsluhuje UI, proxy rozpoznávání fotografií a proxy interakcí;
+pro předání seznamu na nasazený storage použijte `npm run web:remote` výše.
+Automatické opakování odeslání není zapnuté.
 Při změně souborů UI zvyšte verzi cache v `apps/patient-web/public/sw.js`. Testy PWA jsou součástí
 `npm test`; samostatně je spustíte příkazem
 `node --test tests/patient.test.mjs tests/server.test.mjs`.
