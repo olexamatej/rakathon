@@ -9,7 +9,7 @@ async function adminAction(page, action) {
   const response = await responsePromise;
   expect(response.status(), 'Admin listing must succeed').toBe(200);
   await expect(page.locator('#storage')).toBeVisible();
-  await expect(page.locator('#status')).not.toHaveText('Načítání…');
+  await expect(page.locator('#status')).toHaveText('Hotovo.');
   await expect(page.locator('#status')).toHaveAttribute('data-error', 'false');
 }
 

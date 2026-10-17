@@ -139,7 +139,10 @@ if (typeof document !== 'undefined') {
     const disabled = controls.map((button) => button.disabled);
     controls.forEach((button) => { button.disabled = true; });
     status('Načítání…');
-    try { await action(); }
+    try {
+      await action();
+      if (current === generation) status('Hotovo.');
+    }
     catch (error) {
       if (current !== generation) return;
       if (error.status === 401) logout(error.message);
