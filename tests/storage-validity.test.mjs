@@ -36,15 +36,14 @@ test('missing and legacy receipts are not confused with network or service failu
   await assert.rejects(checkList(entry));
 });
 
-test('receipt uses server time and token, expired restoration preserves local snapshot and ID', async t => {
+test('receipt uses server time and token; saved snapshots cannot switch PINs', async t => {
   const state = createState();
   const items = [{ id: 'medicine-local-id', name: 'Syntetické léčivo', dosage: '', dosesPerPackage: '' }];
   const original = recordSubmission(state, items, { ...entry, sentAt: headers['x-uploaded-at'], expiresAt: headers['x-expires-at'] });
   assert.throws(() => updateSubmission(state, original.id, items, { pin: '5678', sentAt: headers['x-uploaded-at'] }));
-  original.expired = true;
   t.mock.method(globalThis, 'fetch', async (_, options) => {
     assert.equal(options.method, 'POST');
-    return Response.json({ pin: '5678' }, { status: 201, headers });
+    return Response.json({ pin: '0042' }, { status: 201, headers });
   });
   const receipt = await sendList({ items });
   assert.equal(receipt.sentAt, headers['x-uploaded-at']);

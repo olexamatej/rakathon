@@ -23,7 +23,7 @@ modifying existing records. PUT still works when all PINs are occupied.
 Collisions never overwrite data;
 keyed PIN digests identify SQLite rows (debug mode may also store the PIN).
 GET atomically deletes and returns the blob: only one concurrent retrieval succeeds.
-If the response is lost, the patient must restore from their local snapshot.
+If the response is lost, the patient must upload again from scratch.
 There is no public DELETE, revocation, or idempotency key.
 Each successful POST creates a separate database row with a distinct PIN, even
 when the request bytes (including photos or lists) are identical. There is no
@@ -58,12 +58,15 @@ column tracks this most recent upload, so updated blobs move up in admin listing
 POST/PUT also return `X-Owner-Token` (random 256-bit upload credential) and
 `X-Expires-At`. Migration 0005 adds ownership and separate expiry timestamps;
 existing rows get a display deadline of upload + 14 days and no ownership token.
-Old local receipts are kept but need restoration with a new upload.
+Patient receipts without a valid future local expiry are cleared on load.
 Renewal changes only expiry, preserving JSON and the real upload time.
 **Demo only:** validity is display-only. No age-based deletion job or automatic
 age rejection is implemented; cleanup still only deletes rate-limit counters.
 Patient HEAD checks cannot consume data, and stale tokens cannot edit or renew
 a PIN later allocated to another upload. Never log the token.
+Patient load checks local expiry before HEAD. Expired deadlines or missing server
+rows clear the local PIN, saved list and draft and return to fresh photo upload.
+Network errors retain data for another check; expired lists cannot be restored.
 
 Operational probes remain `GET /health/live` and `GET /health/ready`.
 The latter checks SQLite. Source rate limits are 30 combined POST/PUT/renew writes,

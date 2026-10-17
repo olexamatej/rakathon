@@ -67,7 +67,7 @@ export async function sendList(payload, existingPin, ownerToken) {
   }
   if (response.status === 429) throw new Error('Příliš mnoho odeslání. Vyčkejte alespoň minutu před dalším pokusem.');
   if (response.status === 413) throw new Error('Seznam je příliš velký. Maximální velikost je 1 MiB.');
-  if (existingPin && response.status === 404) throw Object.assign(new Error('Seznam s tímto PINem již není v úložišti. Obnovte jeho platnost.'), { missing: true });
+  if (existingPin && response.status === 404) throw Object.assign(new Error('Platnost seznamu vypršela. Nahrajte fotografie léků znovu.'), { missing: true });
   if (response.status !== (existingPin ? 200 : 201)) throw new Error('Úložiště nyní nemůže potvrdit odeslání seznamu.');
   let pin;
   try {

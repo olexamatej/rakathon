@@ -111,7 +111,7 @@ export function updateSubmission(state, id, items, receipt, regimen = '') {
   const entry = { id, pin: receipt?.pin, sentAt: receipt?.sentAt, items: structuredClone(items) };
   copyValidity(entry, receipt);
   if (regimen.trim()) entry.regimen = regimen.trim();
-  if (!previous || (!previous.expired && previous.pin !== entry.pin) || !isSubmission(entry)) {
+  if (!previous || previous.pin !== entry.pin || !isSubmission(entry)) {
     throw new Error('Neplatná odpověď při uložení seznamu.');
   }
   state.submissions = [entry];

@@ -8,14 +8,14 @@ test('patient returns from the latest PIN to the original photo upload screen an
   expect(upload.status()).toBe(201);
   const { pin } = await upload.json();
   await page.goto('/pacient');
-  await page.evaluate(({ pin, item, ownerToken }) => {
+  await page.evaluate(({ pin, item, ownerToken, expiresAt }) => {
     localStorage.setItem('pillgaze:patient:v3', JSON.stringify({
-      items: [], submissions: [{ id: 'latest-local-id', pin, ownerToken, sentAt: '2026-10-17T12:00:00Z',
+      items: [], submissions: [{ id: 'latest-local-id', pin, ownerToken, expiresAt, sentAt: '2026-10-17T12:00:00Z',
         items: [{ id: 'medicine-local-id', ...item }], regimen: 'Původní režim' },
         { id: 'older-local-id', pin: '1234', sentAt: '2026-10-16T12:00:00Z',
           items: [{ id: 'older-medicine-id', ...item }] }],
     }));
-  }, { pin, item, ownerToken: upload.headers()['x-owner-token'] });
+  }, { pin, item, ownerToken: upload.headers()['x-owner-token'], expiresAt: upload.headers()['x-expires-at'] });
   await page.goto('/pacient?new=1');
   await expect(page.locator('h1.pin')).toHaveText(pin);
   await expect(page.locator('.submission-history, #history-title')).toHaveCount(0);
@@ -44,12 +44,9 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await doctor.goto(`/lekar?pin=${pin}`);
   await expect(doctor.locator('#main input[data-field="name"]')).toHaveValue(expected.items[0].name);
   await page.reload();
-  await expect(page.locator('h1')).toHaveText('Vypršelo');
+  await expect(page.locator('#photo-title')).toHaveText('Nahrajte fotografie léků');
   await expect(page.locator('h1.pin')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Obnovit platnost', exact: true }).click();
-  await expect(page.locator('h1.pin')).toBeVisible();
-  const restoredPin = await page.locator('h1.pin').textContent();
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).toEqual({ items: [], submissions: [] });
   await page.route('**/api/transcribe', route => route.fulfill({
     status: 200, contentType: 'application/json',
     body: JSON.stringify([{ name: 'Další syntetické léčivo', strength: '5 mg', schedule: null }]),
@@ -58,13 +55,13 @@ test('patient returns from the latest PIN to the original photo upload screen an
     name: 'synthetic.png', mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64'),
   });
-  await expect(page.locator('.medicine')).toHaveCount(2);
+  await expect(page.locator('.medicine')).toHaveCount(1);
   await expect(page.locator('.photo-status')).toHaveCount(0);
   await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
   await page.getByRole('button', { name: 'Uložit seznam' }).click();
-  await expect(page.locator('h1.pin')).toHaveText(restoredPin);
+  await expect(page.locator('h1.pin')).toBeVisible();
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
-  await expect(page.locator('.medicine')).toHaveCount(2);
+  await expect(page.locator('.medicine')).toHaveCount(1);
   await expect(page.locator('.photo-status')).toHaveCount(0);
   await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
   await expect(page.locator('.medicine input')).toHaveCount(0);
@@ -74,9 +71,9 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
   const upload = await context.request.post('/api/v1/transfers', { data: { version: 1, regimen: '', items: [item] } });
   const { pin } = await upload.json();
   await page.goto('/pacient');
-  await page.evaluate(({ pin, item, ownerToken }) => localStorage.setItem('pillgaze:patient:v3', JSON.stringify({
-    items: [], submissions: [{ id: 'latest-local-id', pin, ownerToken, sentAt: '2026-10-17T12:00:00Z', items: [{ id: 'medicine-local-id', ...item }] }],
-  })), { pin, item, ownerToken: upload.headers()['x-owner-token'] });
+  await page.evaluate(({ pin, item, ownerToken, expiresAt }) => localStorage.setItem('pillgaze:patient:v3', JSON.stringify({
+    items: [], submissions: [{ id: 'latest-local-id', pin, ownerToken, expiresAt, sentAt: '2026-10-17T12:00:00Z', items: [{ id: 'medicine-local-id', ...item }] }],
+  })), { pin, item, ownerToken: upload.headers()['x-owner-token'], expiresAt: upload.headers()['x-expires-at'] });
   await page.reload();
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await page.getByRole('button', { name: 'Přidat režim onkologické léčby' }).click();

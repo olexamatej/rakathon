@@ -47,7 +47,7 @@ const icons = {
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</svg>`;
-const isBusy = () => loadFailed || processing || sending;
+const isBusy = () => loadFailed || processing || sending || checking;
 
 function persist() {
   if (loadFailed) return;
@@ -127,18 +127,18 @@ function render(focus = false) {
     dateStyle: 'medium', timeStyle: 'short',
   }).format(new Date(value));
   const content = receipt ? `<main id="main" class="pin-screen">
-    <section class="current-submission">${!receipt.expired && verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
+    <section class="current-submission">${verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>`
-      : `<h1>${receipt.expired ? 'Vypršelo' : checking ? 'Ověřuji platnost…' : 'Platnost není ověřena'}</h1>`}
+      : `<h1>${checking ? 'Ověřuji platnost…' : 'Platnost není ověřena'}</h1>`}
     <p class="generated-at">Uloženo ${escape(formatDate(receipt.sentAt))}</p>
     ${receipt.expiresAt ? `<p>Platnost do ${escape(formatDate(receipt.expiresAt))}</p>` : ''}
     <div class="saved-list"><h2>Uložený seznam léčiv</h2>
     ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
     ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>
-    <p>Po načtení lékařem se seznam z úložiště smaže. Kopie zůstává v tomto zařízení.</p>
-    <button class="primary" data-action="renew" ${sending || checking || (!receipt.expired && verifiedEntry !== receipt) ? 'disabled' : ''}>${sending ? 'Ukládám…' : receipt.expired ? 'Obnovit platnost' : 'Prodloužit platnost'}</button>
-    ${!receipt.expired && verifiedEntry !== receipt && !checking ? '<button class="secondary" data-action="check-validity">Ověřit platnost</button>' : ''}
-    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${sending ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>
+    <p>Po načtení lékařem nebo vypršení platnosti budete muset seznam nahrát znovu.</p>
+    <button class="primary" data-action="renew" ${sending || checking || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
+    ${verifiedEntry !== receipt && !checking ? '<button class="secondary" data-action="check-validity">Ověřit platnost</button>' : ''}
+    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${sending || checking || verifiedEntry !== receipt ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>
     ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
     <p class="save-status" role="status">${saveStatus()}</p><p class="message" role="status">${escape(message)}</p></section>
     </main>`
@@ -370,22 +370,26 @@ app.addEventListener('submit', async event => {
   const regimen = state.regimen || '';
   const origin = location.search;
   const editing = state.submissions[0];
+  if (editing && !(Date.parse(editing.expiresAt) > Date.now())) {
+    clearExpiredList();
+    render();
+    return;
+  }
   sending = true;
   message = '';
   render();
   let entry;
   try {
     // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
-    const existing = editing?.expired ? await checkList(editing) : editing;
-    const receipt = await sendList({ items, regimen }, existing ? editing.pin : undefined, existing ? editing.ownerToken : undefined);
+    const receipt = await sendList({ items, regimen }, editing?.pin, editing?.ownerToken);
     entry = editing
       ? updateSubmission(state, editing.id, items, receipt, regimen)
       : recordSubmission(state, items, receipt, regimen);
     verifiedEntry = entry.ownerToken ? entry : undefined;
     persist();
   } catch (error) {
-    if (error.missing && editing) { editing.expired = true; verifiedEntry = undefined; persist(); }
-    message = error.message || 'Odeslání se nezdařilo. Zkuste to znovu.';
+    if (error.missing && editing) clearExpiredList();
+    else message = error.message || 'Odeslání se nezdařilo. Zkuste to znovu.';
   } finally {
     sending = false;
     if (entry && location.search === origin) navigate(`?pin=${encodeURIComponent(entry.id)}`);
@@ -407,16 +411,13 @@ app.addEventListener('click', async event => {
       message = '';
       render();
       try {
-        let receipt;
-        if (previous.expired) {
-          const existing = await checkList(previous);
-          receipt = existing ? await renewList(previous)
-            : await sendList({ items: previous.items, regimen: previous.regimen || '' });
-        } else receipt = await renewList(previous);
+        if (!(Date.parse(previous.expiresAt) > Date.now())) {
+          clearExpiredList();
+          break;
+        }
+        const receipt = await renewList(previous);
         if (!receipt) {
-          previous.expired = true;
-          verifiedEntry = undefined;
-          message = 'Seznam již není v úložišti. Obnovte jeho platnost.';
+          clearExpiredList();
         } else {
           const entry = updateSubmission(state, previous.id, previous.items, receipt, previous.regimen || '');
           verifiedEntry = entry;
@@ -475,9 +476,26 @@ app.addEventListener('click', async event => {
 });
 
 window.addEventListener('popstate', () => { message = ''; render(true); });
+function clearExpiredList() {
+  state = createState();
+  photos.length = 0;
+  regimenOpen = false;
+  verifiedEntry = undefined;
+  persist();
+  history.replaceState(null, '', '/pacient');
+  message = 'Platnost seznamu vypršela. Nahrajte fotografie léků znovu.';
+}
+
 async function refreshValidity(force = false) {
   const entry = state.submissions[0];
-  if (!entry || entry.expired || checking || sending || (!force && Date.now() - lastCheck < 60_000)) return;
+  if (!entry || checking || sending || processing) return;
+  // Local deadline first: never call storage for an already expired receipt.
+  if (entry.expired || !(Date.parse(entry.expiresAt) > Date.now())) {
+    clearExpiredList();
+    render();
+    return;
+  }
+  if (!force && Date.now() - lastCheck < 60_000) return;
   lastCheck = Date.now();
   checking = true;
   verifiedEntry = undefined;
@@ -486,11 +504,10 @@ async function refreshValidity(force = false) {
   try {
     const receipt = await checkList(entry);
     if (state.submissions[0] !== entry) return;
-    if (!receipt) entry.expired = true;
+    if (!receipt || !(Date.parse(receipt.expiresAt) > Date.now())) clearExpiredList();
     else {
       Object.assign(entry, receipt);
-      entry.expired = Date.parse(entry.expiresAt) <= Date.now();
-      if (!entry.expired) verifiedEntry = entry;
+      verifiedEntry = entry;
     }
     persist();
   } catch (error) { message = error.message; }

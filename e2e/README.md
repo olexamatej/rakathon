@@ -6,10 +6,10 @@ server-issued PIN and **exactly one additional record** before retrieval. A sepa
 doctor context retrieves the exact list once, deleting the stored row; admin then
 returns to its original inventory.
 
-`storage-validity.spec.mjs` checks patient HEAD/renewal, retained local content after
-consumption, restoration, network failures without stale PIN display, and renewal
-of a display-expired demo row without duplicate uploads. `patient-resume.spec.mjs`
-also verifies restoration after a real doctor's consuming GET.
+`storage-validity.spec.mjs` checks local-expiry-first validation without API calls
+for expired receipts, HEAD/renewal for available lists, clearing local data after
+consumption, and network failures without stale PIN display. `patient-resume.spec.mjs`
+also verifies fresh photo upload after a real doctor's consuming GET.
 
 `patient-doctor.spec.mjs` covers **Vyfotit** on mobile and **Z galerie** on desktop with
 service workers enabled: a patient uploads a tiny synthetic image, the app's mock

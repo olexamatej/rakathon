@@ -61,8 +61,7 @@ storage's JSON body still contains only the PIN.
 The patient keeps one current PIN and reopens it on every page load. Previous
 local history migrates to its latest entry; the patient UI has no history. The button below the PIN
 returns to the original list and photo upload screen with that snapshot; saving uses PUT and replaces the local history entry
-  only after the server confirms the same PIN (restoration of missing data may issue
-  a new PIN). No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
+  only after the server confirms the same PIN. No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
 storage uploads under `/api/v1/` use the same-origin VPS proxy in deployment.
 For local UI development, `npm run web:remote` (or `WEB_BACKEND_URL` set to a
 deployed HTTP(S) origin) proxies the allowlisted `/api/` endpoints to that origin,
@@ -81,9 +80,12 @@ same admin authentication; the UI requires confirmation.
 Validity is display-only for the demo: there is **no age-based deletion job or
 server-side age rejection**. The existing cleanup worker still removes only rate
 limits. The patient checks on load/visible focus and at most once per visible minute,
-hides unverified PINs, and keeps the local snapshot/date after consumption or
-displayed expiry. Restore re-uploads a missing snapshot (new PIN/token) or renews
-an existing owned blob, without duplicating an expired-but-still-stored demo row.
+hides unverified PINs. On load it first compares the local expiry timestamp; only
+a future deadline permits a HEAD check. Expired/missing deadlines, a server 404,
+or an expired server deadline clear the current local PIN, saved snapshot, draft,
+and regimen and return to photo upload from scratch. Network/service failures
+retain local data without showing the unverified PIN. Available lists keep the
+current PIN/editing/extension flow; there is no restore-expired-list button.
 There is no public DELETE, revocation, or idempotency key.
 Each POST creates a new blob. The old encrypted endpoints and embedded browser
 demo are removed. Historical SQLite migrations and existing legacy rows are
