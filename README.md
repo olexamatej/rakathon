@@ -22,6 +22,9 @@ npm start           # nebo npm run web / npm run web:patient
 
 ### Lokální UI proti nasazenému backendu
 
+Podrobný postup, konfigurace, bezpečnost a srovnání návrhů:
+[readme-local-ui.md](readme-local-ui.md).
+
 ```sh
 npm run web:remote
 # http://localhost:8081/pacient
