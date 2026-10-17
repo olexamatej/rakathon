@@ -16,6 +16,7 @@ let checking = false;
 let verifiedEntry;
 let lastCheck = 0;
 let editingSession = false;
+let validityInfoOpen = false;
 
 try {
   const loaded = loadState(localStorage);
@@ -133,15 +134,16 @@ function render(focus = false) {
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>`
       : `<h1>${checking ? 'Ověřuji platnost…' : 'Platnost není ověřena'}</h1>`}
     ${receipt.expired ? `<p class="generated-at">Nahráno <time datetime="${escape(receipt.sentAt)}">${escape(formatDate(receipt.sentAt))}</time></p>` : ''}
-    ${receipt.expiresAt ? `<p>${receipt.expired && Date.parse(receipt.expiresAt) <= Date.now() ? 'Platnost vypršela' : 'Platnost do'} <time datetime="${escape(receipt.expiresAt)}">${escape(formatDate(receipt.expiresAt))}</time></p>` : '<p>Datum vypršení platnosti není dostupné.</p>'}
+    ${receipt.expiresAt ? `<p class="validity-date">${receipt.expired && Date.parse(receipt.expiresAt) <= Date.now() ? 'Platnost vypršela' : 'Platnost do'} <time datetime="${escape(receipt.expiresAt)}">${escape(formatDate(receipt.expiresAt))}</time>${!receipt.expired ? ` <button class="validity-help" data-action="validity-help" aria-label="Informace o platnosti" aria-expanded="${validityInfoOpen}" aria-controls="validity-info">?</button>` : ''}</p>` : '<p>Datum vypršení platnosti není dostupné.</p>'}
+    ${!receipt.expired ? `<button class="primary" data-action="renew" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
+    <p class="validity-info" id="validity-info" ${validityInfoOpen ? '' : 'hidden'}>Data jsou uchována pouze dokud nejsou zobrazena zdravotníkem, nebo do uvedeného data platnosti. Pokud je vaše plánovaná návštěva až po konci platnosti, musíte platnost před návštěvou prodloužit.</p>` : ''}
     ${receipt.expired ? `<p class="notice">Původní PIN už nelze použít pro předání lékaři. Tady vidíte pouze lokální kopii uloženou v tomto zařízení, nikoli aktuálně sdílený seznam. Kopie pochází z data nahrání uvedeného výše. Zkontrolujte, zda jsou léky stále aktuální. Seznam můžete zahodit, nebo jej znovu nahrát a získat nový PIN.</p>
       ${receipt.invalidatedAt ? `<p>Nedostupnost zjištěna <time datetime="${escape(receipt.invalidatedAt)}">${escape(formatDate(receipt.invalidatedAt))}</time>.</p>` : ''}` : ''}
-    <div class="saved-list"><h2>Uložený seznam léčiv</h2>
+    <div class="saved-list"><h2>Uložený seznam léčiv:</h2>
     ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
     ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>
     ${receipt.expired ? `<button class="primary" data-action="reupload" ${isBusy() ? 'disabled' : ''}>${sending ? 'Nahrávám…' : 'Znovu nahrát a získat nový PIN'}</button>
-    <button class="secondary" data-action="discard-expired" ${isBusy() ? 'disabled' : ''}>Zahodit seznam</button>` : `<p>Po načtení lékařem nebo vypršení platnosti můžete lokální kopii znovu nahrát pod novým PINem.</p>
-    <button class="primary" data-action="renew" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
+    <button class="secondary" data-action="discard-expired" ${isBusy() ? 'disabled' : ''}>Zahodit seznam</button>` : `
     ${verifiedEntry !== receipt && !checking ? `<button class="secondary" data-action="check-validity" ${loadFailed ? 'disabled' : ''}>Ověřit platnost</button>` : ''}
     <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>`}
     ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
@@ -405,6 +407,11 @@ app.addEventListener('click', async event => {
   if (!button || button.disabled) return;
   event.preventDefault();
   switch (button.dataset.action) {
+    case 'validity-help':
+      validityInfoOpen = !validityInfoOpen;
+      render();
+      app.querySelector('[data-action="validity-help"]')?.focus({ preventScroll: true });
+      break;
     case 'reupload': {
       const previous = state.submissions[0];
       if (isBusy() || !previous?.expired) break;

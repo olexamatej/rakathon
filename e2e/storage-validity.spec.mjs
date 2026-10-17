@@ -281,6 +281,17 @@ test('expired local copy shows dates and explicitly reuploads the displayed snap
   await expect(page.locator('.generated-at')).toHaveCount(0);
   await expect(page.locator('time[datetime="2026-10-17T12:00:00Z"]')).toHaveCount(0);
   await expect(page.locator('time[datetime="2099-10-31T12:00:00Z"]')).toBeVisible();
+  await expect(page.locator('.saved-list h2')).toHaveText('Uložený seznam léčiv:');
+  await expect(page.locator('.current-submission')).not.toContainText('Po načtení lékařem');
+  expect(await page.locator('[data-action="renew"]').evaluate(button => button.previousElementSibling.classList.contains('validity-date'))).toBe(true);
+  const help = page.getByRole('button', { name: 'Informace o platnosti' });
+  await expect(help).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#validity-info')).toBeHidden();
+  await help.click();
+  await expect(help).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#validity-info')).toContainText('musíte platnost před návštěvou prodloužit');
+  await help.click();
+  await expect(page.locator('#validity-info')).toBeHidden();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
   expect(saved.submissions[0].expired).toBeUndefined();
 });

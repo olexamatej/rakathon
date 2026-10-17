@@ -133,3 +133,7 @@ dialog p { font-size: 14px; margin: 12px 0; }
 .camera-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
 .saved-list { text-align: left; margin: 24px 0; }
 .current-submission > button { margin-top: 12px; }
+.validity-date { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
+.validity-help { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--brand); font-size: 13px; font-weight: 700; }
+.validity-help:hover { background: var(--tint-2); border-radius: 50%; }
+.validity-info { max-width: 440px; padding: 12px; background: var(--tint-2); border-radius: 12px; font-size: 14px; text-align: left; }
