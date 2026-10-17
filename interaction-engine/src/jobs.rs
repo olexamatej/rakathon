@@ -227,7 +227,7 @@ fn submit_inner(
     let kind_json = serde_json::to_string(&kind)?;
     // Exact names/order are retained because reports reference input indexes.
     let identity = json!([
-        "contract-async-2-medscape-api",
+        "contract-async-3-medscape-name-resolution",
         kind_json,
         request,
         state.config.model,

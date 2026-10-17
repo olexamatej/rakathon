@@ -56,33 +56,29 @@ fn normalize(s: &str) -> String {
         .to_lowercase()
 }
 
-// Never select a fuzzy first suggestion: ibuprofen IV and combination products
-// must not be substituted for plain ibuprofen. Brand text maps to generic val.
+// Preserve Medscape's ordering: prefer a display/canonical name match,
+// falling back to the first suggestion that supports interaction checking.
 fn resolve(search: Search, name: &str) -> anyhow::Result<Option<Drug>> {
     let name = normalize(name);
-    let mut matches = std::collections::BTreeMap::new();
-    for group in search.types.into_iter().filter(|g| g.type_id == "10417") {
-        for drug in group.references {
-            if drug.has_interactions == "1" && normalize(&drug.text) == name {
-                ensure!(
-                    !drug.id.is_empty() && drug.id.bytes().all(|c| c.is_ascii_digit()),
-                    "invalid Medscape drug ID"
-                );
-                ensure!(!drug.val.trim().is_empty(), "empty Medscape canonical name");
-                if let Some(previous) = matches.insert(drug.id.clone(), drug.clone()) {
-                    ensure!(
-                        normalize(&previous.val) == normalize(&drug.val),
-                        "conflicting Medscape names"
-                    );
-                }
-            }
-        }
+    let candidates: Vec<_> = search
+        .types
+        .into_iter()
+        .filter(|group| group.type_id == "10417")
+        .flat_map(|group| group.references)
+        .filter(|drug| drug.has_interactions == "1")
+        .collect();
+    let selected = candidates
+        .iter()
+        .find(|drug| normalize(&drug.text) == name || normalize(&drug.val) == name)
+        .or_else(|| candidates.first());
+    if let Some(drug) = selected {
+        ensure!(
+            !drug.id.is_empty() && drug.id.bytes().all(|c| c.is_ascii_digit()),
+            "invalid Medscape drug ID"
+        );
+        ensure!(!drug.val.trim().is_empty(), "empty Medscape canonical name");
     }
-    Ok(if matches.len() == 1 {
-        matches.into_values().next()
-    } else {
-        None
-    })
+    Ok(selected.cloned())
 }
 
 fn validate_records(data: &Interactions, drugs: &[Drug; 2]) -> anyhow::Result<()> {
@@ -209,7 +205,7 @@ pub(crate) async fn research(
         };
         let Some(drug) = resolve(search, name)? else {
             return Ok(inconclusive(
-                "Medscape nevrátil jednoznačnou přesnou shodu pro oba zadané názvy. Interakci nelze spolehlivě ověřit a výsledek nepotvrzuje bezpečnost kombinace.",
+                "Medscape nevrátil použitelný návrh pro oba zadané názvy. Interakci nelze spolehlivě ověřit a výsledek nepotvrzuje bezpečnost kombinace.",
             ));
         };
         resolved.push(drug);
@@ -337,7 +333,7 @@ mod tests {
         server.abort();
     }
     #[test]
-    fn resolves_exact_names_and_brands_without_selecting_related_products() {
+    fn prefers_name_matches_and_falls_back_to_first_suggestion() {
         assert_eq!(
             resolve(search(IBUPROFEN), " Ibuprofen ")
                 .unwrap()
@@ -345,7 +341,18 @@ mod tests {
                 .id,
             "343289"
         );
-        assert!(resolve(search(IBUPROFEN), "ibupro").unwrap().is_none());
+        assert_eq!(
+            resolve(search(IBUPROFEN), "ibupro").unwrap().unwrap().id,
+            "343289"
+        );
+        // An exact formulation match wins over the first result.
+        assert_eq!(
+            resolve(search(IBUPROFEN), "ibuprofen IV")
+                .unwrap()
+                .unwrap()
+                .id,
+            "999790"
+        );
         assert_eq!(
             resolve(
                 search(include_str!("../tests/fixtures/medscape/advil.json")),
@@ -358,8 +365,25 @@ mod tests {
         );
         let mut ambiguous: serde_json::Value = serde_json::from_str(IBUPROFEN).unwrap();
         ambiguous["types"][0]["references"][1]["text"] = json!("ibuprofen");
-        assert!(
+        assert_eq!(
             resolve(serde_json::from_value(ambiguous).unwrap(), "ibuprofen")
+                .unwrap()
+                .unwrap()
+                .id,
+            "343289"
+        );
+        // The canonical name can match even if the display text is a brand.
+        let mut branded = search(include_str!("../tests/fixtures/medscape/advil.json"));
+        branded.types[0].references.swap(0, 1);
+        assert_eq!(resolve(branded, "ibuprofen").unwrap().unwrap().id, "343289");
+        let mut unavailable = search(IBUPROFEN);
+        unavailable.types[0].references[0].has_interactions = "0".into();
+        assert_eq!(
+            resolve(unavailable, "ibupro").unwrap().unwrap().id,
+            "999790"
+        );
+        assert!(
+            resolve(search(r#"{"types":[]}"#), "missing")
                 .unwrap()
                 .is_none()
         );

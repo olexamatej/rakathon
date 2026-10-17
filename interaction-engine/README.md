@@ -134,9 +134,13 @@ Responses contain `drugs`, `site`, `checkedAt`, `status`, `url`, and `summary`:
   accessible evidence prevented a reliable answer; `url` is null.
 
 Medscape is a special case: the server resolves each name using the public
-checker typeahead API and requires one exact match (case/whitespace insensitive).
-Brand names map to the generic record returned by Medscape; partial names,
-ambiguous names, and two aliases of the same record return `inconclusive`.
+checker typeahead API, preferring a display or canonical name match
+(case/whitespace insensitive). Otherwise it takes the first suggestion supporting
+interaction checks, in Medscape's response order, even when several drugs match.
+This can select a different formulation or combination product; the result
+summarizes the selected Medscape records. Missing suggestions and two aliases of
+the same record return `inconclusive`. This does not translate Czech names or local
+brands that Medscape does not recognize.
 It then calls `druginteraction.do?action=getMultiInteraction&ids=...`, validates
 that every returned record names the resolved pair, and uses a tool-free model
 call only to summarize those records in Czech. An explicitly empty API response
