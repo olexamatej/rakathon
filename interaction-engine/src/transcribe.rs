@@ -312,6 +312,24 @@ pub(crate) async fn transcribe(
     let mime = image_mime_type(&bytes)?;
 
     let config = &state.config;
+    if config.mock_transcribe {
+        let catalogue = state.transcribe.catalogue(config).await;
+        let names: Vec<_> = catalogue
+            .iter()
+            .filter(|name| name.chars().count() <= FIELD_MAX_CHARS && !has_control(name))
+            .collect();
+        if names.is_empty() {
+            return Err(Problem::new(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Mock přepis vyžaduje neprázdný katalog SÚKL.",
+            ));
+        }
+        return Ok(rows_response(vec![Row {
+            name: Some(names[rand::random_range(0..names.len())].clone()),
+            strength: None,
+            schedule: None,
+        }]));
+    }
     if config.openrouter_model.trim().is_empty() {
         return Err(not_configured());
     }
@@ -472,9 +490,13 @@ async fn generate(
         invalid_output()
     })?;
 
+    Ok(rows_response(rows))
+}
+
+fn rows_response(rows: Vec<Row>) -> Response {
     let mut response = (StatusCode::OK, Json(rows)).into_response();
     response
         .headers_mut()
         .insert(header::CACHE_CONTROL, "no-store".parse().unwrap());
-    Ok(response)
+    response
 }

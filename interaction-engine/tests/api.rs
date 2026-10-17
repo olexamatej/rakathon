@@ -187,6 +187,7 @@ fn config(bin: PathBuf) -> Config {
         openrouter_model: interaction_engine::transcribe::DEFAULT_MODEL.into(),
         openrouter_timeout: Duration::from_secs(5),
         sukl_catalogue: PathBuf::from("/does/not/exist/medications.json"),
+        mock_transcribe: false,
     }
 }
 

@@ -1,0 +1,5 @@
+[workspace]
+members = ["interaction-engine"]
+default-members = ["interaction-engine"]
+exclude = ["services/transfer-api"]
+resolver = "3"

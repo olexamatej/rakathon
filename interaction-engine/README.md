@@ -14,7 +14,7 @@ authenticated using `codex login` or the CLI's supported API-key authentication.
 Your existing Codex login is used; user configuration is ignored for inference.
 
 ```sh
-cargo run --release
+cargo run
 ```
 
 Set the listening port with `--port` (or `-p`):
@@ -23,11 +23,26 @@ Set the listening port with `--port` (or `-p`):
 cargo run --release -- --port 8080
 ```
 
-The default is port 3000. `--port` overrides the port in `BIND_ADDR` while
+The default is port 6767. `--port` overrides the port in `BIND_ADDR` while
 keeping its host address. Run with `--help` to see command line options.
 
+The binary loads the nearest `.env` from the current directory or its parents
+(including the repository root). Existing environment variables take precedence;
+a missing `.env` is fine. Default catalogue and jobs paths work from either the
+crate directory or the repository root. Explicit relative path overrides resolve
+from the current working directory. The root Cargo workspace selects the engine
+by default, so `cargo run` works from either directory. Its lockfile is the
+repository-root `Cargo.lock`; the transfer API remains a separate crate.
+
+Use `cargo run -- --mock-transcribe` from the repository root or engine directory
+to return one random SÚKL catalogue name per valid
+photo upload without calling OpenRouter or requiring an API key. Strength and
+schedule are null. This requires a nonempty catalogue at `SUKL_CATALOGUE_PATH`;
+otherwise `/transcribe` returns 503. Image type and size checks still apply.
+Omit the flag to use real transcription.
+
 ```sh
-curl -i http://127.0.0.1:3000/interaction-checks \
+curl -i http://127.0.0.1:6767/interaction-checks \
   -H 'Content-Type: application/json' \
   -d '{"drugs":["warfarin","ibuprofen","unknown-drug-name"]}'
 ```
@@ -63,7 +78,7 @@ it does not make a model call or verify Codex authentication.
 
 | Environment variable | Default | Purpose |
 | --- | --- | --- |
-| `BIND_ADDR` | `127.0.0.1:3000` | HTTP listener |
+| `BIND_ADDR` | `127.0.0.1:6767` | HTTP listener |
 | `CODEX_BIN` | `codex` on PATH | Codex executable |
 | `CODEX_MODEL` | `gpt-6.1-sol` | Optional interaction-check model override |
 | `CODEX_SERVICE_TIER` | `priority` (Fast) | Interaction checks: `default` for Standard; `fast` or `priority` to request Fast mode |
@@ -116,7 +131,7 @@ supported site. Medscape uses its checker JSON endpoints directly; other sites
 use a fresh agent with live web search:
 
 ```sh
-curl http://127.0.0.1:3000/interaction-research \
+curl http://127.0.0.1:6767/interaction-research \
   -H 'Content-Type: application/json' \
   -d '{"drugs":["warfarin","ibuprofen"],"site":"drugs.com"}'
 ```
@@ -200,7 +215,7 @@ malformed, truncated or blocked output fails instead of returning partial rows.
 
 ```sh
 curl --data-binary @photo.jpg -H 'Content-Type: image/jpeg' \
-  http://127.0.0.1:3000/transcribe
+  http://127.0.0.1:6767/transcribe
 ```
 
 Visible strength stays inside `name`. Fractions and written instructions are

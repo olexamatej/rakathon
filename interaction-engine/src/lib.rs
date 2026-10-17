@@ -37,10 +37,17 @@ pub struct Config {
     pub openrouter_model: String,
     pub openrouter_timeout: Duration,
     pub sukl_catalogue: PathBuf,
+    pub mock_transcribe: bool,
 }
 
 impl Config {
     pub fn from_env() -> anyhow::Result<Self> {
+        // Support running from either the repository root or this crate.
+        let engine_dir = if std::path::Path::new("interaction-engine/Cargo.toml").is_file() {
+            PathBuf::from("interaction-engine")
+        } else {
+            PathBuf::from(".")
+        };
         let timeout = env::var("CODEX_TIMEOUT_SECONDS")
             .unwrap_or_else(|_| codex::DEFAULT_TIMEOUT.as_secs().to_string())
             .parse()
@@ -67,7 +74,7 @@ impl Config {
             .filter(|key| !key.is_empty());
         Ok(Self {
             bind: env::var("BIND_ADDR")
-                .unwrap_or_else(|_| "127.0.0.1:3000".into())
+                .unwrap_or_else(|_| "127.0.0.1:6767".into())
                 .parse()
                 .context("invalid BIND_ADDR")?,
             codex_bin: env::var_os("CODEX_BIN")
@@ -84,7 +91,7 @@ impl Config {
             max_concurrent,
             jobs_path: env::var_os("JOBS_PATH")
                 .map(PathBuf::from)
-                .unwrap_or_else(|| "data/jobs.sqlite3".into()),
+                .unwrap_or_else(|| engine_dir.join("data/jobs.sqlite3")),
             max_queued: env_number("MAX_QUEUED_CHECKS", 100)? as usize,
             result_ttl: Duration::from_secs(env_number("RESULT_TTL_SECONDS", 86400)?),
             failure_ttl: Duration::from_secs(env_number("FAILURE_TTL_SECONDS", 30)?),
@@ -98,7 +105,8 @@ impl Config {
             openrouter_timeout: Duration::from_secs(env_number("OPENROUTER_TIMEOUT_SECONDS", 120)?),
             sukl_catalogue: env::var_os("SUKL_CATALOGUE_PATH")
                 .map(PathBuf::from)
-                .unwrap_or_else(|| "../data/sukl/medications.json".into()),
+                .unwrap_or_else(|| engine_dir.join("../data/sukl/medications.json")),
+            mock_transcribe: false,
         })
     }
 }

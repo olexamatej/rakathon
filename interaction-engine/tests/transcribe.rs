@@ -82,6 +82,7 @@ fn config(base: String, catalogue: Option<PathBuf>) -> Config {
         openrouter_api_key: Some("proxy-key".into()),
         openrouter_model: "google/test-model:variant".into(),
         openrouter_timeout: Duration::from_secs(5),
+        mock_transcribe: false,
         sukl_catalogue: catalogue
             .unwrap_or_else(|| PathBuf::from("/does/not/exist/medications.json")),
     }
@@ -133,6 +134,47 @@ fn assert_matches_openapi(value: &Value, name: &str) {
         .map(|error| error.to_string())
         .collect();
     assert!(errors.is_empty(), "{errors:?}");
+}
+
+#[tokio::test]
+async fn mock_transcription_returns_one_catalogue_name_without_calling_provider() {
+    let (base, requests) = stub(json!({}), StatusCode::INTERNAL_SERVER_ERROR).await;
+    let mut config = config(base, Some(catalogue_file(&["CONCOR", "ANOPYRIN"])));
+    config.mock_transcribe = true;
+    config.openrouter_api_key = None;
+    config.openrouter_model.clear();
+    let router = app(AppState::new(config).unwrap());
+    for _ in 0..8 {
+        let (status, headers, body) = post_image(router.clone(), "image/png", PNG.to_vec()).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(headers["cache-control"], "no-store");
+        let rows: Value = serde_json::from_slice(&body).unwrap();
+        assert_matches_openapi(&rows, "TranscriptionRows");
+        let rows = rows.as_array().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert!(["CONCOR", "ANOPYRIN"].contains(&rows[0]["name"].as_str().unwrap()));
+        assert!(rows[0]["strength"].is_null());
+        assert!(rows[0]["schedule"].is_null());
+    }
+    assert!(requests.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn mock_transcription_requires_a_usable_catalogue() {
+    let (base, requests) = stub(json!({}), StatusCode::INTERNAL_SERVER_ERROR).await;
+    for catalogue in [
+        None,
+        Some(catalogue_file(&[])),
+        Some(catalogue_file(&["bad\nname"])),
+    ] {
+        let mut config = config(base.clone(), catalogue);
+        config.mock_transcribe = true;
+        config.openrouter_api_key = None;
+        let router = app(AppState::new(config).unwrap());
+        let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    }
+    assert!(requests.lock().unwrap().is_empty());
 }
 
 #[tokio::test]

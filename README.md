@@ -69,7 +69,7 @@ Pacientské UI odesílá fotografie přes `POST /api/transcribe` na lokální No
 server, který je předá interaction enginu (`POST /transcribe`). Engine volá
 přímo OpenRouter, standardně model `google/gemini-3.6-flash`. Do kořenového `.env`
 nastavte `OPENROUTER_API_KEY`, případně `OPENROUTER_MODEL`, a pro lokální přepis
-`TRANSCRIBE_API_URL=http://127.0.0.1:6767`. Spusťte `npm run engine` vedle
+`TRANSCRIBE_API_URL=http://127.0.0.1:6767`. Spusťte z kořene `cargo run` vedle
 `npm run web:patient`. Klíč zůstává na serveru; CLIProxyAPI není potřeba.
 `WEB_BACKEND_URL` musí být pro lokální přepis vypnuté, protože přesměrovává všechny
 API požadavky na vzdálený backend.

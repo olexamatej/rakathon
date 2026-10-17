@@ -361,7 +361,10 @@ paths:
         an unreadable name is never filled from it. All photos use base64 image
         URLs in the chat completions request. Malformed,
         truncated, or invalid provider output fails instead of returning partial
-        data. There is no retry.
+        data. There is no retry. With the server's --mock-transcribe flag,
+        valid uploads instead return one random SÚKL catalogue name with null
+        strength and schedule, without calling OpenRouter or requiring its key.
+        Mock mode returns 503 if no usable catalogue names are available.
       requestBody:
         required: true
         content:

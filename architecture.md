@@ -76,7 +76,7 @@ Each field is a string or null; visible strength stays in name. The client maps
 these rows to its existing editable items without inventing strength or package
 size. Invalid/incomplete provider output fails instead of returning partial data.
 The engine reads the provider key and model from process environment variables
-(sourced from `.env` by `npm run engine`); only the engine holds the API key.
+(loaded from `.env` by the Rust engine); only the engine holds the API key.
 Large photos against the default Google endpoint use temporary Google Files,
 deleted after generation. There is no automatic retry or fallback to simulated
 data. This is separate from the opaque Rust storage.

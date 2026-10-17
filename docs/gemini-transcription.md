@@ -17,9 +17,10 @@ OPENROUTER_MODEL=google/gemini-3.6-flash
 TRANSCRIBE_API_URL=http://127.0.0.1:6767
 ```
 
-Run `npm run engine` and `npm run web:patient` in separate terminals, then open
+Run `cargo run` and `npm run web:patient` from the repository root in separate
+terminals, then open
 `http://localhost:8081/pacient`. Both commands load the root `.env`;
-`npm run engine` starts the engine on port 6767. Restart after configuration
+The engine defaults to port 6767; use `-- --port 8080` to override it. Restart after configuration
 changes. The engine requires an OpenRouter key; old `GEMINI_*` and
 `GOOGLE_API_KEY` settings are no longer used.
 
@@ -58,8 +59,8 @@ medicine names to the instruction: a clearly matching visible name may be writte
 with the catalogue spelling (e.g. `name: "CONCOR"`, `strength: "5 mg"`).
 Strengths, forms and dosing are never taken from the catalogue, an unreadable
 name is never filled from it, and no values are invented. The catalogue is read
-from `SUKL_CATALOGUE_PATH` (`npm run engine` defaults to
-`data/sukl/medications.json`); a missing catalogue only skips name correction.
+from `SUKL_CATALOGUE_PATH` (defaults to the repository
+`data/sukl/medications.json` from either working directory); a missing catalogue only skips name correction.
 No medicines gives `[]`.
 
 The existing UI adds local IDs, maps null names to empty editable names, maps
