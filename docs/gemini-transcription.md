@@ -1,76 +1,40 @@
-# Gemini photo transcription
+# OpenRouter photo transcription
 
-The patient PWA's photo/gallery flow posts to `POST /api/transcribe` on the
-patient Node server, which proxies the raw photo to `POST /transcribe` on the
-Rust interaction engine (`interaction-engine/`); the engine calls Gemini
-**3.6 Flash** and returns strict minimal rows. The patient PWA currently
-explicitly selects `{ mode: 'demo' }` to provide three complete synthetic
-medicines for the PIN handoff demonstration; that mode makes no request at all.
-Calling `recognizePhoto(file)` without the demo option retains real transcription
-and never replaces errors with mock results.
+The patient PWA sends photos to `POST /api/transcribe` on the patient Node
+server, which forwards the raw photo to `POST /transcribe` on the Rust
+interaction engine. The engine calls OpenRouter directly using its chat
+completions API; no CLIProxyAPI or Antigravity login is needed. The default
+model is `google/gemini-3.6-flash`.
 
 ## Run
 
-Use Node.js 24 for the patient server and Rust 1.91+ for the engine. In the
-repository root, create `.env` (or edit the existing file):
+Use Node.js 24 for the patient server and Rust 1.91+ for the engine. Edit the
+repository-root `.env`:
 
 ```dotenv
-GEMINI_API_KEY=your_key_here
-GEMINI_MODEL=gemini-3.6-flash
-TRANSCRIBE_API_URL=http://127.0.0.1:3000
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=google/gemini-3.6-flash
+TRANSCRIBE_API_URL=http://127.0.0.1:6767
 ```
 
-`npm run engine` sources the root `.env` (values already exported in the shell
-are kept) and starts the engine on its default port 3000. Then run
-`npm run web:patient` and open `http://localhost:8081/pacient`. The patient
-server proxies `/api/transcribe` to `TRANSCRIBE_API_URL` when set, otherwise to
-`INTERACTION_API_URL`, otherwise to the production engine. Without a local
-engine the photo flow uses the production service. The engine also accepts
-`GOOGLE_API_KEY` when `GEMINI_API_KEY` is absent, and `GEMINI_TIMEOUT_SECONDS`
-(default 120). Restart after changing configuration.
+Run `npm run engine` and `npm run web:patient` in separate terminals, then open
+`http://localhost:8081/pacient`. Both commands load the root `.env`;
+`npm run engine` starts the engine on port 6767. Restart after configuration
+changes. The engine requires an OpenRouter key; old `GEMINI_*` and
+`GOOGLE_API_KEY` settings are no longer used.
 
-The key stays in the server environment. Never put it in public JavaScript or any
-client-exposed environment variable. `.env` is ignored by Git and excluded from Docker input.
+`OPENROUTER_API_BASE` defaults to `https://openrouter.ai/api/v1` (without
+`/chat/completions`). `OPENROUTER_TIMEOUT_SECONDS` defaults to 120.
+`OPENROUTER_MODEL` accepts OpenRouter model IDs including provider prefixes and
+variant suffixes; choose a model with image input and structured-output support.
+The request uses `provider.require_parameters: true` to select compatible
+providers. The key stays in the server environment and is sent only as a bearer
+header. `.env` is ignored by Git and excluded from Docker input.
 
-## Antigravity via a local proxy
-
-Instead of a Google Gemini API key the engine can use an Antigravity
-subscription. Antigravity has no public API, so a local
-[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) instance sits in
-between and speaks the same Gemini protocol (`/v1beta/models/{model}:generateContent`).
-
-One-time setup on a fresh machine:
-
-```sh
-scripts/setup-antigravity-proxy.sh
-```
-
-The script installs `cli-proxy-api` into `~/.local/bin`, writes
-`~/.cli-proxy-api/config.yaml` (listener `127.0.0.1:8317`, a fresh client key
-under `access.api-keys`; an existing config is kept), runs the Antigravity OAuth
-login and prints the `.env` values from this page. Re-run it to refresh an
-expired login; `--no-login` skips the browser step. By hand, equivalently:
-
-- Install the `cli-proxy-api` binary and point it at
-  `~/.cli-proxy-api/config.yaml` (listener `127.0.0.1:8317`, client key under
-  `access.api-keys`).
-- Run `cli-proxy-api -config ~/.cli-proxy-api/config.yaml -antigravity-login`
-  and sign in with the same Google account as in Antigravity; the OAuth token is
-  stored in `~/.cli-proxy-api` and refreshed by the proxy.
-- Start the proxy before the engine, e.g. `npm run proxy`.
-
-Root `.env`:
-
-```dotenv
-GEMINI_API_BASE=http://127.0.0.1:8317/v1beta
-GEMINI_API_KEY=the_key_from_access.api-keys
-GEMINI_MODEL=gemini-3.8-flash-medium
-```
-
-With a custom `GEMINI_API_BASE` every photo is sent inline (the resumable Google
-Files API exists only upstream at Google), so the 14 MiB inline threshold does
-not apply and the raw photo limit stays 20 MiB. Responses, errors and the strict
-minimal output are identical to the direct Google endpoint.
+The patient server uses `TRANSCRIBE_API_URL`, then `INTERACTION_API_URL`, then
+the production engine. `WEB_BACKEND_URL` overrides these settings and sends all
+API routes to the specified remote backend; leave it unset to use the local
+engine for transcription.
 
 ## Request and response
 
@@ -107,17 +71,17 @@ validation. Storage retains its existing structured payload shape.
 
 Malformed JSON, additional fields, truncated generation and provider failures
 return an error rather than partial or demo data. Responses use `no-store`.
-Engine generation/upload timeout is 120 seconds (`GEMINI_TIMEOUT_SECONDS`);
-browser timeout is 135 seconds.
-With the default Google endpoint up to 14 MiB is sent inline; larger images use
-resumable Google Files upload and a deletion attempt after generation, including
-failed generation. With a custom `GEMINI_API_BASE` (local proxy) images go inline
-regardless of size. There is no automatic retry. Neither images nor provider
-responses are written to local disk.
-
-The full image is sent to Google. The prompt excludes identifiers from the
-returned data; it does not anonymize the uploaded photograph. Use synthetic or
-already anonymized inputs for prototype testing.
+The provider deadline is 120 seconds (`OPENROUTER_TIMEOUT_SECONDS`);
+the browser timeout is 135 seconds. Every photo is sent inline as a base64 data
+URL to OpenRouter. The upstream structured response wraps the rows in a
+`medications` object property; the engine validates and unwraps it, so the public
+response remains the same array. Refused, malformed or truncated responses fail.
+The upstream array schema deliberately omits `maxItems`: Gemini 3.8 Flash
+rejects `maxItems: 200` with a generic `400 INVALID_ARGUMENT`. The engine still
+enforces the 200-row limit when validating the response.
+There is no automatic retry. Images and provider responses are not written to
+local disk. The entire photograph is sent to OpenRouter and its selected model
+provider; excluding identifiers from the response does not anonymize the input.
 
 ## Routing
 
@@ -131,19 +95,16 @@ configuration lives outside this checkout; this change does not deploy or alter 
 HTTP failures from the engine: 400 empty image, 405 method, 413 size, 415 format,
 422 blocked image, 429 provider quota, 502 provider/invalid output, 503 missing
 configuration, 504 timeout. The patient server forwards them unchanged; a
-connection failure to the engine yields its own 502. Google HTTP 429 may indicate
-exhausted daily free-tier quota, not only temporary load; check the key's project
-quota before retrying.
+connection failure to the engine yields its own 502.
 
 ## Verification
 
 `npm test` covers the patient proxy and its request checks with a stub engine over
 loopback. `cargo test` in `interaction-engine/` covers request shape, the
 catalogue prompt, strict output, provider-failure mapping and missing
-configuration with a stub Gemini server. Browser E2E stubs only transcription,
-keeping the real storage flow. No Google credentials or real patient photographs
+configuration with a stub OpenRouter server. Browser E2E stubs only transcription,
+keeping the real storage flow. No OpenRouter credentials or real patient photographs
 are needed for automated tests.
 
-Official API references: [model](https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash),
-[images](https://ai.google.dev/gemini-api/docs/generate-content/image-understanding),
-[structured output](https://ai.google.dev/gemini-api/docs/generate-content/structured-output).
+Official API references: [image inputs](https://openrouter.ai/docs/guides/overview/multimodal/images),
+[structured output](https://openrouter.ai/docs/guides/features/structured-outputs).

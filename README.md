@@ -65,27 +65,20 @@ Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva;
 pokud je vyplněný, textové předání přidá sloupec **Kdy**.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
-Pacientské UI nyní výslovně používá demo režim: každá fotografie přidá kompletní
-ukázkový seznam PARALEN, IBALGIN a LETROX, včetně síly, počtu dávek a rozpisu.
-Fotografie se v tomto režimu neposílá do Gemini. Odesílání i lékařské čtení
-používají stejnou validaci formátu seznamu.
+Pacientské UI odesílá fotografie přes `POST /api/transcribe` na lokální Node
+server, který je předá interaction enginu (`POST /transcribe`). Engine volá
+přímo OpenRouter, standardně model `google/gemini-3.6-flash`. Do kořenového `.env`
+nastavte `OPENROUTER_API_KEY`, případně `OPENROUTER_MODEL`, a pro lokální přepis
+`TRANSCRIBE_API_URL=http://127.0.0.1:6767`. Spusťte `npm run engine` vedle
+`npm run web:patient`. Klíč zůstává na serveru; CLIProxyAPI není potřeba.
+`WEB_BACKEND_URL` musí být pro lokální přepis vypnuté, protože přesměrovává všechny
+API požadavky na vzdálený backend.
 
-Skutečné rozpoznávání zůstává dostupné voláním `recognizePhoto(file)` bez
-`{ mode: 'demo' }`. Fotografie se pak odesílá přes `POST /api/transcribe` na
-lokálním Node serveru, který ji proxyuje na interaction engine
-(`POST /transcribe`); teprve engine volá Gemini 3.6 Flash a drží klíč. Engine
-načítá `GEMINI_API_KEY` a `GEMINI_MODEL` z prostředí (`npm run engine` načte
-kořenové `.env`); klíč se nikdy neposílá do prohlížeče. Místo klíče lze použít
-předplatné Antigravity přes lokální proxy CLIProxyAPI (`GEMINI_API_BASE`,
-`npm run proxy`) — viz [Gemini transcription](docs/gemini-transcription.md).
-Pro lokální rozpoznávání nastavte v `.env`
-`TRANSCRIBE_API_URL=http://127.0.0.1:3000` a spusťte `npm run engine` vedle
-`npm run web:patient`. Rozpoznávání vrací pouze
-`[{"name":"Concor 5 mg","schedule":"1-0-0"}]`; nečitelné údaje jsou `null`.
-Viditelná síla zůstává v názvu. Samostatná síla a počet dávek v balení zůstávají
-prázdné a neblokují předání; řádek s nečitelným názvem je nutné odebrat a vyfotit znovu.
-Podrobnosti: [Gemini transcription](docs/gemini-transcription.md). „Odeslat seznam“
-uloží verzovaný strukturovaný JSON `{ version: 1, regimen, items }` přes
+Rozpoznávání vrací `[{"name":"Concor","strength":"5 mg","schedule":"1-0-0"}]`;
+nečitelné údaje jsou `null`. Síla se v UI zobrazí v poli dávkování, neznámý počet
+dávek v balení zůstává prázdný. Řádek s nečitelným názvem je nutné odebrat a
+vyfotit znovu. Podrobnosti: [OpenRouter transcription](docs/gemini-transcription.md).
+„Odeslat seznam“ uloží verzovaný strukturovaný JSON `{ version: 1, regimen, items }` přes
 `POST /api/v1/transfers`. Každá položka obsahuje pouze název, dávkování, počet
 dávek v balení a případný rozpis užívání; lékař tyto položky načte a vykreslí.
 PIN vrací storage API a PWA jej zobrazí po úspěšném odeslání. Blob lze vyzvednout

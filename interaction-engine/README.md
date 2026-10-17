@@ -74,10 +74,10 @@ it does not make a model call or verify Codex authentication.
 | `RESULT_TTL_SECONDS` | `86400` | Successful-result retention after completion |
 | `FAILURE_TTL_SECONDS` | `30` | Failure retention before another attempt is allowed |
 | `QUEUE_TIMEOUT_SECONDS` | `300` | Maximum wait before execution |
-| `GEMINI_API_KEY` | *(none)* | Photo transcription provider key; `GOOGLE_API_KEY` is accepted as a fallback |
-| `GEMINI_API_BASE` | Google endpoint | Gemini-compatible base URL, e.g. a local CLIProxyAPI proxy |
-| `GEMINI_MODEL` | `gemini-3.6-flash` | Photo transcription model |
-| `GEMINI_TIMEOUT_SECONDS` | `120` | Deadline for one transcription provider call |
+| `OPENROUTER_API_KEY` | *(none)* | Server-only OpenRouter key for photo transcription |
+| `OPENROUTER_API_BASE` | `https://openrouter.ai/api/v1` | Base URL without `/chat/completions` |
+| `OPENROUTER_MODEL` | `google/gemini-3.6-flash` | Photo transcription model |
+| `OPENROUTER_TIMEOUT_SECONDS` | `120` | Deadline for one transcription provider call |
 | `SUKL_CATALOGUE_PATH` | `../data/sukl/medications.json` | SÚKL names used only for photo name spelling; a missing file disables that hint |
 | `RUST_LOG` | `info` | Server logging filter |
 
@@ -194,7 +194,7 @@ Web-search settings follow the official
 `POST /transcribe` accepts raw JPEG, PNG or WebP bytes (not multipart, up to
 20 MiB) and synchronously returns `[{name, schedule}]` rows; each field is a
 string or null. It is a direct request/response endpoint: no queue, polling or
-deduplication. It requires `GEMINI_API_KEY` or `GOOGLE_API_KEY`; without one it
+deduplication. It requires `OPENROUTER_API_KEY`; without one it
 returns 503. Provider output is schema-constrained and validated by Rust;
 malformed, truncated or blocked output fails instead of returning partial rows.
 
@@ -210,12 +210,13 @@ prompt includes official SÚKL names, so a clearly matching visible name may use
 the catalogue spelling; strengths, forms, dosing and unreadable names are never
 taken or filled from the catalogue.
 
-With the default Google endpoint, photos above 14 MiB use a resumable Google
-Files upload that is deleted after generation, including failed generation. With
-a custom `GEMINI_API_BASE` (e.g. a local
-[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) Antigravity proxy)
-all photos are sent inline. Nothing is written to local disk, responses use
-`Cache-Control: no-store`, and provider credentials never leave the server.
+Photos are sent directly to OpenRouter as inline base64 image URLs using bearer
+authentication. No local provider proxy or Google Files upload is used.
+`OPENROUTER_MODEL` defaults to `google/gemini-3.6-flash`; the selected model must
+support images and structured output. The provider response uses a strict
+`medications` object wrapper, validated and unwrapped to the public row array.
+Nothing is written to local disk, responses use `Cache-Control: no-store`, and
+provider credentials never leave the server except to authenticate to OpenRouter.
 Failures use the shared problem+json format: 400 empty, 413 too large, 415
 unsupported signature, 422 blocked image, 429 provider quota (with
 `Retry-After`), 502 provider or invalid output, 503 missing configuration, 504

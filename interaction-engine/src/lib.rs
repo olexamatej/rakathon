@@ -32,10 +32,10 @@ pub struct Config {
     pub result_ttl: Duration,
     pub failure_ttl: Duration,
     pub queue_timeout: Duration,
-    pub gemini_api_base: String,
-    pub gemini_api_key: Option<String>,
-    pub gemini_model: String,
-    pub gemini_timeout: Duration,
+    pub openrouter_api_base: String,
+    pub openrouter_api_key: Option<String>,
+    pub openrouter_model: String,
+    pub openrouter_timeout: Duration,
     pub sukl_catalogue: PathBuf,
 }
 
@@ -56,14 +56,13 @@ impl Config {
             .map(|tier| normalize_service_tier(&tier))
             .transpose()?
             .or_else(|| Some("priority".into()));
-        let gemini_api_base = env::var("GEMINI_API_BASE")
+        let openrouter_api_base = env::var("OPENROUTER_API_BASE")
             .ok()
             .map(|base| base.trim().trim_end_matches('/').to_string())
             .filter(|base| !base.is_empty())
-            .unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1beta".into());
-        let gemini_api_key = env::var("GEMINI_API_KEY")
+            .unwrap_or_else(|| "https://openrouter.ai/api/v1".into());
+        let openrouter_api_key = env::var("OPENROUTER_API_KEY")
             .ok()
-            .or_else(|| env::var("GOOGLE_API_KEY").ok())
             .map(|key| key.trim().to_string())
             .filter(|key| !key.is_empty());
         Ok(Self {
@@ -90,13 +89,13 @@ impl Config {
             result_ttl: Duration::from_secs(env_number("RESULT_TTL_SECONDS", 86400)?),
             failure_ttl: Duration::from_secs(env_number("FAILURE_TTL_SECONDS", 30)?),
             queue_timeout: Duration::from_secs(env_number("QUEUE_TIMEOUT_SECONDS", 300)?),
-            gemini_api_base,
-            gemini_api_key,
-            gemini_model: env::var("GEMINI_MODEL")
+            openrouter_api_base,
+            openrouter_api_key,
+            openrouter_model: env::var("OPENROUTER_MODEL")
                 .ok()
                 .filter(|model| !model.trim().is_empty())
                 .unwrap_or_else(|| transcribe::DEFAULT_MODEL.into()),
-            gemini_timeout: Duration::from_secs(env_number("GEMINI_TIMEOUT_SECONDS", 120)?),
+            openrouter_timeout: Duration::from_secs(env_number("OPENROUTER_TIMEOUT_SECONDS", 120)?),
             sukl_catalogue: env::var_os("SUKL_CATALOGUE_PATH")
                 .map(PathBuf::from)
                 .unwrap_or_else(|| "../data/sukl/medications.json".into()),
@@ -143,7 +142,7 @@ impl AppState {
         }
         Ok(Self {
             jobs: Arc::new(jobs::Store::open(&config)?),
-            transcribe: Arc::new(transcribe::TranscribeState::new(config.gemini_timeout)?),
+            transcribe: Arc::new(transcribe::TranscribeState::new(config.openrouter_timeout)?),
             config: Arc::new(config),
         })
     }

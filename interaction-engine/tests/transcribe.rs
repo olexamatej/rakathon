@@ -37,7 +37,7 @@ async fn stub(reply: Value, status: StatusCode) -> (String, Arc<Mutex<Vec<Captur
             sink.lock().unwrap().push(Captured {
                 path: uri.path().to_string(),
                 api_key: headers
-                    .get("x-goog-api-key")
+                    .get("authorization")
                     .and_then(|value| value.to_str().ok())
                     .map(str::to_string),
                 content_type: headers
@@ -52,12 +52,17 @@ async fn stub(reply: Value, status: StatusCode) -> (String, Arc<Mutex<Vec<Captur
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    (format!("http://{address}/v1beta"), requests)
+    (format!("http://{address}/api/v1"), requests)
 }
 
 fn canned(text: &str, finish: &str) -> Value {
-    json!({"candidates": [{"finishReason": finish,
-        "content": {"parts": [{"thought": true, "text": "not output"}, {"text": text}]}}]})
+    let content = if let Ok(rows) = serde_json::from_str::<Value>(text) {
+        json!({"medications": rows}).to_string()
+    } else {
+        text.to_string()
+    };
+    json!({"choices": [{"finish_reason": finish,
+        "message": {"role": "assistant", "content": content, "reasoning": "not output"}}]})
 }
 
 fn config(base: String, catalogue: Option<PathBuf>) -> Config {
@@ -73,10 +78,10 @@ fn config(base: String, catalogue: Option<PathBuf>) -> Config {
         result_ttl: Duration::from_secs(86400),
         failure_ttl: Duration::from_secs(30),
         queue_timeout: Duration::from_secs(300),
-        gemini_api_base: base,
-        gemini_api_key: Some("proxy-key".into()),
-        gemini_model: "test-model".into(),
-        gemini_timeout: Duration::from_secs(5),
+        openrouter_api_base: base,
+        openrouter_api_key: Some("proxy-key".into()),
+        openrouter_model: "google/test-model:variant".into(),
+        openrouter_timeout: Duration::from_secs(5),
         sukl_catalogue: catalogue
             .unwrap_or_else(|| PathBuf::from("/does/not/exist/medications.json")),
     }
@@ -132,7 +137,7 @@ fn assert_matches_openapi(value: &Value, name: &str) {
 
 #[tokio::test]
 async fn transcribes_with_catalogue_and_keeps_the_key_in_headers() {
-    let (base, requests) = stub(canned(ROWS, "STOP"), StatusCode::OK).await;
+    let (base, requests) = stub(canned(ROWS, "stop"), StatusCode::OK).await;
     let router = app(AppState::new(config(
         base.clone(),
         Some(catalogue_file(&["CONCOR", "ANOPYRIN"])),
@@ -151,31 +156,43 @@ async fn transcribes_with_catalogue_and_keeps_the_key_in_headers() {
     let captured = requests.lock().unwrap();
     assert_eq!(captured.len(), 1);
     let request = &captured[0];
-    assert_eq!(request.path, "/v1beta/models/test-model:generateContent");
-    assert_eq!(request.api_key.as_deref(), Some("proxy-key"));
+    assert_eq!(request.path, "/api/v1/chat/completions");
+    assert_eq!(request.api_key.as_deref(), Some("Bearer proxy-key"));
     assert_eq!(request.content_type.as_deref(), Some("application/json"));
+    assert_eq!(request.body["model"], "google/test-model:variant");
     assert_eq!(
-        request.body["contents"][0]["parts"][0]["inline_data"]["mime_type"],
-        "image/png"
+        request.body["messages"][1]["content"][1]["type"],
+        "image_url"
     );
     assert_eq!(
-        request.body["contents"][0]["parts"][0]["inline_data"]["data"],
-        "iVBORw0KGgo="
+        request.body["messages"][1]["content"][1]["image_url"]["url"],
+        "data:image/png;base64,iVBORw0KGgo="
     );
+    assert!(!request.body.to_string().contains("proxy-key"));
+    assert_eq!(request.body["provider"]["require_parameters"], true);
+    assert_eq!(request.body["stream"], false);
+    assert_eq!(request.body["max_tokens"], 8192);
+    assert_eq!(request.body["response_format"]["type"], "json_schema");
     assert_eq!(
-        request.body["generationConfig"]["responseMimeType"],
-        "application/json"
+        request.body["response_format"]["json_schema"]["strict"],
+        true
     );
-    assert_eq!(request.body["generationConfig"]["maxOutputTokens"], 8192);
-    let schema = &request.body["generationConfig"]["responseJsonSchema"];
+    let schema = &request.body["response_format"]["json_schema"]["schema"];
+    assert_eq!(schema["required"], json!(["medications"]));
+    let rows_schema = &schema["properties"]["medications"];
+    // A bounded array makes Gemini reject the request before generation.
+    assert!(rows_schema.get("maxItems").is_none());
     assert_eq!(
-        schema["items"]["required"],
+        rows_schema["items"]["required"],
         json!(["name", "strength", "schedule"])
     );
-    assert!(schema["items"]["properties"]["strength"].is_object());
-    let prompt = request.body["systemInstruction"]["parts"][0]["text"]
-        .as_str()
-        .unwrap();
+    assert!(rows_schema["items"]["properties"]["strength"].is_object());
+    let validator = jsonschema::validator_for(schema).unwrap();
+    assert!(
+        validator.is_valid(&json!({"medications": serde_json::from_str::<Value>(ROWS).unwrap()}))
+    );
+    assert!(!validator.is_valid(&json!({"medications": [{"name": "X"}]})));
+    let prompt = request.body["messages"][0]["content"].as_str().unwrap();
     assert!(prompt.contains("<katalog>\nANOPYRIN\nCONCOR\n</katalog>"));
     assert!(prompt.contains("write that catalogue name exactly as listed"));
     assert!(prompt.contains("never take strengths, forms or dosing from the catalogue"));
@@ -183,17 +200,17 @@ async fn transcribes_with_catalogue_and_keeps_the_key_in_headers() {
 
 #[tokio::test]
 async fn no_catalogue_block_when_the_catalogue_is_unavailable() {
-    let (base, requests) = stub(canned("[]", "STOP"), StatusCode::OK).await;
+    let (base, requests) = stub(canned("[]", "stop"), StatusCode::OK).await;
     let router = app(AppState::new(config(base, None)).unwrap());
     let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;
     assert_eq!(status, StatusCode::OK);
-    let prompt = requests.lock().unwrap()[0].body["systemInstruction"]["parts"][0]["text"].clone();
+    let prompt = requests.lock().unwrap()[0].body["messages"][0]["content"].clone();
     assert!(!prompt.as_str().unwrap().contains("<katalog>"));
 }
 
 #[tokio::test]
 async fn rejects_invalid_photos_and_missing_configuration_without_calling_provider() {
-    let (base, requests) = stub(canned("[]", "STOP"), StatusCode::OK).await;
+    let (base, requests) = stub(canned("[]", "stop"), StatusCode::OK).await;
     let router = app(AppState::new(config(base.clone(), None)).unwrap());
     let cases = [
         (
@@ -229,7 +246,7 @@ async fn rejects_invalid_photos_and_missing_configuration_without_calling_provid
     assert!(requests.lock().unwrap().is_empty());
 
     let mut missing = config(base, None);
-    missing.gemini_api_key = None;
+    missing.openrouter_api_key = None;
     let router = app(AppState::new(missing).unwrap());
     let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
@@ -250,24 +267,69 @@ async fn maps_provider_failures_to_problem_statuses() {
             StatusCode::BAD_GATEWAY,
         ),
         (
-            json!({"promptFeedback": {"blockReason": "SAFETY"}}),
+            canned("[]", "content_filter"),
             StatusCode::OK,
             StatusCode::UNPROCESSABLE_ENTITY,
         ),
         (
-            canned("[]", "MAX_TOKENS"),
+            json!({"error": {"code": 429, "message": "private provider detail"}}),
+            StatusCode::OK,
+            StatusCode::TOO_MANY_REQUESTS,
+        ),
+        (
+            json!({"choices": [{"finish_reason": "stop", "message": {"refusal": "blocked", "content": null}}]}),
+            StatusCode::OK,
+            StatusCode::UNPROCESSABLE_ENTITY,
+        ),
+        (
+            json!({"choices": [{"finish_reason": "stop", "message": {"content": "[]"}}]}),
             StatusCode::OK,
             StatusCode::BAD_GATEWAY,
         ),
         (
-            canned("not json", "STOP"),
+            json!({"choices": [{"finish_reason": "stop", "message": {"content": "{\"medications\":[],\"extra\":1}"}}]}),
+            StatusCode::OK,
+            StatusCode::BAD_GATEWAY,
+        ),
+        (
+            json!({"choices": []}),
+            StatusCode::OK,
+            StatusCode::BAD_GATEWAY,
+        ),
+        (
+            canned("[]", "length"),
+            StatusCode::OK,
+            StatusCode::BAD_GATEWAY,
+        ),
+        (
+            canned("not json", "stop"),
+            StatusCode::OK,
+            StatusCode::BAD_GATEWAY,
+        ),
+        (
+            canned(
+                &json!(vec![
+                    json!({"name": "X", "strength": null, "schedule": null});
+                    201
+                ])
+                .to_string(),
+                "stop",
+            ),
+            StatusCode::OK,
+            StatusCode::BAD_GATEWAY,
+        ),
+        (
+            canned(
+                &json!([{"name": "X", "strength": "x".repeat(121), "schedule": null}]).to_string(),
+                "stop",
+            ),
             StatusCode::OK,
             StatusCode::BAD_GATEWAY,
         ),
         (
             canned(
                 r#"[{"name":"X","strength":null,"schedule":null,"extra":1}]"#,
-                "STOP",
+                "stop",
             ),
             StatusCode::OK,
             StatusCode::BAD_GATEWAY,
@@ -330,7 +392,7 @@ async fn logs_provider_error_details_without_exposing_the_api_key() {
         let logs = String::from_utf8(logs.lock().unwrap().clone()).unwrap();
         assert!(logs.contains("Unsupported model"), "{logs}");
         assert!(logs.contains(provider_status.as_str()), "{logs}");
-        assert!(logs.contains("generateContent"), "{logs}");
+        assert!(logs.contains("chat/completions"), "{logs}");
         assert!(logs.contains("test-model"), "{logs}");
         assert!(logs.contains("[REDACTED]"), "{logs}");
         assert!(!logs.contains("proxy-key"), "{logs}");
@@ -340,7 +402,7 @@ async fn logs_provider_error_details_without_exposing_the_api_key() {
 
 #[tokio::test]
 async fn unavailable_provider_yields_gateway_error() {
-    let router = app(AppState::new(config("http://127.0.0.1:1/v1beta".into(), None)).unwrap());
+    let router = app(AppState::new(config("http://127.0.0.1:1/api/v1".into(), None)).unwrap());
     let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;
     assert_eq!(status, StatusCode::BAD_GATEWAY);
 }

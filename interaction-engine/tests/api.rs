@@ -182,10 +182,10 @@ fn config(bin: PathBuf) -> Config {
         result_ttl: Duration::from_secs(86400),
         failure_ttl: Duration::from_secs(30),
         queue_timeout: Duration::from_secs(300),
-        gemini_api_base: "http://127.0.0.1:1/v1beta".into(),
-        gemini_api_key: None,
-        gemini_model: interaction_engine::transcribe::DEFAULT_MODEL.into(),
-        gemini_timeout: Duration::from_secs(5),
+        openrouter_api_base: "http://127.0.0.1:1/v1beta".into(),
+        openrouter_api_key: None,
+        openrouter_model: interaction_engine::transcribe::DEFAULT_MODEL.into(),
+        openrouter_timeout: Duration::from_secs(5),
         sukl_catalogue: PathBuf::from("/does/not/exist/medications.json"),
     }
 }

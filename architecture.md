@@ -70,7 +70,7 @@ producing three complete synthetic medicines without calling Gemini. Calling
 
 `POST /api/transcribe` on the patient Node server accepts raw JPEG, PNG or WebP
 (up to 20 MiB) and proxies the bytes to the interaction engine's
-`POST /transcribe`, which calls Gemini 3.6 Flash through the configured
+`POST /transcribe`, which calls OpenRouter (default model `google/gemini-3.6-flash`) through the configured
 Gemini-compatible endpoint and returns only `[{name, schedule}]`.
 Each field is a string or null; visible strength stays in name. The client maps
 these rows to its existing editable items without inventing strength or package
