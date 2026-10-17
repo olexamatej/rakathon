@@ -13,12 +13,12 @@ async function seed(page, expiresAt = headers['x-expires-at']) {
 }
 
 async function expectFresh(page) {
-  await expect(page.locator('h1')).toHaveText('Platnost seznamu skončila');
+  await expect(page.locator('h1')).toHaveText('PIN vypršel!');
   await expect(page.locator('h1.pin, .medicine')).toHaveCount(0);
   await expect(page.locator('.saved-list')).toContainText(item.name);
   await expect(page.getByRole('button', { name: 'Obnovit platnost' })).toHaveCount(0);
   await expect(page.locator('.notice')).toContainText('v tomto zařízení');
-  await expect(page.getByRole('button', { name: 'Znovu nahrát a získat nový PIN' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Obnovit záznam a získat nový PIN' })).toBeEnabled();
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
   expect(state.items).toEqual([]);
   expect(state.submissions).toHaveLength(1);
@@ -86,7 +86,7 @@ for (const expiresAt of ['2020-01-15T12:00:00Z', undefined]) {
     await expectFresh(page);
     expect(calls).toBe(0);
     await page.reload();
-    await expect(page.locator('h1')).toHaveText('Platnost seznamu skončila');
+    await expect(page.locator('h1')).toHaveText('PIN vypršel!');
     expect((await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).submissions[0].expired).toBe(true);
     expect(calls).toBe(0);
     await page.evaluate(item => {
@@ -273,7 +273,8 @@ test('expired local copy shows dates and explicitly reuploads the displayed snap
   await page.reload();
   await expectFresh(page);
   await expect(page.locator('.expired-heading')).toHaveCSS('color', 'rgb(164, 56, 50)');
-  await expect(page.locator('.expired-icon')).toBeVisible();
+  await expect(page.locator('.expired-icon')).toHaveCount(0);
+  await expect(page.locator('.notice')).toContainText('Zde vidíte');
   expect(await page.locator('.validity-date').evaluate(date => date.previousElementSibling.tagName)).toBe('H1');
   expect(await page.locator('[data-action="reupload"]').evaluate(button => button.previousElementSibling.classList.contains('validity-date'))).toBe(true);
   await expect(page.locator('time[datetime="2026-10-17T12:00:00Z"]')).toBeHidden();
@@ -285,7 +286,7 @@ test('expired local copy shows dates and explicitly reuploads the displayed snap
   await expect(page.locator('#local-copy-info')).toBeHidden();
   await expect(page.locator('time[datetime="2026-10-01T12:00:00Z"]')).toBeVisible();
   expect(writes).toEqual([]);
-  await page.getByRole('button', { name: 'Znovu nahrát a získat nový PIN' }).click();
+  await page.getByRole('button', { name: 'Obnovit záznam a získat nový PIN' }).click();
   await expect(page.locator('h1.pin')).toHaveText('5678');
   expect(writes).toEqual(['POST']);
   await expect(page.locator('.generated-at')).toHaveCount(0);
@@ -311,7 +312,7 @@ test('failed reupload retains the expired copy; discard requires confirmation', 
   await page.route('**/api/v1/transfers', route => route.fulfill({ status: 503 }));
   await page.reload();
   await expectFresh(page);
-  await page.getByRole('button', { name: 'Znovu nahrát a získat nový PIN' }).click();
+  await page.getByRole('button', { name: 'Obnovit záznam a získat nový PIN' }).click();
   await expect(page.locator('.message')).toContainText('nemůže potvrdit');
   expect((await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).submissions[0].expired).toBe(true);
   page.once('dialog', dialog => dialog.dismiss());

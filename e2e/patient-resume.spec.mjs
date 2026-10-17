@@ -44,7 +44,7 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await doctor.goto(`/lekar?pin=${pin}`);
   await expect(doctor.locator('#main input[data-field="name"]')).toHaveValue(expected.items[0].name);
   await page.reload();
-  await expect(page.locator('h1')).toHaveText('Platnost seznamu skončila');
+  await expect(page.locator('h1')).toHaveText('PIN vypršel!');
   await expect(page.locator('h1.pin')).toHaveCount(0);
   const invalidated = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
   expect(invalidated.items).toEqual([]);

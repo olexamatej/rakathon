@@ -99,8 +99,6 @@ input:disabled { opacity: .7; }
 .pin { font-size: clamp(36px, 10vw, 60px); letter-spacing: .16em; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .generated-at { color: var(--muted); font-size: 13px; }
 .expired-heading { display: flex; align-items: center; justify-content: center; gap: 10px; color: #a43832; }
-.expired-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border: 1px solid #e7b8b3; border-radius: 50%; background: #fcf0ee; font-size: 20px; }
-.expired-icon::before { content: '!'; }
 .expired-date { color: #a43832; }
 .current-submission .primary { min-height: 52px; margin-top: 8px; font-size: 16px; }
 .notice { padding: 10px; margin-top: 12px; background: var(--tint); color: #365578; font-size: 13px; line-height: 1.6; border-radius: 10px; }

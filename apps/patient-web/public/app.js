@@ -131,16 +131,16 @@ function render(focus = false) {
     dateStyle: 'medium', timeStyle: 'short',
   }).format(new Date(value));
   const content = receipt ? `<main id="main" class="pin-screen">
-    <section class="current-submission">${receipt.expired ? '<h1 class="expired-heading"><span class="expired-icon" aria-hidden="true"></span>Platnost seznamu skončila</h1>' : verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
+    <section class="current-submission">${receipt.expired ? '<h1 class="expired-heading">PIN vypršel!</h1>' : verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>`
       : `<h1>${checking ? 'Ověřuji platnost…' : 'Platnost není ověřena'}</h1>`}
     <p class="validity-date${receipt.expired ? ' expired-date' : ''}">${receipt.expiresAt ? `${receipt.expired && Date.parse(receipt.expiresAt) <= Date.now() ? 'Platnost vypršela' : 'Platnost do'} <time datetime="${escape(receipt.expiresAt)}">${escape(formatDate(receipt.expiresAt))}</time>` : 'Datum vypršení platnosti není dostupné.'}
     ${receipt.expired ? `<button class="validity-help" data-action="local-copy-help" aria-label="Informace o lokální kopii" aria-expanded="${localCopyInfoOpen}" aria-controls="local-copy-info">?</button>` : receipt.expiresAt ? `<button class="validity-help" data-action="validity-help" aria-label="Informace o platnosti" aria-expanded="${validityInfoOpen}" aria-controls="validity-info">?</button>` : ''}</p>
-    ${receipt.expired ? `<button class="primary" data-action="reupload" ${isBusy() ? 'disabled' : ''}>${sending ? 'Nahrávám…' : 'Znovu nahrát a získat nový PIN'}</button>
+    ${receipt.expired ? `<button class="primary" data-action="reupload" ${isBusy() ? 'disabled' : ''}>${sending ? 'Nahrávám…' : 'Obnovit záznam a získat nový PIN'}</button>
     <p class="validity-info generated-at" id="local-copy-info" ${localCopyInfoOpen ? '' : 'hidden'}>Lokální kopie pochází z nahrání <time datetime="${escape(receipt.sentAt)}">${escape(formatDate(receipt.sentAt))}</time>.</p>` : ''}
     ${!receipt.expired ? `<button class="primary" data-action="renew" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
     <p class="validity-info" id="validity-info" ${validityInfoOpen ? '' : 'hidden'}>Data jsou uchována pouze dokud nejsou zobrazena zdravotníkem, nebo do uvedeného data platnosti. Pokud je vaše plánovaná návštěva až po konci platnosti, musíte platnost před návštěvou prodloužit.</p>` : ''}
-    ${receipt.expired ? `<p class="notice">Původní PIN už nelze použít pro předání lékaři. Tady vidíte pouze lokální kopii uloženou v tomto zařízení, nikoli aktuálně sdílený seznam. Datum jejího nahrání najdete pod otazníkem u platnosti. Zkontrolujte, zda jsou léky stále aktuální. Seznam můžete zahodit, nebo jej znovu nahrát a získat nový PIN.</p>` : ''}
+    ${receipt.expired ? `<p class="notice">Původní PIN už nelze použít pro předání lékaři. Zde vidíte pouze lokální kopii uloženou v tomto zařízení, nikoli aktuálně sdílený seznam. Datum jejího nahrání najdete pod otazníkem u platnosti. Zkontrolujte, zda jsou léky stále aktuální. Seznam můžete zahodit, nebo jej znovu nahrát a získat nový PIN.</p>` : ''}
     ${receipt.expired ? `<div class="saved-list"><h2>Uložený seznam léčiv:</h2>
     ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
     ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>` : ''}
