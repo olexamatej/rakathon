@@ -58,7 +58,9 @@ h2 { font-size: 18px; font-weight: 650; letter-spacing: -.3px; }
 #regimen-list li { padding: 10px; border-radius: 8px; font-size: 15px; cursor: pointer; overflow-wrap: anywhere; }
 #regimen-list li:hover, #regimen-list li[aria-selected="true"] { background: var(--tint); }
 .submission-regimen { font-size: 13px; padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--line); }
-.photo-section { margin: 16px 0 20px; }
+.photo-section { margin: 24px 0 32px; padding: 24px 0; }
+.photo-section--intro { padding: 40px 8px 48px; }
+.photo-section h2 { margin-bottom: 24px; line-height: 1.4; }
 .photo-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
 .section-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .primary, .secondary { min-height: 44px; border-radius: 12px; padding: 10px 14px; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid var(--brand); }
@@ -116,7 +118,6 @@ dialog p { font-size: 14px; margin: 12px 0; }
   .brand img { width: 32px; height: 32px; }
   .install-button { width: 36px; height: 36px; }
   .shell > main { padding-top: 18px; }
-  .photo-section { padding: 15px; }
 }
 @media (max-width: 350px) {
   .photo-actions { grid-template-columns: 1fr; }
@@ -126,7 +127,8 @@ dialog p { font-size: 14px; margin: 12px 0; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
-.photo-actions { display: grid; gap: 10px; }
+.photo-actions { display: grid; gap: 16px; }
+.photo-actions button { min-height: 56px; padding: 16px 20px; }
 #camera-dialog { width: min(560px, calc(100% - 32px)); }
 #camera-video { display: block; width: 100%; border-radius: 12px; background: #000; aspect-ratio: 4 / 3; object-fit: cover; }
 .camera-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }

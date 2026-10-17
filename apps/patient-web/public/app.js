@@ -75,10 +75,10 @@ function photoStatus() {
 
 function photoUpload() {
   const photoInputBlocked = loadFailed || sending;
-  return `<section class="photo-section" aria-labelledby="photo-title">
+  return `<section class="photo-section${state.items.length ? '' : ' photo-section--intro'}" aria-labelledby="photo-title">
       <h2 id="photo-title">Nahrajte ${state.items.length ? 'další ' : ''}fotografie léků</h2>
       <div class="photo-actions">
-        <button type="button" class="secondary full" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Z knihovny</button>
+        <button type="button" class="secondary full" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Z galerie</button>
         <button type="button" class="primary full" data-action="camera" ${photoInputBlocked ? 'disabled' : ''}>${icon('camera')} Vyfotit</button>
       </div>
       ${photoStatus()}

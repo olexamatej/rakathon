@@ -65,7 +65,7 @@ PostgreSQL is not implemented; its old schema is historical only.
 
 ## Photo transcription
 
-The patient starts with a secondary “Z knihovny” button above a primary
+The patient starts with a secondary “Z galerie” button above a primary
 “Vyfotit” button and can keep
 adding photos while recognition runs. The UI shows a brief loading status and
 recognized medicines, without photo previews, filenames or completed photo cards. A single

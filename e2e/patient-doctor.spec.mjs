@@ -29,7 +29,7 @@ for (const source of ['mobile', 'desktop']) {
       }
       await page.goto('/pacient');
       const chooserPromise = page.waitForEvent('filechooser');
-      await page.getByRole('button', { name: source === 'mobile' ? 'Vyfotit' : 'Z knihovny', exact: true }).click();
+      await page.getByRole('button', { name: source === 'mobile' ? 'Vyfotit' : 'Z galerie', exact: true }).click();
       await (await chooserPromise).setFiles({
         name: `synthetic-${randomUUID()}.png`, mimeType: 'image/png',
         buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64'),
