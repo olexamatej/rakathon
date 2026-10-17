@@ -355,10 +355,16 @@ paths:
         server-only OPENROUTER_API_KEY, and is never stored locally. The response returns visible strength in a separate field, preserves written
         schedules (only numeric separators are normalized), and uses null for
         absent or unreadable fields. When the SÚKL catalogue is available
-        (SUKL_CATALOGUE_PATH), its official names are appended to the
-        instruction: a clearly matching visible name may use the catalogue
-        spelling. Strengths, forms and dosing never come from the catalogue, and
-        an unreadable name is never filled from it. All photos use base64 image
+        (SUKL_CATALOGUE_PATH), each non-null name is replaced after validation
+        with the closest usable official name by case-insensitive Levenshtein
+        distance, without a distance threshold. Whole-name prefixes take priority
+        (WARFARIN matches WARFARIN PMCS rather than AFRIN).
+        Ties use sorted catalogue order.
+        The prompt requires the best full catalogue entry even for partial names,
+        assuming every medicine is in the catalogue. Only entirely absent or
+        unreadable names use null. Strengths, dosing
+        and null names stay unchanged. Without usable catalogue names, names
+        stay as transcribed. All photos use base64 image
         URLs in the chat completions request. Malformed,
         truncated, or invalid provider output fails instead of returning partial
         data. There is no retry. With the server's --mock-transcribe flag,

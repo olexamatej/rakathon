@@ -179,7 +179,11 @@ async fn mock_transcription_requires_a_usable_catalogue() {
 
 #[tokio::test]
 async fn transcribes_with_catalogue_and_keeps_the_key_in_headers() {
-    let (base, requests) = stub(canned(ROWS, "stop"), StatusCode::OK).await;
+    let (base, requests) = stub(
+        canned(&ROWS.replace("CONCOR", "Concord"), "stop"),
+        StatusCode::OK,
+    )
+    .await;
     let router = app(AppState::new(config(
         base.clone(),
         Some(catalogue_file(&["CONCOR", "ANOPYRIN"])),
@@ -236,18 +240,103 @@ async fn transcribes_with_catalogue_and_keeps_the_key_in_headers() {
     assert!(!validator.is_valid(&json!({"medications": [{"name": "X"}]})));
     let prompt = request.body["messages"][0]["content"].as_str().unwrap();
     assert!(prompt.contains("<katalog>\nANOPYRIN\nCONCOR\n</katalog>"));
-    assert!(prompt.contains("write that catalogue name exactly as listed"));
+    assert!(prompt.contains("write\nthat catalogue name exactly as listed"));
+    assert!(prompt.contains("Every medicine in the photograph is in this catalogue."));
+    assert!(prompt.contains("Never return a name outside the catalogue"));
+    assert!(prompt.contains("Return the full catalogue name even when\nonly part is visible."));
     assert!(prompt.contains("never take strengths, forms or dosing from the catalogue"));
 }
 
 #[tokio::test]
 async fn no_catalogue_block_when_the_catalogue_is_unavailable() {
-    let (base, requests) = stub(canned("[]", "stop"), StatusCode::OK).await;
+    let (base, requests) = stub(canned(ROWS, "stop"), StatusCode::OK).await;
     let router = app(AppState::new(config(base, None)).unwrap());
-    let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;
+    let (status, _, body) = post_image(router, "image/png", PNG.to_vec()).await;
     assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        serde_json::from_slice::<Vec<Row>>(&body).unwrap(),
+        parse_medications(ROWS).unwrap()
+    );
     let prompt = requests.lock().unwrap()[0].body["messages"][0]["content"].clone();
     assert!(!prompt.as_str().unwrap().contains("<katalog>"));
+}
+
+#[tokio::test]
+async fn corrects_names_by_distance_even_without_a_close_match() {
+    let input = json!([
+        {"name": "concor", "strength": "5 mg", "schedule": "1-0-0"},
+        {"name": "ZZZZZZZZZZ", "strength": null, "schedule": null},
+        {"name": "ŽLUTY", "strength": null, "schedule": null},
+        {"name": "CAT", "strength": null, "schedule": null},
+        {"name": null, "strength": "10 mg", "schedule": "večer"}
+    ]);
+    let (base, _) = stub(canned(&input.to_string(), "stop"), StatusCode::OK).await;
+    let router = app(AppState::new(config(
+        base,
+        Some(catalogue_file(&[
+            "CONCOR",
+            "ŽLUTÝ",
+            "BAT",
+            "HAT",
+            "bad\nname",
+            "",
+            "  ",
+        ])),
+    ))
+    .unwrap());
+    let (status, _, body) = post_image(router, "image/png", PNG.to_vec()).await;
+    assert_eq!(status, StatusCode::OK);
+    let mut expected = input;
+    expected[0]["name"] = json!("CONCOR");
+    expected[1]["name"] = json!("BAT");
+    expected[2]["name"] = json!("ŽLUTÝ");
+    expected[3]["name"] = json!("BAT");
+    assert_eq!(serde_json::from_slice::<Value>(&body).unwrap(), expected);
+}
+
+#[tokio::test]
+async fn prefers_whole_name_prefixes_over_shorter_unrelated_names() {
+    let input = json!([
+        {"name": "WARFARIN", "strength": "5 mg", "schedule": "1-0-0"},
+        {"name": "warfarin", "strength": null, "schedule": null},
+        {"name": "WARFARIN ORION", "strength": "3 mg", "schedule": "večer"},
+        {"name": "AFRIN", "strength": null, "schedule": null},
+        {"name": "CON", "strength": null, "schedule": null}
+    ]);
+    let (base, _) = stub(canned(&input.to_string(), "stop"), StatusCode::OK).await;
+    let router = app(AppState::new(config(
+        base,
+        Some(catalogue_file(&[
+            "AFRIN",
+            "WARFARIN ORION",
+            "WARFARIN PMCS",
+            "CONCOR",
+            "COT",
+        ])),
+    ))
+    .unwrap());
+    let (status, _, body) = post_image(router, "image/png", PNG.to_vec()).await;
+    assert_eq!(status, StatusCode::OK);
+    let mut expected = input;
+    expected[0]["name"] = json!("WARFARIN PMCS");
+    expected[1]["name"] = json!("WARFARIN PMCS");
+    // A partial word must not get prefix priority: CONCOR is farther than COT.
+    expected[4]["name"] = json!("COT");
+    assert_eq!(serde_json::from_slice::<Value>(&body).unwrap(), expected);
+}
+
+#[tokio::test]
+async fn leaves_names_unchanged_without_usable_catalogue_names() {
+    for names in [vec![], vec!["bad\nname", "", "  "]] {
+        let (base, _) = stub(canned(ROWS, "stop"), StatusCode::OK).await;
+        let router = app(AppState::new(config(base, Some(catalogue_file(&names)))).unwrap());
+        let (status, _, body) = post_image(router, "image/png", PNG.to_vec()).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            serde_json::from_slice::<Vec<Row>>(&body).unwrap(),
+            parse_medications(ROWS).unwrap()
+        );
+    }
 }
 
 #[tokio::test]
@@ -414,6 +503,28 @@ async fn logs_provider_error_details_without_exposing_the_api_key() {
         .with_writer(move || writer.clone())
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    let (base, _) = stub(
+        canned(&ROWS.replace("CONCOR", "Concord"), "stop"),
+        StatusCode::OK,
+    )
+    .await;
+    let router = app(AppState::new(config(base, Some(catalogue_file(&["CONCOR"])))).unwrap());
+    let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;
+    assert_eq!(status, StatusCode::OK);
+    let success_logs = String::from_utf8(logs.lock().unwrap().clone()).unwrap();
+    for expected in [
+        "OpenRouter transcription result",
+        "elapsed_ms=",
+        "row_count=2",
+        "Concord",
+        "Transcription name corrected",
+        "to=CONCOR",
+        "distance=1",
+    ] {
+        assert!(success_logs.contains(expected), "{success_logs}");
+    }
+    assert!(!success_logs.contains("proxy-key"));
 
     for provider_status in [StatusCode::TOO_MANY_REQUESTS, StatusCode::BAD_REQUEST] {
         let (base, _) = stub(

@@ -220,10 +220,17 @@ curl --data-binary @photo.jpg -H 'Content-Type: image/jpeg' \
 
 Visible strength stays inside `name`. Fractions and written instructions are
 preserved; only numeric schedule separators are normalized. A handwritten list
-takes precedence over a printed list. With `SUKL_CATALOGUE_PATH` present the
-prompt includes official SÚKL names, so a clearly matching visible name may use
-the catalogue spelling; strengths, forms, dosing and unreadable names are never
-taken or filled from the catalogue.
+takes precedence over a printed list. With `SUKL_CATALOGUE_PATH` present, Rust
+replaces each non-null name after validation with the closest usable official SÚKL name by case-insensitive
+Levenshtein distance, without a distance threshold. Whole-name prefixes take
+priority (e.g. WARFARIN matches WARFARIN PMCS rather than AFRIN). Ties use the first name in
+sorted catalogue order. The prompt requires every partially readable name to
+map to the most plausible full SÚKL catalogue entry, assuming every medicine
+is in the supplied catalogue. Only entirely absent or unreadable names use null. Successful LLM calls log the model,
+elapsed time and medication rows at info level; name corrections log the
+original name, replacement and distance.
+Strengths, dosing and null names stay unchanged; without usable catalogue names,
+transcribed names stay unchanged.
 
 Photos are sent directly to OpenRouter as inline base64 image URLs using bearer
 authentication. No local provider proxy or Google Files upload is used.
