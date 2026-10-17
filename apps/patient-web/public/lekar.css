@@ -15,7 +15,9 @@
 .doc-empty { text-align: center; padding: 80px 20px; border: 1px dashed var(--line); border-radius: 20px; background: #fff; color: var(--muted); }
 .doc-empty svg { width: 34px; height: 34px; color: #8a97a8; margin-bottom: 10px; }
 .doc-empty strong { display: block; color: inherit; font-size: 17px; margin-bottom: 4px; }
-.list-head { margin-bottom: 18px; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 8px 24px #1b2b4408; }
+.list-head { position: relative; margin-bottom: 18px; padding: 20px 72px 20px 20px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 8px 24px #1b2b4408; }
+.close-list { position: absolute; top: 14px; right: 14px; color: var(--muted); }
+.close-list:hover { background: var(--tint); color: var(--brand); }
 .list-head h1 { font-size: 28px; letter-spacing: -.8px; margin: 0 0 6px; }
 .list-head p { color: var(--muted); font-size: 14px; }
 .list-head code { font-weight: 650; letter-spacing: .12em; color: var(--brand); font-size: 15px; }
@@ -82,7 +84,7 @@ input[aria-invalid="true"] { border-color: #c0553a; background: #fff5f1; }
   .doc-shell { padding: 0 12px 24px; }
   .doc-shell header { padding: 12px 0; }
   .doc-layout { margin-top: 16px; }
-  .list-head { padding: 16px; }
+  .list-head { padding: 16px 64px 16px 16px; }
   .table-wrap { border-radius: 12px; }
   .med-table { min-width: 760px; }
   #details-dialog { width: calc(100% - 24px); max-height: calc(100dvh - 24px); padding: 20px 16px; }

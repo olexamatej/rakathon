@@ -20,11 +20,13 @@ const icons = {
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.400-3.800 9c-2.500-2.600-3.800-5.600-3.800-9s1.300-6.400 3.800-9z"/>',
   list: '<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+  close: '<path d="m6 6 12 12M6 18 18 6"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
 
 let state = createDoctorState();
 let loading = false;
+let pinRequest = 0;
 let regimenDrugs = {}; // regimen name -> drug names, filled asynchronously
 const research = new Map(); // `${list id}|${pair}|${site}` -> { status, data, error, controller }
 const interactions = new Map(); // list id -> { status, data, error, token, signature }
@@ -222,7 +224,7 @@ function cellInput(item, field, label, attributes = {}) {
 }
 
 function listView(list) {
-  return `<div class="list-head"><h1>Seznam léčiv</h1>
+  return `<div class="list-head"><button type="button" class="icon-button close-list" data-action="close-list" aria-label="Zavřít aktuální seznam" title="Zavřít aktuální seznam">${icon('close')}</button><h1>Seznam léčiv</h1>
       <p>PIN <code>${escape(list.pin)}</code> · ${list.sentAt ? 'odesláno' : 'načteno'} ${escape(date(list.sentAt || list.loadedAt))} v ${escape(time(list.sentAt || list.loadedAt))} · ${itemCount(list.items.length)}</p></div>
     ${regimenRow(list)}
     ${list.items.length ? `<div class="table-wrap"><table class="med-table"><thead><tr>
@@ -259,6 +261,7 @@ function renderInteractions(list) {
 async function runInteractions(list) {
   if (interactions.get(list.id)?.status === 'loading') return;
   regimenDrugs = await loadRegimenDrugs(); // the regimen's drugs are part of the signature below
+  if (currentList()?.id !== list.id) return;
   const token = newId();
   const controller = new AbortController();
   const signature = interactionSignature(list);
@@ -352,24 +355,30 @@ $('#pin-form').addEventListener('submit', async event => {
     return;
   }
   loading = true;
+  const request = ++pinRequest;
   $('#pin-submit').disabled = true;
   $('#pin-submit').textContent = 'Načítám…';
   try {
     const received = await fetchListByPin(pin);
+    if (request !== pinRequest) return;
     const nextState = createDoctorState();
     const list = addList(nextState, { pin, items: received.items, regimen: received.regimen, sentAt: received.sentAt });
     applySubstances(list.items, await loadSuklSubstances());
+    if (request !== pinRequest) return;
     state = nextState;
     pinInput.value = '';
     render();
   } catch (error) {
+    if (request !== pinRequest) return;
     $('#pin-error').textContent = error.message || 'Seznam se nepodařilo načíst.';
     pinInput.setAttribute('aria-invalid', 'true');
   } finally {
-    loading = false;
-    $('#pin-submit').disabled = false;
-    $('#pin-submit').textContent = 'Zobrazit';
-    pinInput.focus();
+    if (request === pinRequest) {
+      loading = false;
+      $('#pin-submit').disabled = false;
+      $('#pin-submit').textContent = 'Zobrazit';
+      pinInput.focus();
+    }
   }
 });
 
@@ -398,6 +407,31 @@ $('#main').addEventListener('click', event => {
   const list = currentList();
   if (!button || !list) return;
   switch (button.dataset.action) {
+    case 'close-list': {
+      ++pinRequest; // An older PIN request must not reopen the dismissed list.
+      loading = false;
+      for (const entry of interactions.values()) entry.controller?.abort();
+      for (const entry of research.values()) entry.controller?.abort();
+      interactions.clear();
+      research.clear();
+      researchQueue.length = 0;
+      detailRows.clear();
+      detailsTarget = null;
+      if (detailsDialog.open) detailsDialog.close();
+      state = createDoctorState();
+      disarmDelete();
+      pinInput.value = '';
+      pinInput.removeAttribute('aria-invalid');
+      $('#pin-error').textContent = '';
+      $('#pin-submit').disabled = false;
+      $('#pin-submit').textContent = 'Zobrazit';
+      const url = new URL(location.href);
+      url.searchParams.delete('pin');
+      history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+      render();
+      pinInput.focus();
+      break;
+    }
     case 'add-item': {
       const item = { id: newId(), name: '', dosage: '', dosesPerPackage: '' };
       list.items.push(item);

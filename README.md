@@ -110,6 +110,9 @@ lokální historii PINů, přímé úpravy léčiv v tabulce, našeptávání n�
 režimy a kopírování seznamu po řádcích i do jednoho řádku.
 Seznam se načítá ze storage podle skutečného PINu. Účinné látky se doplňují
 podle názvu léčiva z katalogu SÚKL a režim lze upravit přímo v přehledu.
+Křížek v hlavičce seznamu zavře aktuální PIN i seznam a vrátí fokus na zadání
+dalšího PINu; neodstraňuje záznam ze storage. U sdíleného odkazu odstraní PIN
+také z adresy, aby se zavřený seznam po obnovení znovu nenačetl.
 Změna látek zneplatní načtené interakce; úprava dávkování je zachová.
 Interakce se načítají z interaction API; po otevření podrobností se prohledají
 podporované weby. Jejich stav se zobrazuje v pills a odkaz se shrnutím se objeví
