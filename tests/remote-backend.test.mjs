@@ -107,6 +107,26 @@ test('backend configuration accepts only a fixed HTTP(S) origin', () => {
   }
 });
 
+test('remote proxy forwards patient ownership and validity headers only to storage', async t => {
+  const token = 'a'.repeat(64);
+  const seen = [];
+  const backendUrl = await listen(t, createServer((req, res) => {
+    req.resume();
+    seen.push([req.method, req.url, req.headers['x-owner-token']]);
+    res.writeHead(200, { 'X-Owner-Token': token, 'X-Uploaded-At': '2026-10-17T12:00:00Z',
+      'X-Expires-At': '2026-10-31T12:00:00Z' }).end('{}');
+  }));
+  const base = await listen(t, createAppServer({ backendUrl }));
+  for (const [path, method] of [['/api/v1/transfers/0042', 'HEAD'], ['/api/v1/transfers/0042/renew', 'POST'],
+    ['/api/interaction-checks', 'POST'], ['/api/v1/admin/blobs', 'GET']]) {
+    const response = await fetch(base + path, { method, headers: { 'X-Owner-Token': token } });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('x-expires-at'), '2026-10-31T12:00:00Z');
+    assert.equal(seen.at(-1)[2], path.startsWith('/api/v1/transfers/') ? token : undefined);
+    if (method === 'HEAD') assert.equal(await response.text(), '');
+  }
+});
+
 
 test('remote proxy allows PUT only for an existing transfer path and preserves JSON bytes', async t => {
   const payload = ' {"edited": true}\n';

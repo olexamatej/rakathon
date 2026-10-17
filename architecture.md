@@ -19,16 +19,25 @@
 - `POST /v1/transfers`: store any valid JSON as exact bytes; return HTTP 201
   with only `{"pin":"0042"}`. No payload fields are interpreted.
 - `GET /v1/transfers/{pin}`: return those same bytes as `application/json`;
-  return 404 for unknown or invalid PINs. Repeated GETs do not consume the blob.
+  return 404 for unknown or invalid PINs. One atomic DELETE RETURNING consumes
+  the blob on the first successful GET; later GETs return 404 (no retry).
 - `PUT /v1/transfers/{pin}`: replace an existing JSON blob, return HTTP 200
   with the same PIN. Unknown PINs return 404 without creating a blob. The PIN
-  authorizes both reading and editing; concurrent writes use last write wins.
+  authorizes reading; editing also requires the upload-specific `X-Owner-Token`.
+  Concurrent writes use last write wins.
 - Successful storage GETs also return `X-Uploaded-At`, the server UTC time of
   the most recent POST/PUT. JSON bytes remain unchanged. The doctor displays
   that time beside the PIN in one card containing the regimen and medicines.
   The existing SQLite `created_at` field tracks this last upload; updating a
   blob now moves it to the top of the admin listing without changing its PIN.
 - Operational probes: `GET /health/live` and `GET /health/ready`.
+- `HEAD /v1/transfers/{pin}` checks availability without consuming content;
+  `POST /v1/transfers/{pin}/renew` extends displayed validity to 14 days from now.
+  Both require `X-Owner-Token` and return 404 for a different/reused PIN owner.
+  POST/PUT receipts keep the JSON `{pin}` and add `X-Owner-Token`,
+  `X-Uploaded-At`, `X-Expires-At` headers. Renewal preserves upload time and bytes.
+  Migration 0005 adds the token and separate expiry timestamp, backfilling existing
+  expiry as upload + 14 days. Old tokenless patient receipts require a new upload.
 
 Use `/api` before these paths through the frontend proxy. POST requires
 `Content-Type: application/json`. The API and SQLite enforce a 1 MiB payload
@@ -47,11 +56,13 @@ The patient PWA sends `{ "version": 1, "regimen": "…", "items": […] }`,
 without photographs or local IDs. The doctor also accepts legacy `{ "text": "…" }`
 tab-separated payloads. Patient and doctor share validation for this format. Unknown strength/package fields may be empty; demo photos always include complete PARALEN, IBALGIN and LETROX items.
 It records a local snapshot and displays the returned PIN only after a valid 201
-response. The receipt timestamp is client-side; storage returns only the PIN.
+response. The receipt uses server upload/expiry timestamps and an ownership token;
+storage's JSON body still contains only the PIN.
 The patient keeps one current PIN and reopens it on every page load. Previous
 local history migrates to its latest entry; the patient UI has no history. The button below the PIN
 returns to the original list and photo upload screen with that snapshot; saving uses PUT and replaces the local history entry
-only after the server confirms the same PIN. No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
+  only after the server confirms the same PIN (restoration of missing data may issue
+  a new PIN). No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
 storage uploads under `/api/v1/` use the same-origin VPS proxy in deployment.
 For local UI development, `npm run web:remote` (or `WEB_BACKEND_URL` set to a
 deployed HTTP(S) origin) proxies the allowlisted `/api/` endpoints to that origin,
@@ -67,7 +78,13 @@ Admin-only endpoints, enabled with `STORAGE_ADMIN_PASSWORD`:
 `DELETE /v1/admin/blobs` hard deletes all current blobs across all pages with the
 same admin authentication; the UI requires confirmation.
 
-There is no expiry, public DELETE, revocation, idempotency key, or single-use retrieval.
+Validity is display-only for the demo: there is **no age-based deletion job or
+server-side age rejection**. The existing cleanup worker still removes only rate
+limits. The patient checks on load/visible focus and at most once per visible minute,
+hides unverified PINs, and keeps the local snapshot/date after consumption or
+displayed expiry. Restore re-uploads a missing snapshot (new PIN/token) or renews
+an existing owned blob, without duplicating an expired-but-still-stored demo row.
+There is no public DELETE, revocation, or idempotency key.
 Each POST creates a new blob. The old encrypted endpoints and embedded browser
 demo are removed. Historical SQLite migrations and existing legacy rows are
 retained for database compatibility; those rows are not served or deleted.
@@ -108,11 +125,12 @@ See [configuration and routing](docs/gemini-transcription.md) and
 
 This API does not enforce encryption or process medication content. Anyone with
 a PIN can read the blob. Use only synthetic data: a short PIN with indefinite
-retention is not a production patient-data security design. No OCR, interaction
+  retention is not a production patient-data security design. No OCR, interaction
 checks, accounts, or clinical validation belong to this storage service.
 
-Limit requests by socket IP (30 combined POST/PUT writes, 20 GETs per minute); clients behind the
-current proxy share limits. Return `Retry-After: 60` on 429. Cleanup deletes only
+Limit requests by socket IP (30 combined POST/PUT/renew writes, 20 GETs per minute); clients behind the
+current proxy share limits. Patient HEAD checks have a separate 60/minute budget.
+Return `Retry-After: 60` on 429. Cleanup deletes only
 expired rate-limit counters, not blobs. Storage grows without automatic expiry;
 retention, backups, production authentication, and monitoring need separate work.
 Use HTTPS and `Cache-Control: no-store`. The POC storage read audit intentionally

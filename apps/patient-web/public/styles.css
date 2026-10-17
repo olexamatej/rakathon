@@ -131,3 +131,5 @@ dialog p { font-size: 14px; margin: 12px 0; }
 #camera-dialog { width: min(560px, calc(100% - 32px)); }
 #camera-video { display: block; width: 100%; border-radius: 12px; background: #000; aspect-ratio: 4 / 3; object-fit: cover; }
 .camera-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.saved-list { text-align: left; margin: 24px 0; }
+.current-submission > button { margin-top: 12px; }

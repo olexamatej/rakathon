@@ -8,14 +8,14 @@ test('patient returns from the latest PIN to the original photo upload screen an
   expect(upload.status()).toBe(201);
   const { pin } = await upload.json();
   await page.goto('/pacient');
-  await page.evaluate(({ pin, item }) => {
+  await page.evaluate(({ pin, item, ownerToken }) => {
     localStorage.setItem('pillgaze:patient:v3', JSON.stringify({
-      items: [], submissions: [{ id: 'latest-local-id', pin, sentAt: '2026-10-17T12:00:00Z',
+      items: [], submissions: [{ id: 'latest-local-id', pin, ownerToken, sentAt: '2026-10-17T12:00:00Z',
         items: [{ id: 'medicine-local-id', ...item }], regimen: 'Původní režim' },
         { id: 'older-local-id', pin: '1234', sentAt: '2026-10-16T12:00:00Z',
           items: [{ id: 'older-medicine-id', ...item }] }],
     }));
-  }, { pin, item });
+  }, { pin, item, ownerToken: upload.headers()['x-owner-token'] });
   await page.goto('/pacient?new=1');
   await expect(page.locator('h1.pin')).toHaveText(pin);
   await expect(page.locator('.submission-history, #history-title')).toHaveCount(0);
@@ -33,8 +33,6 @@ test('patient returns from the latest PIN to the original photo upload screen an
   expect((await saved).status()).toBe(200);
   await expect(page.locator('h1.pin')).toHaveText(pin);
   const expected = { ...payload, regimen: 'Upravený režim', items: [item] };
-  const stored = await context.request.get(`/api/v1/transfers/${pin}`);
-  expect(await stored.json()).toEqual(expected);
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
   expect(state.submissions).toHaveLength(1);
   expect(state.submissions[0].id).toBe('latest-local-id');
@@ -45,6 +43,12 @@ test('patient returns from the latest PIN to the original photo upload screen an
   const doctor = await context.newPage();
   await doctor.goto(`/lekar?pin=${pin}`);
   await expect(doctor.locator('#main input[data-field="name"]')).toHaveValue(expected.items[0].name);
+  await page.reload();
+  await expect(page.locator('h1')).toHaveText('Vypršelo');
+  await expect(page.locator('h1.pin')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Obnovit platnost', exact: true }).click();
+  await expect(page.locator('h1.pin')).toBeVisible();
+  const restoredPin = await page.locator('h1.pin').textContent();
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await page.route('**/api/transcribe', route => route.fulfill({
     status: 200, contentType: 'application/json',
@@ -58,7 +62,7 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await expect(page.locator('.photo-status')).toHaveCount(0);
   await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
   await page.getByRole('button', { name: 'Uložit seznam' }).click();
-  await expect(page.locator('h1.pin')).toHaveText(pin);
+  await expect(page.locator('h1.pin')).toHaveText(restoredPin);
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await expect(page.locator('.medicine')).toHaveCount(2);
   await expect(page.locator('.photo-status')).toHaveCount(0);
@@ -70,9 +74,9 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
   const upload = await context.request.post('/api/v1/transfers', { data: { version: 1, regimen: '', items: [item] } });
   const { pin } = await upload.json();
   await page.goto('/pacient');
-  await page.evaluate(({ pin, item }) => localStorage.setItem('pillgaze:patient:v3', JSON.stringify({
-    items: [], submissions: [{ id: 'latest-local-id', pin, sentAt: '2026-10-17T12:00:00Z', items: [{ id: 'medicine-local-id', ...item }] }],
-  })), { pin, item });
+  await page.evaluate(({ pin, item, ownerToken }) => localStorage.setItem('pillgaze:patient:v3', JSON.stringify({
+    items: [], submissions: [{ id: 'latest-local-id', pin, ownerToken, sentAt: '2026-10-17T12:00:00Z', items: [{ id: 'medicine-local-id', ...item }] }],
+  })), { pin, item, ownerToken: upload.headers()['x-owner-token'] });
   await page.reload();
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await page.getByRole('button', { name: 'Přidat režim onkologické léčby' }).click();

@@ -1,5 +1,5 @@
 import { createState, loadState, saveState, recordSubmission, updateSubmission, canSend, medicineSummary } from './lists.js';
-import { recognizePhoto, sendList, loadRegimens } from './services.js';
+import { recognizePhoto, sendList, checkList, renewList, loadRegimens } from './services.js';
 
 const app = document.querySelector('#app');
 const photos = [];
@@ -12,6 +12,9 @@ let storageWarning = '';
 let message = '';
 let regimenOpen = false;
 let installPrompt;
+let checking = false;
+let verifiedEntry;
+let lastCheck = 0;
 
 try {
   const loaded = loadState(localStorage);
@@ -124,10 +127,20 @@ function render(focus = false) {
     dateStyle: 'medium', timeStyle: 'short',
   }).format(new Date(value));
   const content = receipt ? `<main id="main" class="pin-screen">
-    <section class="current-submission"><p class="pin-caption">PIN pro lékaře</p>
-    <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>
-    <p class="generated-at">Vygenerováno ${escape(formatDate(receipt.sentAt))}</p>
-    <button class="primary" data-action="open-list" data-id="${escape(receipt.id)}">Zpět k seznamu ${icon('arrow')}</button></section>
+    <section class="current-submission">${!receipt.expired && verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
+    <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>`
+      : `<h1>${receipt.expired ? 'Vypršelo' : checking ? 'Ověřuji platnost…' : 'Platnost není ověřena'}</h1>`}
+    <p class="generated-at">Uloženo ${escape(formatDate(receipt.sentAt))}</p>
+    ${receipt.expiresAt ? `<p>Platnost do ${escape(formatDate(receipt.expiresAt))}</p>` : ''}
+    <div class="saved-list"><h2>Uložený seznam léčiv</h2>
+    ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
+    ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>
+    <p>Po načtení lékařem se seznam z úložiště smaže. Kopie zůstává v tomto zařízení.</p>
+    <button class="primary" data-action="renew" ${sending || checking || (!receipt.expired && verifiedEntry !== receipt) ? 'disabled' : ''}>${sending ? 'Ukládám…' : receipt.expired ? 'Obnovit platnost' : 'Prodloužit platnost'}</button>
+    ${!receipt.expired && verifiedEntry !== receipt && !checking ? '<button class="secondary" data-action="check-validity">Ověřit platnost</button>' : ''}
+    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${sending ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>
+    ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
+    <p class="save-status" role="status">${saveStatus()}</p><p class="message" role="status">${escape(message)}</p></section>
     </main>`
     : editor();
   const header = `<header><a class="brand" href="/pacient" data-action="home"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
@@ -363,12 +376,15 @@ app.addEventListener('submit', async event => {
   let entry;
   try {
     // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
-    const receipt = await sendList({ items, regimen }, editing?.pin);
+    const existing = editing?.expired ? await checkList(editing) : editing;
+    const receipt = await sendList({ items, regimen }, existing ? editing.pin : undefined, existing ? editing.ownerToken : undefined);
     entry = editing
       ? updateSubmission(state, editing.id, items, receipt, regimen)
       : recordSubmission(state, items, receipt, regimen);
+    verifiedEntry = entry.ownerToken ? entry : undefined;
     persist();
   } catch (error) {
+    if (error.missing && editing) { editing.expired = true; verifiedEntry = undefined; persist(); }
     message = error.message || 'Odeslání se nezdařilo. Zkuste to znovu.';
   } finally {
     sending = false;
@@ -382,6 +398,35 @@ app.addEventListener('click', async event => {
   if (!button || button.disabled) return;
   event.preventDefault();
   switch (button.dataset.action) {
+    case 'check-validity': await refreshValidity(true); break;
+    case 'renew': {
+      if (sending || checking) break;
+      const previous = state.submissions[0];
+      if (!previous) break;
+      sending = true;
+      message = '';
+      render();
+      try {
+        let receipt;
+        if (previous.expired) {
+          const existing = await checkList(previous);
+          receipt = existing ? await renewList(previous)
+            : await sendList({ items: previous.items, regimen: previous.regimen || '' });
+        } else receipt = await renewList(previous);
+        if (!receipt) {
+          previous.expired = true;
+          verifiedEntry = undefined;
+          message = 'Seznam již není v úložišti. Obnovte jeho platnost.';
+        } else {
+          const entry = updateSubmission(state, previous.id, previous.items, receipt, previous.regimen || '');
+          verifiedEntry = entry;
+          message = 'Platnost obnovena na 14 dní.';
+        }
+        persist();
+      } catch (error) { message = error.message; }
+      finally { sending = false; render(); }
+      break;
+    }
     case 'home': navigate(); break;
     case 'camera': await openCamera(); break;
     case 'gallery': document.getElementById('gallery').click(); break;
@@ -430,6 +475,34 @@ app.addEventListener('click', async event => {
 });
 
 window.addEventListener('popstate', () => { message = ''; render(true); });
+async function refreshValidity(force = false) {
+  const entry = state.submissions[0];
+  if (!entry || entry.expired || checking || sending || (!force && Date.now() - lastCheck < 60_000)) return;
+  lastCheck = Date.now();
+  checking = true;
+  verifiedEntry = undefined;
+  message = '';
+  render();
+  try {
+    const receipt = await checkList(entry);
+    if (state.submissions[0] !== entry) return;
+    if (!receipt) entry.expired = true;
+    else {
+      Object.assign(entry, receipt);
+      entry.expired = Date.parse(entry.expiresAt) <= Date.now();
+      if (!entry.expired) verifiedEntry = entry;
+    }
+    persist();
+  } catch (error) { message = error.message; }
+  finally { checking = false; render(); }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void refreshValidity();
+});
+window.addEventListener('focus', () => { void refreshValidity(); });
+window.addEventListener('online', () => { void refreshValidity(); });
+// Bounded, visible-tab-only checks; separate from the doctor's consuming GET budget.
+setInterval(() => { if (document.visibilityState === 'visible') void refreshValidity(); }, 60_000);
 window.addEventListener('beforeunload', event => {
   if (unsaved || processing || sending) event.preventDefault();
 });
@@ -449,3 +522,4 @@ if ('caches' in window) {
 }
 persist();
 render();
+void refreshValidity(true);

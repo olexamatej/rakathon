@@ -1,5 +1,6 @@
 // PINs are strings: 0042 and 42 must never identify the same record.
 export const isPin = value => typeof value === 'string' && value.length === 4 && /^[0-9]{4}$/.test(value);
+export const isOwnerToken = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 // Allow pasted visual separators, but never truncate or remove letters from a code.
 export const normalizePin = value => String(value).replace(/[\s-]/g, '');
 
@@ -28,7 +29,10 @@ const isItems = items => Array.isArray(items)
   && new Set(items.map(item => item.id)).size === items.length;
 const isRegimen = value => value === undefined || isText(value, 200);
 const isSubmission = (value, legacy = false) => value && isId(value.id) && isReceipt(value, legacy)
-  && isItems(value.items) && canSend(value.items) && isRegimen(value.regimen);
+  && isItems(value.items) && canSend(value.items) && isRegimen(value.regimen)
+  && (value.ownerToken === undefined || isOwnerToken(value.ownerToken))
+  && (value.expiresAt === undefined || isDate(value.expiresAt))
+  && (value.expired === undefined || typeof value.expired === 'boolean');
 const isState = (state, legacy = false) => state && isItems(state.items) && isRegimen(state.regimen) && Array.isArray(state.submissions)
   && state.submissions.every(entry => isSubmission(entry, legacy))
   && new Set(state.submissions.map(entry => entry.id)).size === state.submissions.length;
@@ -94,6 +98,7 @@ export function recordSubmission(state, items, receipt, regimen = '') {
     return updateSubmission(state, state.submissions[0].id, items, receipt, regimen);
   }
   const entry = { id: newId(), pin: receipt?.pin, sentAt: receipt?.sentAt, items: structuredClone(items) };
+  copyValidity(entry, receipt);
   if (regimen.trim()) entry.regimen = regimen.trim();
   if (!isSubmission(entry)) throw new Error('Neplatná odpověď při odeslání seznamu.');
   state.submissions = [entry];
@@ -104,12 +109,18 @@ export function recordSubmission(state, items, receipt, regimen = '') {
 export function updateSubmission(state, id, items, receipt, regimen = '') {
   const previous = state.submissions.find(entry => entry.id === id);
   const entry = { id, pin: receipt?.pin, sentAt: receipt?.sentAt, items: structuredClone(items) };
+  copyValidity(entry, receipt);
   if (regimen.trim()) entry.regimen = regimen.trim();
-  if (!previous || previous.pin !== entry.pin || !isSubmission(entry)) {
+  if (!previous || (!previous.expired && previous.pin !== entry.pin) || !isSubmission(entry)) {
     throw new Error('Neplatná odpověď při uložení seznamu.');
   }
   state.submissions = [entry];
   return entry;
+}
+
+function copyValidity(entry, receipt) {
+  if (receipt?.ownerToken !== undefined) entry.ownerToken = receipt.ownerToken;
+  if (receipt?.expiresAt !== undefined) entry.expiresAt = receipt.expiresAt;
 }
 
 // Photo transcription provides name, visible strength (stored as dosage) and optional schedule.

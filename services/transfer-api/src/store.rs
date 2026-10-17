@@ -61,6 +61,7 @@ impl TransferStore {
 
     // Payloads are not unique: identical uploads must occupy separate rows.
     // False means a PIN collision. Never overwrite an existing payload.
+    #[cfg(test)]
     pub async fn create_blob(
         &self,
         pin_digest: &[u8; 32],
@@ -68,14 +69,20 @@ impl TransferStore {
         payload: &[u8],
         now: i64,
     ) -> Result<bool, sqlx::Error> {
+        self.create_owned_blob(pin_digest, pin, payload, now, None).await
+    }
+
+    pub async fn create_owned_blob(&self, pin_digest: &[u8; 32], pin: Option<&str>, payload: &[u8], now: i64, token: Option<&str>) -> Result<bool, sqlx::Error> {
         let result = sqlx::query(
-            "INSERT INTO blob_transfers (pin_digest, payload, created_at, pin) VALUES (?, ?, ?, ?) \
+            "INSERT INTO blob_transfers (pin_digest, payload, created_at, pin, owner_token, expires_at) VALUES (?, ?, ?, ?, ?, ?) \
              ON CONFLICT(pin_digest) DO NOTHING",
         )
         .bind(pin_digest.as_slice())
         .bind(payload)
         .bind(now)
         .bind(pin)
+        .bind(token)
+        .bind(now + 14 * 24 * 60 * 60)
         .execute(&self.pool)
         .await?;
         Ok(result.rows_affected() == 1)
@@ -87,6 +94,7 @@ impl TransferStore {
         Ok(digests.into_iter().collect())
     }
 
+    #[cfg(test)]
     pub async fn update_blob(&self, pin_digest: &[u8; 32], payload: &[u8], uploaded_at: i64) -> Result<bool, sqlx::Error> {
         let result = sqlx::query("UPDATE blob_transfers SET payload = ?, created_at = ? WHERE pin_digest = ?")
             .bind(payload)
@@ -97,12 +105,42 @@ impl TransferStore {
         Ok(result.rows_affected() == 1)
     }
 
+    pub async fn owner_timestamp(&self, digest: &[u8; 32], token: &str) -> Result<Option<(i64, i64)>, sqlx::Error> {
+        sqlx::query_as("SELECT created_at, expires_at FROM blob_transfers WHERE pin_digest = ? AND owner_token = ?")
+            .bind(digest.as_slice()).bind(token).fetch_optional(&self.pool).await
+    }
+
+    pub async fn update_owned_blob(&self, digest: &[u8; 32], token: &str, payload: &[u8], now: i64) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query("UPDATE blob_transfers SET payload = ?, created_at = ?, expires_at = ? WHERE pin_digest = ? AND owner_token = ?")
+            .bind(payload).bind(now).bind(now + 1209600).bind(digest.as_slice()).bind(token).execute(&self.pool).await?;
+        Ok(result.rows_affected() == 1)
+    }
+
+    pub async fn renew_blob(&self, digest: &[u8; 32], token: &str, now: i64) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query("UPDATE blob_transfers SET expires_at = ? WHERE pin_digest = ? AND owner_token = ?")
+            .bind(now + 1209600).bind(digest.as_slice()).bind(token).execute(&self.pool).await?;
+        Ok(result.rows_affected() == 1)
+    }
+
+    // One atomic statement: concurrent doctors cannot both retrieve the same upload.
+    pub async fn consume_blob(&self, digest: &[u8; 32]) -> Result<Option<(Vec<u8>, i64)>, sqlx::Error> {
+        sqlx::query_as("DELETE FROM blob_transfers WHERE pin_digest = ? RETURNING payload, created_at")
+            .bind(digest.as_slice()).fetch_optional(&self.pool).await
+    }
+
     // The existing timestamp tracks the last patient upload (POST or PUT).
+    #[cfg(test)]
     pub async fn get_blob_with_uploaded_at(&self, pin_digest: &[u8; 32]) -> Result<Option<(Vec<u8>, i64)>, sqlx::Error> {
         sqlx::query_as("SELECT payload, created_at FROM blob_transfers WHERE pin_digest = ?")
             .bind(pin_digest.as_slice())
             .fetch_optional(&self.pool)
             .await
+    }
+
+    #[cfg(test)]
+    pub async fn test_owner_token(&self, digest: &[u8; 32]) -> String {
+        sqlx::query_scalar::<_, String>("SELECT owner_token FROM blob_transfers WHERE pin_digest = ?")
+            .bind(digest.as_slice()).fetch_one(&self.pool).await.unwrap()
     }
 
     #[cfg(test)]

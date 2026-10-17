@@ -4,6 +4,12 @@ use sha2::Sha256;
 
 pub const PIN_SPACE: usize = 10_000;
 
+pub fn new_owner_token() -> Result<String, rand::Error> {
+    let mut bytes = [0_u8; 32];
+    OsRng.try_fill_bytes(&mut bytes)?;
+    Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
+}
+
 pub fn new_pin() -> Result<String, rand::Error> {
     let mut pin = String::with_capacity(4);
     loop {

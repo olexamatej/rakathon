@@ -2,9 +2,14 @@
 
 `storage.spec.mjs` logs into storage admin, counts every page, submits a unique
 synthetic patient draft by clicking **Odeslat seznam**, verifies the displayed
-server-issued PIN and exact structured list read back through that PIN, loads the same list
-by PIN in a separate doctor browser context, then reloads admin and requires
-**exactly one additional record**.
+server-issued PIN and **exactly one additional record** before retrieval. A separate
+doctor context retrieves the exact list once, deleting the stored row; admin then
+returns to its original inventory.
+
+`storage-validity.spec.mjs` checks patient HEAD/renewal, retained local content after
+consumption, restoration, network failures without stale PIN display, and renewal
+of a display-expired demo row without duplicate uploads. `patient-resume.spec.mjs`
+also verifies restoration after a real doctor's consuming GET.
 
 `patient-doctor.spec.mjs` covers **Vyfotit** on mobile and **Z galerie** on desktop with
 service workers enabled: a patient uploads a tiny synthetic image, the app's mock
