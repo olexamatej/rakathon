@@ -8,9 +8,9 @@ const medicines = [
 ];
 const transcription = medicines.map(({ name, dosage, schedule }) => ({ name, strength: dosage, schedule }));
 
-for (const source of ['gallery', 'camera']) {
-  test.describe(`patient photo from ${source}`, () => {
-    test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'allow' });
+for (const source of ['mobile', 'desktop']) {
+  test.describe(`patient upload on ${source}`, () => {
+    test.use({ viewport: source === 'mobile' ? { width: 390, height: 844 } : { width: 1280, height: 800 }, isMobile: source === 'mobile', hasTouch: source === 'mobile', serviceWorkers: 'allow' });
 
     test('stores mocked transcription results under the same PIN in admin and doctor', async ({ page, context }) => {
       let recognitionRequests = 0;
@@ -22,16 +22,9 @@ for (const source of ['gallery', 'camera']) {
         recognitionRequests++;
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(transcription) });
       });
-      if (source === 'camera') {
-        await page.addInitScript(() => {
-          if (navigator.mediaDevices) {
-            navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Camera unavailable', 'NotFoundError'));
-          }
-        });
-      }
       await page.goto('/pacient');
       const chooserPromise = page.waitForEvent('filechooser');
-      await page.getByRole('button', { name: source === 'camera' ? 'Vyfotit' : 'Z galerie', exact: true }).click();
+      await page.getByRole('button', { name: 'Nahrajte fotografie léků', exact: true }).click();
       await (await chooserPromise).setFiles({
         name: `synthetic-${randomUUID()}.png`, mimeType: 'image/png',
         buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64'),

@@ -19,8 +19,7 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await expect(page.locator('.medicine-info strong')).toHaveText(item.name);
   await expect(page.locator('.medicine input')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Z galerie', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Vyfotit', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Nahrajte fotografie léků', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('h1.pin')).toHaveText(pin);
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
@@ -52,12 +51,14 @@ test('patient returns from the latest PIN to the original photo upload screen an
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64'),
   });
   await expect(page.locator('.medicine')).toHaveCount(2);
-  await expect(page.locator('.photo-job')).toContainText('Hotovo');
+  await expect(page.locator('.photo-status')).toHaveCount(0);
+  await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
   await page.getByRole('button', { name: 'Uložit seznam' }).click();
   await expect(page.locator('h1.pin')).toHaveText(pin);
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await expect(page.locator('.medicine')).toHaveCount(2);
-  await expect(page.locator('.photo-job')).toContainText('Hotovo');
+  await expect(page.locator('.photo-status')).toHaveCount(0);
+  await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
   await expect(page.locator('.medicine input')).toHaveCount(0);
 });
 
@@ -81,7 +82,7 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
   await page.getByRole('button', { name: 'Uložit seznam' }).click();
   await expect(page.locator('#message')).toContainText('nemůže potvrdit');
   await expect(page.locator('#regimen')).toHaveValue('Neuložená změna');
-  await expect(page.getByRole('button', { name: 'Z galerie', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Nahrajte fotografie léků', exact: true })).toBeVisible();
   const history = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v2')).submissions);
   expect(history).toHaveLength(1);
   expect(history[0].pin).toBe(pin);
@@ -93,17 +94,18 @@ test('patient can queue more photos during recognition and a failed photo does n
   const requests = [];
   await page.route('**/api/transcribe', route => { requests.push(route); });
   await page.goto('/pacient');
+  await expect(page.locator('#list-form button')).toHaveCount(1);
+  await expect(page.locator('#list-form')).not.toContainText('Z fotografie');
   const photo = name => ({ name, mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64') });
   await page.locator('#gallery').setInputFiles(photo('first.png'));
   await expect.poll(() => requests.length).toBe(1);
   await page.locator('#gallery').evaluate(input => { input.queueTestMarker = true; });
-  await expect(page.getByRole('button', { name: 'Z galerie', exact: true })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Vyfotit', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Nahrajte fotografie léků', exact: true })).toBeEnabled();
   await page.locator('#gallery').setInputFiles([photo('second.png'), photo('third.png')]);
-  await expect(page.locator('.photo-job')).toHaveCount(3);
-  await expect(page.locator('.photo-job').nth(1)).toContainText('Čeká na zpracování');
-  await expect(page.locator('#send')).toBeDisabled();
+  await expect(page.locator('.photo-status')).toHaveText('Načítám léčiva…');
+  await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
+  await expect(page.locator('#send')).toHaveCount(0);
   expect(requests).toHaveLength(1);
   await requests[0].fulfill({ status: 200, contentType: 'application/json',
     body: JSON.stringify([{ name: 'První léčivo', strength: '10 mg', schedule: null }]) });
@@ -112,12 +114,12 @@ test('patient can queue more photos during recognition and a failed photo does n
   await expect(page.locator('#send')).toBeDisabled();
   await requests[1].fulfill({ status: 503, contentType: 'application/json', body: '{}' });
   await expect.poll(() => requests.length).toBe(3);
-  await expect(page.locator('.photo-job').nth(1)).toHaveClass(/photo-error/);
+  await expect(page.locator('.photo-section [role="alert"]')).toContainText('nepodařilo rozpoznat');
   await requests[2].fulfill({ status: 200, contentType: 'application/json',
     body: JSON.stringify([{ name: 'Třetí léčivo', strength: '5 mg', schedule: null }]) });
   await expect(page.locator('.medicine-info strong')).toHaveText(['První léčivo', 'Třetí léčivo']);
-  await expect(page.locator('.photo-job').nth(0)).toContainText('Hotovo');
-  await expect(page.locator('.photo-job').nth(2)).toContainText('Hotovo');
+  await expect(page.locator('.photo-status')).toHaveCount(0);
+  await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
   await expect(page.locator('#send')).toBeEnabled();
   expect(await page.locator('#gallery').evaluate(input => input.queueTestMarker)).toBe(true);
   await expect(page.locator('#gallery')).toHaveValue('');

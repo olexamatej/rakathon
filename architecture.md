@@ -64,10 +64,12 @@ PostgreSQL is not implemented; its old schema is historical only.
 
 ## Photo transcription
 
-The patient can keep selecting or taking photos while recognition runs. A single
+The patient starts with one “Nahrajte fotografie léků” button and can keep
+adding photos while recognition runs. The UI shows a brief loading status and
+recognized medicines, without photo previews, filenames or completed photo cards. A single
 background worker processes the growing queue in order, appending each result
 as it finishes. A failed photo is shown individually and does not stop the queue.
-Saving waits for all queued photos to finish. Native file inputs survive UI
+Saving waits for all queued photos to finish. The native file input survives UI
 updates so an open file chooser is preserved.
 
 The patient photo UI currently passes `{ mode: 'demo' }` to `recognizePhoto`,

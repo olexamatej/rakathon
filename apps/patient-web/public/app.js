@@ -38,7 +38,6 @@ const escape = value => String(value).replace(/[&<>"']/g, char => ({
 })[char]);
 const icons = {
   arrow: '<path d="m9 5 7 7-7 7"/>',
-  camera: '<path d="M4 6h4l2-3h4l2 3h4v14H4z"/><circle cx="12" cy="13" r="4"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',
   list: '<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h4"/>',
   trash: '<path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
@@ -74,21 +73,21 @@ function saveStatus() {
     : '';
 }
 
-function photoRows() {
-  if (!photos.length) return '';
-  return `<ul class="photo-jobs" aria-label="Zpracování fotografií" aria-live="polite">${photos.map(job => `
-    <li class="photo-job ${job.status === 'error' ? 'photo-error' : ''}">
-      ${job.url ? `<img src="${escape(job.url)}" alt="Přidaná fotografie" width="44" height="44">` : icon('image')}
-      <span><strong>${escape(job.name)}</strong><span>${escape(job.status === 'done' ? `Hotovo · ${itemCount(job.count)}` : job.status === 'error' ? job.error : job.status === 'processing' ? 'Zpracovávám fotografii…' : 'Čeká na zpracování…')}</span></span>
-      ${job.status === 'done' ? icon('check') : job.status === 'processing' ? '<span class="spinner" aria-hidden="true"></span>' : ''}
-    </li>`).join('')}</ul>`;
+function photoStatus() {
+  return `${processing ? '<p class="photo-status" role="status"><span class="spinner" aria-hidden="true"></span> Načítám léčiva…</p>' : ''}
+    ${photos.filter(job => job.status === 'error').map(job => `<p class="notice" role="alert">${escape(job.error)}</p>`).join('')}`;
 }
 
 function editor() {
   const busy = isBusy();
   const photoInputBlocked = loadFailed || sending;
   return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
-    <form id="list-form"><section class="medicines" aria-labelledby="medicines-title">
+    <form id="list-form">
+    <section class="photo-section" aria-label="Nahrání fotografií">
+      <button type="button" class="primary full" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Nahrajte fotografie léků</button>
+      ${photoStatus()}
+    </section>
+    <section class="medicines" aria-labelledby="medicines-title">
       ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
         <legend class="list-heading">Léčiva v seznamu <span>${itemCount(state.items.length)}</span></legend>${state.items.map((item, index) => `
         <article class="medicine"><div class="medicine-info">
@@ -96,26 +95,21 @@ function editor() {
           <span>${escape(medicineSummary(item))}</span></div>
           <button type="button" class="icon-button" data-action="remove" data-id="${escape(item.id)}" aria-label="Odstranit léčivo ${escape(item.name)}">${icon('trash')}</button>
         </article>`).join('')}</fieldset>`
-      : `<div class="empty-list">${icon('list')}<strong>Seznam je prázdný</strong></div>`}
+      : ''}
     </section>
-    ${state.regimen || regimenOpen ? `<section class="regimen-section"><label for="regimen" class="sr-only">Režim onkologické léčby (volitelné)</label>
+    ${state.items.length || state.regimen || regimenOpen ? `${state.regimen || regimenOpen ? `<section class="regimen-section"><label for="regimen" class="sr-only">Režim onkologické léčby (volitelné)</label>
       <div class="combo"><input id="regimen" name="regimen" value="${escape(state.regimen || '')}" maxlength="200" placeholder="Režim onkologické léčby (volitelné)" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="regimen-list" aria-autocomplete="list" ${busy ? 'disabled' : ''}>
       <button type="button" class="icon-button" data-action="remove-regimen" aria-label="Odebrat režim" ${busy ? 'disabled' : ''}>${icon('close')}</button>
       <ul id="regimen-list" role="listbox" aria-label="Návrhy režimů" hidden></ul></div></section>`
       : `<button type="button" class="add-link" data-action="add-regimen" ${busy ? 'disabled' : ''}>${icon('plus')} Přidat režim onkologické léčby</button>`}
-    <section class="photo-section" aria-labelledby="photo-title"><div class="section-heading"><h2 id="photo-title">Přidejte fotografie</h2></div>
-      <p>Z fotografie přepíšeme názvy léčiv a uvedené dávkování. Po zpracování seznam zkontrolujte.</p>
-      <div class="photo-actions"><button type="button" class="secondary" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Z galerie</button>
-        <button type="button" class="secondary" data-action="camera" ${photoInputBlocked ? 'disabled' : ''}>${icon('camera')} Vyfotit</button></div>
-      ${photoRows()}
-    </section>
-    <div class="send-panel"><button type="submit" id="send" class="primary full" ${!canSend(state.items) || busy ? 'disabled' : ''}>
+    ` : ''}
+    ${state.items.length ? `<div class="send-panel"><button type="submit" id="send" class="primary full" ${!canSend(state.items) || busy ? 'disabled' : ''}>
       ${sending ? '<span class="spinner" aria-hidden="true"></span> Ukládám…' : 'Uložit seznam ' + icon('arrow')}</button>
-      <p id="send-hint">${sendHint()}</p></div></form>`;
+      <p id="send-hint">${sendHint()}</p></div>` : ''}</form>`;
 }
 
 function sendHint() {
-  if (processing) return 'Fotografie se zpracovávají. Mezitím můžete přidat další.';
+  if (processing) return '';
   if (!state.items.length || canSend(state.items)) return '';
   return 'Některá léčiva jsou neúplná. Odstraňte je a přidejte znovu.';
 }
@@ -153,7 +147,7 @@ function render(focus = false) {
       <p class="save-status" id="save-status" role="status">${saveStatus()}</p>
       ${content}<p class="message" role="status" id="message">${escape(message)}</p></main></div>`;
   // File inputs live outside #app so pending recognition cannot replace an open chooser.
-  for (const id of ['camera', 'gallery']) {
+  for (const id of ['gallery']) {
     document.getElementById(id).disabled = loadFailed || sending || Boolean(receipt);
   }
   document.title = `${receipt ? 'PIN' : 'Seznam'} · PillGaze`;
@@ -166,7 +160,7 @@ function render(focus = false) {
 
 async function addPhotos(files) {
   if (!files.length || loadFailed || sending) return;
-  const jobs = files.map(file => ({ file, name: file.name, status: 'waiting', url: null }));
+  const jobs = files.map(file => ({ file, status: 'waiting' }));
   photos.push(...jobs);
   // One worker drains the queue, including photos added while recognition is pending.
   if (processing) {
@@ -179,18 +173,18 @@ async function addPhotos(files) {
   while ((job = photos.find(photo => photo.status === 'waiting'))) {
     job.status = 'processing';
     render();
+    let url;
     try {
       if (!job.file.type.startsWith('image/')) throw new Error('Soubor není fotografie. Vyberte obrázek.');
       if (job.file.size > 20 * 1024 * 1024) throw new Error('Fotografie přesahuje 20 MB. Vyberte menší snímek.');
-      job.url = URL.createObjectURL(job.file);
+      url = URL.createObjectURL(job.file);
       const image = new Image();
-      image.src = job.url;
+      image.src = url;
       await image.decode().catch(() => { throw new Error('Fotku nelze přečíst. Zkuste JPEG, PNG nebo WebP.'); });
       render();
       const result = await recognizePhoto(job.file);
       const items = Array.isArray(result) ? result : result.items;
       const regimen = Array.isArray(result) ? '' : String(result.regimen || '').trim().slice(0, 200);
-      job.count = items.length;
       state.items.push(...items);
       if (regimen && !state.regimen?.trim()) state.regimen = regimen;
       persist();
@@ -198,9 +192,8 @@ async function addPhotos(files) {
     } catch (error) {
       job.status = 'error';
       job.error = error.message || 'Fotografii se nepodařilo zpracovat. Přidejte ji prosím znovu.';
-      if (job.url) URL.revokeObjectURL(job.url);
-      job.url = null;
     } finally {
+      if (url) URL.revokeObjectURL(url);
       delete job.file;
       render();
     }
@@ -208,46 +201,6 @@ async function addPhotos(files) {
   processing = false;
   render();
 }
-
-const cameraDialog = document.querySelector('#camera-dialog');
-const cameraVideo = document.querySelector('#camera-video');
-let cameraStream = null;
-
-function stopCamera() {
-  cameraStream?.getTracks().forEach(track => track.stop());
-  cameraStream = null;
-  cameraVideo.srcObject = null;
-}
-
-// Stream the camera in-page everywhere: the native <input capture> app gets the browser OOM-killed on some phones
-// (e.g. Galaxy S23), losing the photo. The file input is only a fallback when getUserMedia is unavailable or denied.
-async function openCamera() {
-  const input = document.getElementById('camera');
-  if (!navigator.mediaDevices?.getUserMedia) return input.click();
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false,
-    });
-  } catch {
-    return document.getElementById('camera')?.click();
-  }
-  cameraVideo.srcObject = cameraStream;
-  cameraDialog.showModal();
-}
-
-cameraDialog.addEventListener('close', stopCamera);
-document.querySelector('#camera-cancel').addEventListener('click', () => cameraDialog.close());
-document.querySelector('#camera-shoot').addEventListener('click', () => {
-  if (!cameraVideo.videoWidth) return;
-  const canvas = document.createElement('canvas');
-  canvas.width = cameraVideo.videoWidth;
-  canvas.height = cameraVideo.videoHeight;
-  canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
-  cameraDialog.close();
-  canvas.toBlob(blob => {
-    if (blob) void addPhotos([new File([blob], `foto-${Date.now()}.jpg`, { type: 'image/jpeg' })]);
-  }, 'image/jpeg', 0.9);
-});
 
 const normalize = value => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 let suggestions = [];
@@ -358,7 +311,7 @@ app.addEventListener('mousedown', event => {
   pickSuggestion(option.dataset.name);
 });
 
-for (const id of ['camera', 'gallery']) {
+for (const id of ['gallery']) {
   document.getElementById(id).addEventListener('change', event => {
     const files = Array.from(event.target.files || []);
     event.target.value = '';
@@ -399,7 +352,6 @@ app.addEventListener('click', async event => {
   event.preventDefault();
   switch (button.dataset.action) {
     case 'home': navigate(); break;
-    case 'camera': await openCamera(); break;
     case 'gallery': document.getElementById('gallery').click(); break;
     case 'add-regimen':
       regimenOpen = true;
@@ -418,8 +370,8 @@ app.addEventListener('click', async event => {
       state.items = state.items.filter(item => item.id !== button.dataset.id);
       persist();
       render();
-      document.querySelector('#photo-title').tabIndex = -1;
-      document.querySelector('#photo-title').focus({ preventScroll: true });
+      document.querySelector('.photo-section').tabIndex = -1;
+      document.querySelector('.photo-section').focus({ preventScroll: true });
       break;
     case 'retry-save':
       persist();
