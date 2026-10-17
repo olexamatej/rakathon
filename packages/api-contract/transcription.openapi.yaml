@@ -6,7 +6,8 @@ paths:
   /api/transcribe:
     post:
       summary: Transcribe medicine names and patient schedules from a photograph
-      description: Separate from opaque Rust storage. Responses are never cached.
+      description: Separate from opaque Rust storage. The patient server proxies the raw
+        bytes to the interaction engine's /transcribe. Responses are never cached.
       requestBody:
         required: true
         content:

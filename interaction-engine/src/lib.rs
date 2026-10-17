@@ -3,6 +3,7 @@ mod jobs;
 pub mod model;
 pub mod report;
 mod research;
+pub mod transcribe;
 
 use std::{env, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
@@ -30,6 +31,11 @@ pub struct Config {
     pub result_ttl: Duration,
     pub failure_ttl: Duration,
     pub queue_timeout: Duration,
+    pub gemini_api_base: String,
+    pub gemini_api_key: Option<String>,
+    pub gemini_model: String,
+    pub gemini_timeout: Duration,
+    pub sukl_catalogue: PathBuf,
 }
 
 impl Config {
@@ -49,6 +55,16 @@ impl Config {
             .map(|tier| normalize_service_tier(&tier))
             .transpose()?
             .or_else(|| Some("priority".into()));
+        let gemini_api_base = env::var("GEMINI_API_BASE")
+            .ok()
+            .map(|base| base.trim().trim_end_matches('/').to_string())
+            .filter(|base| !base.is_empty())
+            .unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1beta".into());
+        let gemini_api_key = env::var("GEMINI_API_KEY")
+            .ok()
+            .or_else(|| env::var("GOOGLE_API_KEY").ok())
+            .map(|key| key.trim().to_string())
+            .filter(|key| !key.is_empty());
         Ok(Self {
             bind: env::var("BIND_ADDR")
                 .unwrap_or_else(|_| "127.0.0.1:3000".into())
@@ -73,6 +89,16 @@ impl Config {
             result_ttl: Duration::from_secs(env_number("RESULT_TTL_SECONDS", 86400)?),
             failure_ttl: Duration::from_secs(env_number("FAILURE_TTL_SECONDS", 30)?),
             queue_timeout: Duration::from_secs(env_number("QUEUE_TIMEOUT_SECONDS", 300)?),
+            gemini_api_base,
+            gemini_api_key,
+            gemini_model: env::var("GEMINI_MODEL")
+                .ok()
+                .filter(|model| !model.trim().is_empty())
+                .unwrap_or_else(|| transcribe::DEFAULT_MODEL.into()),
+            gemini_timeout: Duration::from_secs(env_number("GEMINI_TIMEOUT_SECONDS", 120)?),
+            sukl_catalogue: env::var_os("SUKL_CATALOGUE_PATH")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| "../data/sukl/medications.json".into()),
         })
     }
 }
@@ -98,6 +124,7 @@ fn normalize_service_tier(tier: &str) -> anyhow::Result<String> {
 pub struct AppState {
     config: Arc<Config>,
     jobs: Arc<jobs::Store>,
+    transcribe: Arc<transcribe::TranscribeState>,
 }
 
 impl AppState {
@@ -115,6 +142,7 @@ impl AppState {
         }
         Ok(Self {
             jobs: Arc::new(jobs::Store::open(&config)?),
+            transcribe: Arc::new(transcribe::TranscribeState::new(config.gemini_timeout)?),
             config: Arc::new(config),
         })
     }
@@ -125,6 +153,7 @@ pub fn app(state: AppState) -> Router {
     Router::new()
         .route("/interaction-checks", post(check))
         .route("/interaction-research", post(research_check))
+        .route("/transcribe", post(transcribe::transcribe))
         .route(
             "/openapi.yaml",
             get(|| async {

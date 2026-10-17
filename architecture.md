@@ -6,13 +6,13 @@
 
 | Area | Responsibility |
 | --- | --- |
-| `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same Node server. Patient uploads and doctor retrieval use storage; interaction checks and site research use the interaction engine. Photo recognition uses the server-side Gemini adapter. |
+| `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same Node server. Patient uploads and doctor retrieval use storage; interaction checks and site research use the interaction engine. Photo bytes are proxied to the engine's `/transcribe`. |
 | Root `App.tsx`, `src/` | Separate older Expo prototype; preserve its entry points. |
 | `apps/doctor-web/` | Doctor-facing browser UI area. |
-| `services/transcription/gemini.mjs` | Gemini image-to-medication adapter; server credentials and strict minimal output. |
+| `services/transcription/` | Standalone Python CLI/HTTP experiment for photo transcription; the patient server no longer uses it. |
 | `services/transfer-api/` | Rust/Axum opaque JSON storage backed by SQLite. |
 | `packages/api-contract/` | OpenAPI storage and separate transcription contracts. |
-| `interaction-engine/` | Separate Rust interaction service; not part of storage. |
+| `interaction-engine/` | Separate Rust interaction service: interaction checks, web research and `POST /transcribe` photo transcription; not part of storage. |
 | `infra/vps/` | Existing Compose deployment notes and generic image inputs. |
 
 ## Storage contract
@@ -52,13 +52,17 @@ PostgreSQL is not implemented; its old schema is historical only.
 ## Photo transcription
 
 `POST /api/transcribe` on the patient Node server accepts raw JPEG, PNG or WebP
-(up to 20 MiB), calls Gemini 3.6 Flash and returns only `[{name, schedule}]`.
+(up to 20 MiB) and proxies the bytes to the interaction engine's
+`POST /transcribe`, which calls Gemini 3.6 Flash through the configured
+Gemini-compatible endpoint and returns only `[{name, schedule}]`.
 Each field is a string or null; visible strength stays in name. The client maps
 these rows to its existing editable items without inventing strength or package
 size. Invalid/incomplete provider output fails instead of returning partial data.
-The server loads `.env`; only the server holds the API key. Large photos use
-temporary Google Files, deleted after generation. There is no automatic retry
-or fallback to simulated data. This is separate from the opaque Rust storage.
+The engine reads the provider key and model from process environment variables
+(sourced from `.env` by `npm run engine`); only the engine holds the API key.
+Large photos against the default Google endpoint use temporary Google Files,
+deleted after generation. There is no automatic retry or fallback to simulated
+data. This is separate from the opaque Rust storage.
 See [configuration and routing](docs/gemini-transcription.md) and
 [the transcription contract](packages/api-contract/transcription.openapi.yaml).
 

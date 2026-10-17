@@ -4,6 +4,12 @@ Základ pacientské aplikace a náhledu pracovního rozhraní lékaře v React N
 
 [Checklist zadání](docs/requirements.md) · [Architektura systému](architecture.md) · [Transfer API](services/transfer-api/README.md) · [Pravidla spolupráce a CI](CONTRIBUTING.md) · [Katalog SÚKL](data/sukl/README.md)
 
+Samostatný [prepis fotky cez prihlásený Codex alebo OpenCode](services/transcription/README.md)
+je dostupný ako Python príkaz aj lokálny HTTP endpoint; vracia iba názov lieku
+a dávkovanie. Alternatíva bez LLM je [offline OCR servis](services/ocr/README.md)
+(RapidOCR + párovanie proti SÚKL katalógu). Zapojenie do aplikácie je samostatný
+krok.
+
 ## Spuštění
 
 Node.js 22.13+ (ověřeno na 24), npm. Bez účtu, API klíčů a backendu.
@@ -38,9 +44,15 @@ Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva a v histo
 pokud je vyplněný, textové předání přidá sloupec **Kdy**.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
-Fotografie se odesílá přes `POST /api/transcribe` do serverového adaptéru Gemini
-3.6 Flash. Server načítá klíč `GEMINI_API_KEY` a model `GEMINI_MODEL` z kořenového
-`.env`; klíč se nikdy neposílá do prohlížeče. Rozpoznávání vrací pouze
+Fotografie se odesílá přes `POST /api/transcribe` na lokálním Node serveru, který
+ji proxyuje na interaction engine (`POST /transcribe`); teprve engine volá Gemini
+3.6 Flash a drží klíč. Engine načítá `GEMINI_API_KEY` a `GEMINI_MODEL` z prostředí
+(`npm run engine` načte kořenové `.env`); klíč se nikdy neposílá do prohlížeče.
+Místo klíče lze použít předplatné
+Antigravity přes lokální proxy CLIProxyAPI (`GEMINI_API_BASE`, `npm run proxy`) —
+viz [Gemini transcription](docs/gemini-transcription.md). Pro lokální rozpoznávání
+nastavte v `.env` `TRANSCRIBE_API_URL=http://127.0.0.1:3000` a spusťte
+`npm run engine` vedle `npm run web:patient`. Rozpoznávání vrací pouze
 `[{"name":"Concor 5 mg","schedule":"1-0-0"}]`; nečitelné údaje jsou `null`.
 Viditelná síla zůstává v názvu. Samostatná síla a počet dávek v balení zůstávají
 prázdné a neblokují předání; řádek s nečitelným názvem je nutné odebrat a vyfotit znovu.
@@ -52,7 +64,7 @@ PIN vrací storage API a PWA jej zobrazí i uloží do historie až po úspěšn
 odeslání. Blob lze vyzvednout přes `GET /api/v1/transfers/{pin}`. Lékař nadále
 umí načíst i dřívější textový formát `{ text }`.
 Používejte pouze syntetická data: storage nevynucuje šifrování ani expiraci.
-Lokální Node server obsluhuje UI, rozpoznávání a proxy interakcí; předání seznamu
+Lokální Node server obsluhuje UI, proxy rozpoznávání fotografií a proxy interakcí; předání seznamu
 vyžaduje stejný origin s `/api/v1/` proxy na storage. Automatické opakování odeslání není zapnuté.
 Při změně souborů UI zvyšte verzi cache v `apps/patient-web/public/sw.js`. Testy PWA jsou součástí
 `npm test`; samostatně je spustíte příkazem

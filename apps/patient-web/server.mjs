@@ -2,7 +2,10 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadEnvFile } from 'node:process';
-import { MAX_IMAGE_BYTES, TranscriptionError, transcribeImage } from '../../services/transcription/gemini.mjs';
+
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const DEFAULT_ENGINE_URL = 'https://rakathon.josefkuchar.com';
+const engineUrl = () => (process.env.TRANSCRIBE_API_URL || process.env.INTERACTION_API_URL || DEFAULT_ENGINE_URL).replace(/\/$/, '');
 
 const files = {
   '/pacient': ['index.html', 'text/html'],
@@ -114,7 +117,9 @@ async function proxyInteractionEngine(req, res, upstreamPath) {
   }
 }
 
-async function recognizeImage(req, res, transcriber) {
+// Same-origin proxy for photo transcription on the interaction engine. The engine holds the
+// provider credentials and the SÚKL catalogue; the browser only ever sees medication rows.
+async function recognizeImage(req, res) {
   if (req.method !== 'POST') return problem(res, 405, 'Nepovolená metoda', 'Použijte POST s fotografií.');
   res.setHeader('Cache-Control', 'no-store');
   const mimeType = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
@@ -130,16 +135,22 @@ async function recognizeImage(req, res, transcriber) {
       if (size > MAX_IMAGE_BYTES) return problem(res, 413, 'Příliš velká fotografie', 'Vyberte snímek do 20 MB.');
       chunks.push(chunk);
     }
-    const rows = await transcriber(Buffer.concat(chunks));
-    res.writeHead(200, { ...securityHeaders, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify(rows));
-  } catch (error) {
-    if (error instanceof TranscriptionError) return problem(res, error.status, 'Rozpoznávání fotografie', error.message);
+    const response = await fetch(`${engineUrl()}/transcribe`, {
+      method: 'POST', redirect: 'error', signal: AbortSignal.timeout(120_000),
+      headers: { 'Content-Type': mimeType }, body: Buffer.concat(chunks),
+    });
+    const headers = { ...securityHeaders, 'Cache-Control': 'no-store' };
+    for (const name of ['content-type', 'retry-after', 'content-language']) {
+      if (response.headers.has(name)) headers[name] = response.headers.get(name);
+    }
+    res.writeHead(response.status, headers);
+    res.end(Buffer.from(await response.arrayBuffer()));
+  } catch {
     problem(res, 502, 'Rozpoznávání fotografie', 'Fotografii se nepodařilo zpracovat. Zkuste to znovu.');
   }
 }
 
-export function createAppServer({ transcriber = transcribeImage } = {}) {
+export function createAppServer() {
   return createServer(async (req, res) => {
     let path;
     try {
@@ -149,7 +160,7 @@ export function createAppServer({ transcriber = transcribeImage } = {}) {
       return;
     }
     if (path === '/api/transcribe') {
-      await recognizeImage(req, res, transcriber);
+      await recognizeImage(req, res);
       return;
     }
     if (path === '/api/interaction-checks' || path === '/api/interaction-research') {

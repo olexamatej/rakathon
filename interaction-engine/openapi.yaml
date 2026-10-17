@@ -26,6 +26,8 @@ security: []
 tags:
   - name: Interactions
     description: Pairwise checks for a submitted list of drug names.
+  - name: Transcription
+    description: Medication photo transcription for the patient application.
 paths:
   /interaction-checks:
     post:
@@ -331,6 +333,108 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /transcribe:
+    post:
+      operationId: transcribePhoto
+      tags: [Transcription]
+      summary: Transcribe a medication photo into name and schedule rows
+      description: |
+        Accepts raw image bytes (not multipart) with a JPEG, PNG, or WebP
+        signature; the raw limit is 20 MiB. The photo is sent to a
+        Gemini-compatible endpoint selected by GEMINI_API_BASE (including a
+        local proxy backed by an Antigravity subscription) and is never stored
+        locally. The response keeps visible strength in name, preserves written
+        schedules (only numeric separators are normalized), and uses null for
+        absent or unreadable fields. When the SÚKL catalogue is available
+        (SUKL_CATALOGUE_PATH), its official names are appended to the
+        instruction: a clearly matching visible name may use the catalogue
+        spelling. Strengths, forms and dosing never come from the catalogue, and
+        an unreadable name is never filled from it. Photos above 14 MiB sent to
+        the default Google endpoint use temporary Google Files and are deleted
+        afterwards; custom endpoints receive all photos inline. Malformed,
+        truncated, or invalid provider output fails instead of returning partial
+        data. There is no retry.
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: {type: string, format: binary}
+          image/png:
+            schema: {type: string, format: binary}
+          image/webp:
+            schema: {type: string, format: binary}
+          application/octet-stream:
+            schema: {type: string, format: binary}
+      responses:
+        '200':
+          description: Medication rows in reading order; every field is a string or null.
+          headers:
+            Cache-Control:
+              schema: {type: string, const: no-store}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptionRows'
+              example:
+                - {name: "CONCOR 5 mg", schedule: "1-0-0"}
+                - {name: null, schedule: null}
+        '400':
+          description: Empty image.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: Body exceeds 20 MiB.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '415':
+          description: Unsupported content type or image signature.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: The provider blocked the image.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Provider quota or load limit reached.
+          headers:
+            Retry-After:
+              schema: {type: integer, minimum: 0}
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Provider call failed or output was invalid or truncated.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Transcription is not configured (missing GEMINI_API_KEY).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '504':
+          description: Provider call timed out.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unexpected server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 components:
   schemas:
     PendingResponse:
@@ -341,6 +445,29 @@ components:
         state:
           type: string
           enum: [queued, running]
+    TranscriptionRows:
+      type: array
+      description: Medication rows in reading order, at most 200.
+      maxItems: 200
+      items:
+        $ref: '#/components/schemas/TranscribedRow'
+    TranscribedRow:
+      type: object
+      additionalProperties: false
+      required: [name, schedule]
+      properties:
+        name:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 120
+          pattern: '\S'
+          description: Visible medicine name including strength; null when absent or unreadable.
+        schedule:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 120
+          pattern: '\S'
+          description: Written patient dosing, e.g. 1-0-0 or 1/2-0-0; null when absent or unreadable.
     ResearchDrugs:
       type: array
       minItems: 2

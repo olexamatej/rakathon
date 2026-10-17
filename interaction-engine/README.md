@@ -2,7 +2,9 @@
 
 Rust/Axum server implementing [openapi.yaml](openapi.yaml). Each uncached check runs in the background using a
 fresh `codex exec --ephemeral` process and requests schema-constrained JSON.
-Rust validates the result and constructs the public response.
+Rust validates the result and constructs the public response. `POST /transcribe`
+is a synchronous exception: it sends photo bytes to a Gemini-compatible endpoint
+instead of Codex.
 
 ## Run
 
@@ -72,6 +74,11 @@ it does not make a model call or verify Codex authentication.
 | `RESULT_TTL_SECONDS` | `86400` | Successful-result retention after completion |
 | `FAILURE_TTL_SECONDS` | `30` | Failure retention before another attempt is allowed |
 | `QUEUE_TIMEOUT_SECONDS` | `300` | Maximum wait before execution |
+| `GEMINI_API_KEY` | *(none)* | Photo transcription provider key; `GOOGLE_API_KEY` is accepted as a fallback |
+| `GEMINI_API_BASE` | Google endpoint | Gemini-compatible base URL, e.g. a local CLIProxyAPI proxy |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | Photo transcription model |
+| `GEMINI_TIMEOUT_SECONDS` | `120` | Deadline for one transcription provider call |
+| `SUKL_CATALOGUE_PATH` | `../data/sukl/medications.json` | SÚKL names used only for photo name spelling; a missing file disables that hint |
 | `RUST_LOG` | `info` | Server logging filter |
 
 Low reasoning effort is requested for latency. One model call evaluates the
@@ -152,6 +159,38 @@ research returns 200. Responses declare `Content-Language: cs`,
 Web-search settings follow the official
 [Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
 
+## Photo transcription
+
+`POST /transcribe` accepts raw JPEG, PNG or WebP bytes (not multipart, up to
+20 MiB) and synchronously returns `[{name, schedule}]` rows; each field is a
+string or null. It is a direct request/response endpoint: no queue, polling or
+deduplication. It requires `GEMINI_API_KEY` or `GOOGLE_API_KEY`; without one it
+returns 503. Provider output is schema-constrained and validated by Rust;
+malformed, truncated or blocked output fails instead of returning partial rows.
+
+```sh
+curl --data-binary @photo.jpg -H 'Content-Type: image/jpeg' \
+  http://127.0.0.1:3000/transcribe
+```
+
+Visible strength stays inside `name`. Fractions and written instructions are
+preserved; only numeric schedule separators are normalized. A handwritten list
+takes precedence over a printed list. With `SUKL_CATALOGUE_PATH` present the
+prompt includes official SÚKL names, so a clearly matching visible name may use
+the catalogue spelling; strengths, forms, dosing and unreadable names are never
+taken or filled from the catalogue.
+
+With the default Google endpoint, photos above 14 MiB use a resumable Google
+Files upload that is deleted after generation, including failed generation. With
+a custom `GEMINI_API_BASE` (e.g. a local
+[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) Antigravity proxy)
+all photos are sent inline. Nothing is written to local disk, responses use
+`Cache-Control: no-store`, and provider credentials never leave the server.
+Failures use the shared problem+json format: 400 empty, 413 too large, 415
+unsupported signature, 422 blocked image, 429 provider quota (with
+`Retry-After`), 502 provider or invalid output, 503 missing configuration, 504
+timeout.
+
 ## Codex restrictions
 
 Interaction checks disable web search. Every invocation disables shell execution, image/file viewing,
@@ -191,9 +230,10 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-Tests use a fake executable rather than making paid model calls. They cover
+Tests use a fake executable rather than making paid model calls. Transcription
+tests use a stub Gemini-compatible server over loopback. They cover
 OpenAPI response conformance, pair invariants, partial resolution, invalid input,
-subprocess flags, invalid output, unexpected tool activity, timeout cleanup, capacity limits, request deduplication, persistent results, expiry, and restart recovery. The subprocess tests require Unix and `/usr/bin/python3`.
+subprocess flags, invalid output, unexpected tool activity, timeout cleanup, capacity limits, request deduplication, persistent results, expiry, restart recovery, photo request handling and provider-failure mapping. The subprocess tests require Unix and `/usr/bin/python3`.
 
 An optional live smoke test uses your configured Codex login and makes a real
 model call:
