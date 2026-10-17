@@ -19,7 +19,7 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await expect(page.locator('.medicine-info strong')).toHaveText(item.name);
   await expect(page.locator('.medicine input')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Nahrajte fotografie léků', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Z knihovny', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('h1.pin')).toHaveText(pin);
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
@@ -82,7 +82,7 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
   await page.getByRole('button', { name: 'Uložit seznam' }).click();
   await expect(page.locator('#message')).toContainText('nemůže potvrdit');
   await expect(page.locator('#regimen')).toHaveValue('Neuložená změna');
-  await expect(page.getByRole('button', { name: 'Nahrajte fotografie léků', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Z knihovny', exact: true })).toBeVisible();
   const history = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v2')).submissions);
   expect(history).toHaveLength(1);
   expect(history[0].pin).toBe(pin);
@@ -94,14 +94,17 @@ test('patient can queue more photos during recognition and a failed photo does n
   const requests = [];
   await page.route('**/api/transcribe', route => { requests.push(route); });
   await page.goto('/pacient');
-  await expect(page.locator('#list-form button')).toHaveCount(1);
+  await expect(page.locator('#list-form button')).toHaveCount(2);
   await expect(page.locator('#list-form')).not.toContainText('Z fotografie');
+  await expect(page.locator('.photo-actions button')).toHaveText(['Z knihovny', 'Vyfotit']);
+  await expect(page.locator('[data-action="gallery"]')).toHaveClass(/secondary/);
+  await expect(page.locator('[data-action="camera"]')).toHaveClass(/primary/);
   const photo = name => ({ name, mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64') });
   await page.locator('#gallery').setInputFiles(photo('first.png'));
   await expect.poll(() => requests.length).toBe(1);
   await page.locator('#gallery').evaluate(input => { input.queueTestMarker = true; });
-  await expect(page.getByRole('button', { name: 'Nahrajte fotografie léků', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Z knihovny', exact: true })).toBeEnabled();
   await page.locator('#gallery').setInputFiles([photo('second.png'), photo('third.png')]);
   await expect(page.locator('.photo-status')).toHaveText('Načítám léčiva…');
   await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);

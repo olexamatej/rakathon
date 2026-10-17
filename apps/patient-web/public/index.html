@@ -18,8 +18,16 @@
 <body>
   <a class="skip-link" href="#main">Přejít k obsahu</a>
   <div id="app"></div>
+  <input type="file" id="camera" accept="image/*" capture="environment" hidden>
   <input type="file" id="gallery" accept="image/*" multiple hidden>
   <noscript>Pro práci se seznamy prosím povolte JavaScript.</noscript>
+  <dialog id="camera-dialog" aria-label="Fotoaparát">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div class="camera-actions">
+      <button type="button" class="secondary" id="camera-cancel">Zrušit</button>
+      <button type="button" class="primary" id="camera-shoot">Vyfotit</button>
+    </div>
+  </dialog>
   <dialog id="install-dialog" aria-labelledby="install-title">
     <h2 id="install-title">PillGaze na ploše</h2>
     <p><strong>iPhone / iPad:</strong> v Safari otevřete Sdílet a vyberte Přidat na plochu.</p>

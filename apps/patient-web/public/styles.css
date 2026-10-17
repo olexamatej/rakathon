@@ -138,3 +138,8 @@ dialog p { font-size: 14px; margin: 12px 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+.photo-actions { display: grid; gap: 10px; }
+#camera-dialog { width: min(560px, calc(100% - 32px)); }
+#camera-video { display: block; width: 100%; border-radius: 12px; background: #000; aspect-ratio: 4 / 3; object-fit: cover; }
+.camera-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }

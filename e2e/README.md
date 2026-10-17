@@ -6,7 +6,7 @@ server-issued PIN and exact structured list read back through that PIN, loads th
 by PIN in a separate doctor browser context, then reloads admin and requires
 **exactly one additional record**.
 
-`patient-doctor.spec.mjs` covers the **Nahrajte fotografie léků** button on mobile and desktop with
+`patient-doctor.spec.mjs` covers **Vyfotit** on mobile and **Z knihovny** on desktop with
 service workers enabled: a patient uploads a tiny synthetic image, the app's mock
 recognizer creates three complete sample medicines, and the
 patient submits them to the real Rust storage API. A clean doctor browser context

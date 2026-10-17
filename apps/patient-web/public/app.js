@@ -38,6 +38,7 @@ const escape = value => String(value).replace(/[&<>"']/g, char => ({
 })[char]);
 const icons = {
   arrow: '<path d="m9 5 7 7-7 7"/>',
+  camera: '<path d="M4 6h4l2-3h4l2 3h4v14H4z"/><circle cx="12" cy="13" r="4"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',
   list: '<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h4"/>',
   trash: '<path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
@@ -84,7 +85,10 @@ function editor() {
   return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
     <form id="list-form">
     <section class="photo-section" aria-label="Nahrání fotografií">
-      <button type="button" class="primary full" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Nahrajte fotografie léků</button>
+      <div class="photo-actions">
+        <button type="button" class="secondary full" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Z knihovny</button>
+        <button type="button" class="primary full" data-action="camera" ${photoInputBlocked ? 'disabled' : ''}>${icon('camera')} Vyfotit</button>
+      </div>
       ${photoStatus()}
     </section>
     <section class="medicines" aria-labelledby="medicines-title">
@@ -147,7 +151,7 @@ function render(focus = false) {
       <p class="save-status" id="save-status" role="status">${saveStatus()}</p>
       ${content}<p class="message" role="status" id="message">${escape(message)}</p></main></div>`;
   // File inputs live outside #app so pending recognition cannot replace an open chooser.
-  for (const id of ['gallery']) {
+  for (const id of ['camera', 'gallery']) {
     document.getElementById(id).disabled = loadFailed || sending || Boolean(receipt);
   }
   document.title = `${receipt ? 'PIN' : 'Seznam'} · PillGaze`;
@@ -201,6 +205,46 @@ async function addPhotos(files) {
   processing = false;
   render();
 }
+
+const cameraDialog = document.querySelector('#camera-dialog');
+const cameraVideo = document.querySelector('#camera-video');
+let cameraStream = null;
+
+function stopCamera() {
+  cameraStream?.getTracks().forEach(track => track.stop());
+  cameraStream = null;
+  cameraVideo.srcObject = null;
+}
+
+// Stream the camera in-page everywhere: the native <input capture> app gets the browser OOM-killed on some phones
+// (e.g. Galaxy S23), losing the photo. The file input is only a fallback when getUserMedia is unavailable or denied.
+async function openCamera() {
+  const input = document.getElementById('camera');
+  if (!navigator.mediaDevices?.getUserMedia) return input.click();
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false,
+    });
+  } catch {
+    return document.getElementById('camera')?.click();
+  }
+  cameraVideo.srcObject = cameraStream;
+  cameraDialog.showModal();
+}
+
+cameraDialog.addEventListener('close', stopCamera);
+document.querySelector('#camera-cancel').addEventListener('click', () => cameraDialog.close());
+document.querySelector('#camera-shoot').addEventListener('click', () => {
+  if (!cameraVideo.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = cameraVideo.videoWidth;
+  canvas.height = cameraVideo.videoHeight;
+  canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
+  cameraDialog.close();
+  canvas.toBlob(blob => {
+    if (blob) void addPhotos([new File([blob], `foto-${Date.now()}.jpg`, { type: 'image/jpeg' })]);
+  }, 'image/jpeg', 0.9);
+});
 
 const normalize = value => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 let suggestions = [];
@@ -311,7 +355,7 @@ app.addEventListener('mousedown', event => {
   pickSuggestion(option.dataset.name);
 });
 
-for (const id of ['gallery']) {
+for (const id of ['camera', 'gallery']) {
   document.getElementById(id).addEventListener('change', event => {
     const files = Array.from(event.target.files || []);
     event.target.value = '';
@@ -352,6 +396,7 @@ app.addEventListener('click', async event => {
   event.preventDefault();
   switch (button.dataset.action) {
     case 'home': navigate(); break;
+    case 'camera': await openCamera(); break;
     case 'gallery': document.getElementById('gallery').click(); break;
     case 'add-regimen':
       regimenOpen = true;
