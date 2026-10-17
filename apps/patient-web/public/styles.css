@@ -29,10 +29,6 @@ p { line-height: 1.6; }
 header { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--line); gap: 16px; }
 .brand { display: flex; gap: 10px; align-items: center; color: #14233a; font-size: 21px; font-weight: 750; letter-spacing: -.7px; text-decoration: none; white-space: nowrap; }
 .brand img { border-radius: 11px; }
-.role-nav { display: inline-flex; align-items: center; gap: 3px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
-.role-nav a { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 0 12px; border-radius: 8px; color: var(--muted); font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
-.role-nav a:hover { background: var(--tint-2); color: var(--brand); }
-.role-nav a[aria-current="page"] { background: var(--tint); color: var(--brand); }
 .install-button, .icon-button { border: 1px solid var(--line); display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--brand); background: transparent; flex-shrink: 0; }
 .install-button { width: 40px; height: 40px; border-radius: 12px; background: #fff; }
 .install-button:hover { background: var(--tint-2); }
@@ -104,10 +100,24 @@ input:disabled { opacity: .7; }
 .send-panel .primary { min-height: 50px; box-shadow: 0 4px 12px #1f3f6e20; }
 .send-panel p { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; }
 .send-panel p:empty { display: none; }
-.pin-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; text-align: center; padding: 20px 12px max(20px, env(safe-area-inset-bottom)); }
+.pin-screen { display: flex; flex-direction: column; align-items: stretch; gap: 28px; padding: 20px 0 max(20px, env(safe-area-inset-bottom)); }
+.current-submission { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 20px 12px; }
+.pin-caption { color: var(--muted); font-size: 15px; }
 .pin { font-size: clamp(36px, 10vw, 60px); letter-spacing: .16em; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.pin-actions { display: grid; gap: 10px; width: min(320px, 100%); }
-.pin-actions button { min-height: 52px; font-size: 16px; }
+.generated-at { color: var(--muted); font-size: 13px; }
+.current-submission .primary { min-height: 52px; margin-top: 8px; font-size: 16px; }
+.submission-history { border-top: 1px solid var(--line); padding-top: 20px; }
+.submission-history > p { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.submission-history > ul { list-style: none; margin: 14px 0 0; padding: 0; }
+.submission-history > ul > li + li { margin-top: 8px; }
+.submission-history details { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+.submission-history summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 14px; cursor: pointer; }
+.submission-history summary code { color: var(--brand); font-size: 16px; font-weight: 700; letter-spacing: .12em; }
+.submission-history summary time { color: var(--muted); font-size: 12px; text-align: right; }
+.history-items { list-style: none; margin: 0; padding: 0 14px 12px; }
+.history-items li { display: grid; gap: 3px; padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.history-items strong { font-size: 13px; font-weight: 600; }
+.history-items span { color: var(--muted); font-size: 12px; }
 .notice { padding: 10px; margin-top: 12px; background: var(--tint); color: #365578; font-size: 13px; line-height: 1.6; border-radius: 10px; }
 .text-button { background: none; border: 0; padding: 8px 0; color: inherit; text-decoration: underline; }
 .message { font-size: 13px; margin-top: 12px; }
@@ -127,7 +137,6 @@ dialog p { font-size: 14px; margin: 12px 0; }
   header { padding: 12px 0; }
   .brand { gap: 8px; font-size: 19px; }
   .brand img { width: 32px; height: 32px; }
-  .role-nav a { min-height: 32px; padding: 0 9px; font-size: 11px; }
   .install-button { width: 36px; height: 36px; }
   .shell > main { padding-top: 18px; }
   .photo-section { padding: 15px; }

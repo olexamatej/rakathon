@@ -100,7 +100,7 @@ function editor() {
       ${photoRows()}
     </section>
     <div class="send-panel"><button type="submit" id="send" class="primary full" ${!canSend(state.items) || busy ? 'disabled' : ''}>
-      ${sending ? '<span class="spinner" aria-hidden="true"></span> Odesílám…' : 'Odeslat seznam ' + icon('arrow')}</button>
+      ${sending ? '<span class="spinner" aria-hidden="true"></span> Ukládám…' : 'Uložit seznam ' + icon('arrow')}</button>
       <p id="send-hint">${sendHint()}</p></div></form>`;
 }
 
@@ -111,17 +111,30 @@ function sendHint() {
 
 function render(focus = false) {
   const params = new URLSearchParams(location.search);
-  const receipt = state.submissions.find(entry => entry.id === params.get('pin'));
+  const requestedId = params.get('pin') || (!params.has('new') ? state.submissions[0]?.id : null);
+  const receipt = state.submissions.find(entry => entry.id === requestedId);
   if (receipt && !processing) {
     photos.splice(0).forEach(job => { if (job.url) URL.revokeObjectURL(job.url); });
   }
+  const formatDate = value => new Intl.DateTimeFormat('cs-CZ', {
+    dateStyle: 'medium', timeStyle: 'short',
+  }).format(new Date(value));
+  const history = state.submissions.length ? `<section class="submission-history" aria-labelledby="history-title">
+    <h2 id="history-title">Historie uložených seznamů</h2>
+    <p>Platnost starších PINů aplikace neověřuje.</p>
+    <ul>${state.submissions.map(entry => `<li><details ${entry.id === receipt?.id ? 'open' : ''}>
+      <summary><code>${escape(entry.pin)}</code><time datetime="${escape(entry.sentAt)}">${escape(formatDate(entry.sentAt))}</time></summary>
+      <ul class="history-items">${entry.items.map(item => `<li><strong>${escape(item.name || 'Nečitelný název léčiva')}</strong><span>${escape(medicineSummary(item))}</span></li>`).join('')}
+      ${entry.regimen ? `<li><strong>Režim onkologické léčby</strong><span>${escape(entry.regimen)}</span></li>` : ''}</ul>
+    </details></li>`).join('')}</ul></section>` : '';
   const content = receipt ? `<main id="main" class="pin-screen">
+    <section class="current-submission"><p class="pin-caption">PIN pro lékaře</p>
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>
-    <div class="pin-actions"><button class="secondary" data-action="copy" data-pin="${escape(receipt.pin)}">${icon('copy')} <span>Kopírovat PIN</span></button>
-    <button class="primary" data-action="home">Domů</button></div></main>`
+    <p class="generated-at">Vygenerováno ${escape(formatDate(receipt.sentAt))}</p>
+    <button class="primary" data-action="next-list">Uložit další seznam ${icon('arrow')}</button></section>
+    ${history}</main>`
     : editor();
   const header = `<header><a class="brand" href="/pacient" data-action="home"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
-    <nav class="role-nav" aria-label="Zobrazení aplikace"><a href="/pacient" aria-current="page">Pacient</a><a href="/lekar">Lékař</a></nav>
     <button class="install-button" data-action="install" aria-label="Nainstalovat aplikaci">${icon('download')}</button></header>`;
   app.innerHTML = receipt ? `<div class="shell">${header}${content}</div>` : `<div class="shell">${header}
     <main id="main">
@@ -385,18 +398,14 @@ app.addEventListener('click', async event => {
       persist();
       render();
       break;
-    case 'copy': {
-      const label = button.querySelector('span');
-      let copied = true;
-      try {
-        await navigator.clipboard.writeText(button.dataset.pin);
-      } catch {
-        copied = false;
-      }
-      label.textContent = copied ? 'Zkopírováno' : 'Kopírování se nezdařilo';
-      setTimeout(() => { if (label.isConnected) label.textContent = 'Kopírovat PIN'; }, 2000);
+    case 'next-list':
+      if (isBusy()) break;
+      state.items = [];
+      state.regimen = '';
+      regimenOpen = false;
+      persist();
+      navigate('?new=1');
       break;
-    }
     case 'install':
       if (installPrompt) {
         await installPrompt.prompt();
