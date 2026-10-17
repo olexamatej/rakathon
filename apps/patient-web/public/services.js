@@ -96,6 +96,33 @@ export async function checkList(entry) {
   return validityRequest(entry, false);
 }
 
+// Shared by page load, saving and extension. Unknown availability throws;
+// only a known expired/missing upload returns null.
+export async function validateList(entry) {
+  if (!entry || entry.expired || !(Date.parse(entry.expiresAt) > Date.now())) return null;
+  const receipt = await checkList(entry);
+  // A slow HEAD may cross the deadline; compare again after it completes.
+  return receipt && Date.parse(receipt.expiresAt) > Date.now() ? receipt : null;
+}
+
+export async function renewPatientList(entry) {
+  return await validateList(entry) ? renewList(entry) : null;
+}
+
+export async function savePatientList(payload, entry) {
+  const available = await validateList(entry);
+  if (available) {
+    try {
+      return { receipt: await sendList(payload, available.pin, available.ownerToken), updatedExisting: true };
+    } catch (error) {
+      // The doctor may consume the upload between HEAD and PUT. Only a definite
+      // 404 permits one fresh POST; never retry uncertain writes or service errors.
+      if (!error.missing) throw error;
+    }
+  }
+  return { receipt: await sendList(payload), updatedExisting: false };
+}
+
 export async function renewList(entry) {
   if (!isOwnerToken(entry.ownerToken)) throw new Error('Obnovte platnost seznamu novým uložením.');
   return validityRequest(entry, true);

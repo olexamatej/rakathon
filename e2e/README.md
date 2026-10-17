@@ -10,6 +10,11 @@ returns to its original inventory.
 for expired receipts, HEAD/renewal for available lists, clearing local data after
 consumption, and network failures without stale PIN display. `patient-resume.spec.mjs`
 also verifies fresh photo upload after a real doctor's consuming GET.
+Save scenarios cover missing/expired uploads, consumption between HEAD and PUT,
+and network errors: current edits survive, POST is chosen only when necessary,
+and no fallback copy is made for uncertain writes.
+Additional lifecycle coverage includes editor entry after doctor consumption,
+expiry during photo recognition, and another tab replacing patient storage.
 
 `patient-doctor.spec.mjs` covers **Vyfotit** on mobile and **Z galerie** on desktop with
 service workers enabled: a patient uploads a tiny synthetic image, the app's mock

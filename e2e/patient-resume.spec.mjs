@@ -80,6 +80,10 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
   await page.locator('#regimen').fill('Neuložená změna');
   let writes = 0;
   await page.route('**/api/v1/transfers/**', async route => {
+    if (route.request().method() === 'HEAD') return route.fulfill({ status: 200, headers: {
+      'x-owner-token': upload.headers()['x-owner-token'], 'x-uploaded-at': upload.headers()['x-uploaded-at'],
+      'x-expires-at': upload.headers()['x-expires-at'],
+    } });
     expect(route.request().method()).toBe('PUT');
     writes++;
     await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' });

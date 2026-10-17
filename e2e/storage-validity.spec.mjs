@@ -47,7 +47,7 @@ test('future local expiry checks HEAD, preserves available flow and clears consu
   available = false;
   await page.reload();
   await expectFresh(page);
-  expect(checks).toBe(2);
+  expect(checks).toBe(3);
 });
 
 test('network failure keeps local data without displaying stale PIN or claiming expiration', async ({ page }) => {
@@ -101,4 +101,144 @@ test('consumption between validation and extension clears the list instead of re
   await page.getByRole('button', { name: 'Prodloužit platnost', exact: true }).click();
   await expectFresh(page);
   expect(uploads).toBe(0);
+});
+
+for (const scenario of ['missing', 'expired', 'consumed-during-put', 'head-network']) {
+  test(`save reuses validation and preserves current edits: ${scenario}`, async ({ page }) => {
+    await seed(page);
+    let editing = false;
+    const methods = [];
+    await page.route('**/api/v1/transfers/**', async route => {
+      const method = route.request().method();
+      if (editing) methods.push(method);
+      if (method === 'HEAD') {
+        if (editing && scenario === 'head-network') return route.abort();
+        return route.fulfill({ status: editing && scenario === 'missing' ? 404 : 200, headers });
+      }
+      expect(method).toBe('PUT');
+      expect(scenario).toBe('consumed-during-put');
+      return route.fulfill({ status: 404 });
+    });
+    await page.route('**/api/v1/transfers', async route => {
+      methods.push(route.request().method());
+      expect(route.request().postDataJSON()).toMatchObject({ regimen: 'Aktuální rozepsaný režim', items: [{ name: item.name }] });
+      return route.fulfill({ status: 201, json: { pin: '5678' }, headers });
+    });
+    await page.reload();
+    await expect(page.locator('h1.pin')).toHaveText('0042');
+    await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+    await page.locator('#regimen').fill('Aktuální rozepsaný režim');
+    editing = true;
+    if (scenario === 'expired') await page.clock.setSystemTime(new Date('2100-01-01T00:00:00Z'));
+    await page.getByRole('button', { name: 'Uložit seznam' }).click();
+    if (scenario === 'head-network') {
+      await expect(page.locator('#message')).toContainText('připojení');
+      await expect(page.locator('#regimen')).toHaveValue('Aktuální rozepsaný režim');
+      expect(methods).toEqual(['HEAD']);
+    } else {
+      await expect(page.locator('h1.pin')).toHaveText('5678');
+      expect(methods).toEqual(scenario === 'expired' ? ['POST'] : scenario === 'missing' ? ['HEAD', 'POST'] : ['HEAD', 'PUT', 'POST']);
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
+      expect(saved.submissions).toHaveLength(1);
+      expect(saved.submissions[0].regimen).toBe('Aktuální rozepsaný režim');
+      expect(saved.items[0].name).toBe(item.name);
+    }
+  });
+}
+
+test('doctor consumes the upload during patient editing; save POSTs the current draft with a new receipt', async ({ page, context }) => {
+  const upload = await context.request.post('/api/v1/transfers', { data: {
+    version: 1, regimen: 'Původní režim', items: [{ name: item.name, dosage: item.dosage, dosesPerPackage: '' }],
+  } });
+  expect(upload.status()).toBe(201);
+  const { pin } = await upload.json();
+  await page.goto('/pacient');
+  await page.evaluate(({ item, pin, headers }) => localStorage.setItem('pillgaze:patient:v3', JSON.stringify({ items: [], submissions: [{
+    id: 'saved-local-id', pin, ownerToken: headers['x-owner-token'], expiresAt: headers['x-expires-at'],
+    sentAt: headers['x-uploaded-at'], items: [item], regimen: 'Původní režim',
+  }] })), { item, pin, headers: upload.headers() });
+  await page.reload();
+  await expect(page.locator('h1.pin')).toHaveText(pin);
+  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.locator('#regimen').fill('Aktuální rozepsaný režim');
+  const consumed = await context.request.get(`/api/v1/transfers/${pin}`);
+  expect(consumed.status()).toBe(200);
+  const writes = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.startsWith('/api/v1/transfers') && ['POST', 'PUT'].includes(request.method())) writes.push(request.method());
+  });
+  const savedResponse = page.waitForResponse(response => response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/v1/transfers');
+  await page.getByRole('button', { name: 'Uložit seznam' }).click();
+  const saved = await savedResponse;
+  expect(saved.status()).toBe(201);
+  const receipt = await saved.json();
+  await expect(page.locator('h1.pin')).toHaveText(receipt.pin);
+  expect(writes).toEqual(['POST']);
+  expect(saved.headers()['x-owner-token']).not.toBe(upload.headers()['x-owner-token']);
+  const payload = await context.request.get(`/api/v1/transfers/${receipt.pin}`);
+  expect((await payload.json()).regimen).toBe('Aktuální rozepsaný režim');
+});
+
+test('opening the editor rechecks a PIN consumed since the screen was displayed', async ({ page }) => {
+  await seed(page);
+  let available = true;
+  await page.route('**/api/v1/transfers/**', route => route.fulfill({ status: available ? 200 : 404, headers }));
+  await page.reload();
+  await expect(page.locator('h1.pin')).toHaveText('0042');
+  available = false;
+  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await expectFresh(page);
+});
+
+test('another tab changing the receipt blocks stale writes and preserves its storage', async ({ page }) => {
+  await seed(page);
+  await page.route('**/api/v1/transfers/**', route => route.fulfill({ status: 200, headers }));
+  await page.reload();
+  await expect(page.locator('h1.pin')).toHaveText('0042');
+  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.locator('#regimen').fill('Stará editace');
+  const other = await page.context().newPage();
+  await other.goto('/storage-admin');
+  await other.evaluate(() => localStorage.setItem('pillgaze:patient:v3', JSON.stringify({ items: [], submissions: [] })));
+  await expect(page.locator('.notice')).toContainText('jiné kartě');
+  await expect(page.locator('#send')).toBeDisabled();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).toEqual({ items: [], submissions: [] });
+  await other.close();
+});
+
+test('returning through the PIN screen does not overwrite unsaved editor changes', async ({ page }) => {
+  await seed(page);
+  await page.route('**/api/v1/transfers/**', route => route.fulfill({ status: 200, headers }));
+  await page.reload();
+  await expect(page.locator('h1.pin')).toHaveText('0042');
+  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.locator('#regimen').fill('Neuložená editace');
+  await page.locator('[data-action="home"]').click();
+  await expect(page.locator('h1.pin')).toHaveText('0042');
+  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await expect(page.locator('#regimen')).toHaveValue('Neuložená editace');
+});
+
+test('expiry during photo recognition preserves edits and saves them with POST', async ({ page }) => {
+  await seed(page);
+  await page.route('**/api/v1/transfers/**', route => route.fulfill({ status: 200, headers }));
+  await page.reload();
+  await expect(page.locator('h1.pin')).toHaveText('0042');
+  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  let transcription;
+  await page.route('**/api/transcribe', route => { transcription = route; });
+  await page.locator('#gallery').setInputFiles({ name: 'synthetic.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64') });
+  await expect.poll(() => Boolean(transcription)).toBe(true);
+  await page.clock.setSystemTime(new Date('2100-01-01T00:00:00Z'));
+  await transcription.fulfill({ json: [{ name: 'Další rozpoznané léčivo', strength: '5 mg', schedule: null }] });
+  await expect(page.locator('.medicine')).toHaveCount(2);
+  await expect(page.locator('#send')).toBeEnabled();
+  await page.route('**/api/v1/transfers', route => {
+    expect(route.request().postDataJSON().items).toHaveLength(2);
+    return route.fulfill({ status: 201, json: { pin: '5678' }, headers: { ...headers, 'x-expires-at': '2100-01-15T00:00:00Z' } });
+  });
+  await page.getByRole('button', { name: 'Uložit seznam' }).click();
+  await expect(page.locator('h1.pin')).toHaveText('5678');
 });

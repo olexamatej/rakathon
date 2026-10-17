@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkList, renewList, sendList } from '../apps/patient-web/public/services.js';
-import { createState, recordSubmission, updateSubmission, saveState, loadState } from '../apps/patient-web/public/lists.js';
+import { checkList, renewList, sendList, validateList, savePatientList, renewPatientList } from '../apps/patient-web/public/services.js';
+import { createState, recordSubmission, replaceSubmission, updateSubmission, saveState, loadState } from '../apps/patient-web/public/lists.js';
 
 const token = 'a'.repeat(64);
 const entry = { pin: '0042', ownerToken: token };
@@ -23,6 +23,60 @@ test('patient availability uses non-consuming HEAD; renewal uses POST without up
   ]);
 });
 
+const payload = { items: [{ id: 'medicine-local-id', name: 'Aktuální rozepsané léčivo', dosage: '', dosesPerPackage: '' }], regimen: 'Aktuální režim' };
+const futureEntry = { ...entry, expiresAt: '2099-10-31T12:00:00Z' };
+const futureHeaders = { ...headers, 'x-expires-at': futureEntry.expiresAt };
+
+test('shared validation skips HEAD for expired receipts and checks future receipts', async t => {
+  const fetch = t.mock.method(globalThis, 'fetch', async () => new Response(null, { headers: futureHeaders }));
+  assert.equal(await validateList({ ...entry, expiresAt: '2020-01-01T00:00:00Z' }), null);
+  assert.equal(await validateList(undefined), null);
+  assert.equal(fetch.mock.callCount(), 0);
+  assert.equal((await validateList(futureEntry)).pin, entry.pin);
+  assert.equal(fetch.mock.callCount(), 1);
+});
+
+for (const scenario of ['available', 'missing', 'expired', 'consumed-during-put']) {
+  test(`saving validates and chooses the correct write: ${scenario}`, async t => {
+    const methods = [];
+    t.mock.method(globalThis, 'fetch', async (_, options) => {
+      methods.push(options.method);
+      if (options.method === 'HEAD') return new Response(null, { status: scenario === 'missing' ? 404 : 200, headers: futureHeaders });
+      assert.equal(JSON.parse(options.body).items[0].name, payload.items[0].name);
+      if (options.method === 'PUT' && scenario === 'consumed-during-put') return new Response(null, { status: 404 });
+      return Response.json({ pin: options.method === 'POST' ? '5678' : '0042' }, { status: options.method === 'POST' ? 201 : 200, headers: futureHeaders });
+    });
+    const previous = scenario === 'expired' ? { ...futureEntry, expiresAt: '2020-01-01T00:00:00Z' } : futureEntry;
+    const result = await savePatientList(payload, previous);
+    assert.deepEqual(methods, scenario === 'available' ? ['HEAD', 'PUT'] : scenario === 'expired' ? ['POST']
+      : scenario === 'missing' ? ['HEAD', 'POST'] : ['HEAD', 'PUT', 'POST']);
+    assert.equal(result.updatedExisting, scenario === 'available');
+    const state = createState();
+    state.items = structuredClone(payload.items);
+    state.regimen = payload.regimen;
+    recordSubmission(state, payload.items, { ...futureEntry, sentAt: headers['x-uploaded-at'] });
+    if (!result.updatedExisting) replaceSubmission(state, payload.items, result.receipt, payload.regimen);
+    assert.deepEqual(state.items, payload.items);
+    assert.equal(state.regimen, payload.regimen);
+    assert.equal(state.submissions.length, 1);
+    assert.equal(state.submissions[0].pin, result.receipt.pin);
+  });
+}
+
+for (const failure of ['head-network', 'head-429', 'head-503', 'put-network', 'put-429', 'put-503']) {
+  test(`uncertain availability or write does not create a copy: ${failure}`, async t => {
+    const methods = [];
+    t.mock.method(globalThis, 'fetch', async (_, options) => {
+      methods.push(options.method);
+      if (options.method === 'HEAD' && failure.startsWith('put')) return new Response(null, { headers: futureHeaders });
+      if (failure.endsWith('network')) throw new TypeError();
+      return new Response(null, { status: failure.endsWith('429') ? 429 : 503 });
+    });
+    await assert.rejects(savePatientList(payload, futureEntry));
+    assert.deepEqual(methods, failure.startsWith('head') ? ['HEAD'] : ['HEAD', 'PUT']);
+  });
+}
+
 test('missing and legacy receipts are not confused with network or service failures', async t => {
   const fetch = t.mock.method(globalThis, 'fetch', async () => new Response(null, { status: 404 }));
   assert.equal(await checkList({ pin: '0042' }), null);
@@ -34,6 +88,61 @@ test('missing and legacy receipts are not confused with network or service failu
   }
   fetch.mock.mockImplementation(async () => { throw new TypeError(); });
   await assert.rejects(checkList(entry));
+});
+
+test('deadline crossing while HEAD is pending chooses POST instead of PUT', async t => {
+  let now = Date.parse('2026-10-17T12:00:00Z');
+  t.mock.method(Date, 'now', () => now);
+  const deadline = new Date(now + 1000).toISOString();
+  const methods = [];
+  t.mock.method(globalThis, 'fetch', async (_, options) => {
+    methods.push(options.method);
+    if (options.method === 'HEAD') {
+      now += 2000;
+      return new Response(null, { headers: { ...futureHeaders, 'x-expires-at': deadline } });
+    }
+    return Response.json({ pin: '5678' }, { status: 201, headers: futureHeaders });
+  });
+  assert.equal((await savePatientList(payload, { ...futureEntry, expiresAt: deadline })).updatedExisting, false);
+  assert.deepEqual(methods, ['HEAD', 'POST']);
+});
+
+test('extension uses the same validation and never renews an expired or missing upload', async t => {
+  const methods = [];
+  t.mock.method(globalThis, 'fetch', async (_, options) => {
+    methods.push(options.method);
+    return new Response(null, { status: 404 });
+  });
+  assert.equal(await renewPatientList({ ...entry, expiresAt: '2020-01-01T00:00:00Z' }), null);
+  assert.deepEqual(methods, []);
+  assert.equal(await renewPatientList(futureEntry), null);
+  assert.deepEqual(methods, ['HEAD']);
+});
+
+test('failed fresh POST leaves the existing receipt and draft untouched', async t => {
+  const state = createState();
+  state.items = structuredClone(payload.items);
+  state.regimen = payload.regimen;
+  recordSubmission(state, state.items, { ...futureEntry, sentAt: headers['x-uploaded-at'] });
+  const before = structuredClone(state);
+  const methods = [];
+  t.mock.method(globalThis, 'fetch', async (_, options) => {
+    methods.push(options.method);
+    return new Response(null, { status: options.method === 'HEAD' ? 404 : 503 });
+  });
+  await assert.rejects(savePatientList(payload, state.submissions[0]));
+  assert.deepEqual(methods, ['HEAD', 'POST']);
+  assert.deepEqual(state, before);
+});
+
+test('unchanged persistence does not invalidate another tab through redundant storage writes', () => {
+  const state = createState();
+  let saved = null;
+  let writes = 0;
+  const storage = { getItem: () => saved, setItem: (_, value) => { writes++; saved = value; } };
+  saveState(storage, state);
+  saveState(storage, state);
+  assert.equal(writes, 1);
 });
 
 test('receipt uses server time and token; saved snapshots cannot switch PINs', async t => {

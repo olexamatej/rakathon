@@ -86,6 +86,24 @@ or an expired server deadline clear the current local PIN, saved snapshot, draft
 and regimen and return to photo upload from scratch. Network/service failures
 retain local data without showing the unverified PIN. Available lists keep the
 current PIN/editing/extension flow; there is no restore-expired-list button.
+Load, save and extension reuse `validateList`: local deadline first, then HEAD.
+Saving an active draft uses PUT only for an available owned upload; otherwise it
+POSTs the current draft and replaces the local receipt after success. A definite
+PUT 404 between validation and writing permits one POST; network/429/5xx errors
+never trigger a new copy. Background checks skip the editor to avoid destroying
+in-progress work; loading the page still resets expired lists as described above.
+Opening the editor also revalidates the displayed receipt. Validation checks time
+again after HEAD, including deadlines crossed during a slow request. Extension
+uses the same validation; expired/missing data on that screen returns to fresh
+upload, while save preserves the active draft. Recognition completing after
+expiry can still be saved with a fresh POST. A localStorage change in another tab
+blocks stale writes and late-result persistence until explicit reload; it does
+not overwrite the other tab's state. Failed writes retain the draft and hide the
+now-unverified PIN. Navigation is blocked during pending app actions.
+Returning through the PIN screen preserves edits made in this session instead
+of restoring an older submitted snapshot. If its upload becomes unavailable,
+an active edit returns to the editor for a new save rather than discarding work.
+Unchanged local state is not rewritten, avoiding needless cross-tab invalidation.
 There is no public DELETE, revocation, or idempotency key.
 Each POST creates a new blob. The old encrypted endpoints and embedded browser
 demo are removed. Historical SQLite migrations and existing legacy rows are

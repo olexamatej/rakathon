@@ -67,6 +67,10 @@ a PIN later allocated to another upload. Never log the token.
 Patient load checks local expiry before HEAD. Expired deadlines or missing server
 rows clear the local PIN, saved list and draft and return to fresh photo upload.
 Network errors retain data for another check; expired lists cannot be restored.
+Saving an active patient draft validates availability first: PUT for an existing
+valid upload, POST with a fresh PIN otherwise. A PUT 404 race permits one POST;
+uncertain writes and service errors are not retried. The draft is preserved until
+the write succeeds. This differs intentionally from page-load expiration reset.
 
 Operational probes remain `GET /health/live` and `GET /health/ready`.
 The latter checks SQLite. Source rate limits are 30 combined POST/PUT/renew writes,

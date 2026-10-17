@@ -1,5 +1,5 @@
-import { createState, loadState, saveState, recordSubmission, updateSubmission, canSend, medicineSummary } from './lists.js';
-import { recognizePhoto, sendList, checkList, renewList, loadRegimens } from './services.js';
+import { STORAGE_KEY, createState, loadState, saveState, replaceSubmission, updateSubmission, canSend, medicineSummary } from './lists.js';
+import { recognizePhoto, savePatientList, validateList, renewPatientList, loadRegimens } from './services.js';
 
 const app = document.querySelector('#app');
 const photos = [];
@@ -15,6 +15,7 @@ let installPrompt;
 let checking = false;
 let verifiedEntry;
 let lastCheck = 0;
+let editingSession = false;
 
 try {
   const loaded = loadState(localStorage);
@@ -60,6 +61,7 @@ function persist() {
 }
 
 function navigate(query = '') {
+  if (isBusy()) return;
   history.pushState(null, '', `/pacient${query}`);
   message = '';
   render(true);
@@ -77,7 +79,7 @@ function photoStatus() {
 }
 
 function photoUpload() {
-  const photoInputBlocked = loadFailed || sending;
+  const photoInputBlocked = loadFailed || sending || checking;
   return `<section class="photo-section${state.items.length ? '' : ' photo-section--intro'}" aria-labelledby="photo-title">
       <h2 id="photo-title">Nahrajte ${state.items.length ? 'další ' : ''}fotografie léků</h2>
       <div class="photo-actions">
@@ -136,9 +138,9 @@ function render(focus = false) {
     ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
     ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>
     <p>Po načtení lékařem nebo vypršení platnosti budete muset seznam nahrát znovu.</p>
-    <button class="primary" data-action="renew" ${sending || checking || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
-    ${verifiedEntry !== receipt && !checking ? '<button class="secondary" data-action="check-validity">Ověřit platnost</button>' : ''}
-    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${sending || checking || verifiedEntry !== receipt ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>
+    <button class="primary" data-action="renew" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
+    ${verifiedEntry !== receipt && !checking ? `<button class="secondary" data-action="check-validity" ${loadFailed ? 'disabled' : ''}>Ověřit platnost</button>` : ''}
+    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>
     ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
     <p class="save-status" role="status">${saveStatus()}</p><p class="message" role="status">${escape(message)}</p></section>
     </main>`
@@ -152,7 +154,7 @@ function render(focus = false) {
       ${content}<p class="message" role="status" id="message">${escape(message)}</p></main></div>`;
   // File inputs live outside #app so pending recognition cannot replace an open chooser.
   for (const id of ['camera', 'gallery']) {
-    document.getElementById(id).disabled = loadFailed || sending || Boolean(receipt);
+    document.getElementById(id).disabled = loadFailed || sending || checking || Boolean(receipt);
   }
   document.title = `${receipt ? 'PIN' : 'Seznam'} · PillGaze`;
   if (focus) {
@@ -163,7 +165,7 @@ function render(focus = false) {
 }
 
 async function addPhotos(files) {
-  if (!files.length || loadFailed || sending) return;
+  if (!files.length || loadFailed || sending || checking) return;
   const jobs = files.map(file => ({ file, status: 'waiting' }));
   photos.push(...jobs);
   // One worker drains the queue, including photos added while recognition is pending.
@@ -174,7 +176,7 @@ async function addPhotos(files) {
   processing = true;
   render();
   let job;
-  while ((job = photos.find(photo => photo.status === 'waiting'))) {
+  while (!loadFailed && (job = photos.find(photo => photo.status === 'waiting'))) {
     job.status = 'processing';
     render();
     let url;
@@ -187,6 +189,7 @@ async function addPhotos(files) {
       await image.decode().catch(() => { throw new Error('Fotku nelze přečíst. Zkuste JPEG, PNG nebo WebP.'); });
       render();
       const result = await recognizePhoto(job.file);
+      if (loadFailed) break;
       const items = Array.isArray(result) ? result : result.items;
       const regimen = Array.isArray(result) ? '' : String(result.regimen || '').trim().slice(0, 200);
       state.items.push(...items);
@@ -370,26 +373,23 @@ app.addEventListener('submit', async event => {
   const regimen = state.regimen || '';
   const origin = location.search;
   const editing = state.submissions[0];
-  if (editing && !(Date.parse(editing.expiresAt) > Date.now())) {
-    clearExpiredList();
-    render();
-    return;
-  }
   sending = true;
   message = '';
   render();
   let entry;
   try {
     // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
-    const receipt = await sendList({ items, regimen }, editing?.pin, editing?.ownerToken);
-    entry = editing
+    const { receipt, updatedExisting } = await savePatientList({ items, regimen }, editing);
+    if (loadFailed) return;
+    entry = updatedExisting
       ? updateSubmission(state, editing.id, items, receipt, regimen)
-      : recordSubmission(state, items, receipt, regimen);
+      : replaceSubmission(state, items, receipt, regimen);
     verifiedEntry = entry.ownerToken ? entry : undefined;
+    editingSession = false;
     persist();
   } catch (error) {
-    if (error.missing && editing) clearExpiredList();
-    else message = error.message || 'Odeslání se nezdařilo. Zkuste to znovu.';
+    verifiedEntry = undefined;
+    message = error.message || 'Odeslání se nezdařilo. Zkuste to znovu.';
   } finally {
     sending = false;
     if (entry && location.search === origin) navigate(`?pin=${encodeURIComponent(entry.id)}`);
@@ -404,27 +404,24 @@ app.addEventListener('click', async event => {
   switch (button.dataset.action) {
     case 'check-validity': await refreshValidity(true); break;
     case 'renew': {
-      if (sending || checking) break;
+      if (isBusy()) break;
       const previous = state.submissions[0];
       if (!previous) break;
       sending = true;
       message = '';
       render();
       try {
-        if (!(Date.parse(previous.expiresAt) > Date.now())) {
-          clearExpiredList();
-          break;
-        }
-        const receipt = await renewList(previous);
+        const receipt = await renewPatientList(previous);
+        if (loadFailed) break;
         if (!receipt) {
-          clearExpiredList();
+          handleUnavailableList();
         } else {
           const entry = updateSubmission(state, previous.id, previous.items, receipt, previous.regimen || '');
           verifiedEntry = entry;
           message = 'Platnost obnovena na 14 dní.';
         }
         persist();
-      } catch (error) { message = error.message; }
+      } catch (error) { verifiedEntry = undefined; message = error.message; }
       finally { sending = false; render(); }
       break;
     }
@@ -459,8 +456,26 @@ app.addEventListener('click', async event => {
       if (isBusy()) break;
       const entry = state.submissions.find(entry => entry.id === button.dataset.id);
       if (!entry) break;
-      state.items = structuredClone(entry.items);
-      state.regimen = entry.regimen || '';
+      checking = true;
+      render();
+      try {
+        const receipt = await validateList(entry);
+        if (loadFailed) break;
+        if (!receipt) { handleUnavailableList(); break; }
+        Object.assign(entry, receipt);
+        verifiedEntry = entry;
+      } catch (error) {
+        verifiedEntry = undefined;
+        message = error.message;
+        break;
+      } finally { checking = false; render(); }
+      // Returning from the PIN screen must not replace edits or additional photos
+      // with the older submitted snapshot.
+      if (!editingSession) {
+        state.items = structuredClone(entry.items);
+        state.regimen = entry.regimen || '';
+      }
+      editingSession = true;
       regimenOpen = false;
       persist();
       navigate(`?list=${encodeURIComponent(entry.id)}`);
@@ -481,20 +496,24 @@ function clearExpiredList() {
   photos.length = 0;
   regimenOpen = false;
   verifiedEntry = undefined;
+  editingSession = false;
   persist();
   history.replaceState(null, '', '/pacient');
   message = 'Platnost seznamu vypršela. Nahrajte fotografie léků znovu.';
 }
 
+function handleUnavailableList() {
+  if (!editingSession) return clearExpiredList();
+  verifiedEntry = undefined;
+  history.replaceState(null, '', `/pacient?list=${encodeURIComponent(state.submissions[0].id)}`);
+  message = 'Původní seznam již není platný. Uložte aktuální seznam pro získání nového PINu.';
+}
+
 async function refreshValidity(force = false) {
   const entry = state.submissions[0];
-  if (!entry || checking || sending || processing) return;
-  // Local deadline first: never call storage for an already expired receipt.
-  if (entry.expired || !(Date.parse(entry.expiresAt) > Date.now())) {
-    clearExpiredList();
-    render();
-    return;
-  }
+  if (!entry || loadFailed || checking || sending || processing) return;
+  // Do not let background checks discard an active edit. Save validates afresh.
+  if (!force && new URLSearchParams(location.search).has('list')) return;
   if (!force && Date.now() - lastCheck < 60_000) return;
   lastCheck = Date.now();
   checking = true;
@@ -502,9 +521,9 @@ async function refreshValidity(force = false) {
   message = '';
   render();
   try {
-    const receipt = await checkList(entry);
-    if (state.submissions[0] !== entry) return;
-    if (!receipt || !(Date.parse(receipt.expiresAt) > Date.now())) clearExpiredList();
+    const receipt = await validateList(entry);
+    if (loadFailed || state.submissions[0] !== entry) return;
+    if (!receipt) handleUnavailableList();
     else {
       Object.assign(entry, receipt);
       verifiedEntry = entry;
@@ -518,6 +537,16 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('focus', () => { void refreshValidity(); });
 window.addEventListener('online', () => { void refreshValidity(); });
+// Another tab can replace/delete the receipt. Never overwrite its newer state
+// with this tab's stale draft or a late request result; require an explicit reload.
+window.addEventListener('storage', event => {
+  if (event.storageArea !== localStorage || (event.key !== STORAGE_KEY && event.key !== null)) return;
+  loadFailed = true;
+  verifiedEntry = undefined;
+  storageWarning = 'Seznam byl změněn v jiné kartě. Obnovte stránku pro načtení aktuálních údajů.';
+  if (cameraDialog.open) cameraDialog.close();
+  render();
+});
 // Bounded, visible-tab-only checks; separate from the doctor's consuming GET budget.
 setInterval(() => { if (document.visibilityState === 'visible') void refreshValidity(); }, 60_000);
 window.addEventListener('beforeunload', event => {

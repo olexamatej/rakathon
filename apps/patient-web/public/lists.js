@@ -90,13 +90,19 @@ function migratePin(state) {
 
 export function saveState(storage, state) {
   if (!isState(state)) throw new Error('Neplatný formát seznamu.');
-  storage.setItem(STORAGE_KEY, JSON.stringify({ ...state, submissions: state.submissions.slice(0, 1) }));
+  const serialized = JSON.stringify({ ...state, submissions: state.submissions.slice(0, 1) });
+  if (storage.getItem(STORAGE_KEY) !== serialized) storage.setItem(STORAGE_KEY, serialized);
 }
 
 export function recordSubmission(state, items, receipt, regimen = '') {
   if (state.submissions[0]) {
     return updateSubmission(state, state.submissions[0].id, items, receipt, regimen);
   }
+  return replaceSubmission(state, items, receipt, regimen);
+}
+
+// A confirmed fresh POST replaces the receipt, without discarding the draft.
+export function replaceSubmission(state, items, receipt, regimen = '') {
   const entry = { id: newId(), pin: receipt?.pin, sentAt: receipt?.sentAt, items: structuredClone(items) };
   copyValidity(entry, receipt);
   if (regimen.trim()) entry.regimen = regimen.trim();
