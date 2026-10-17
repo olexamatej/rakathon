@@ -49,7 +49,8 @@ test('future local expiry checks HEAD, preserves available flow and clears consu
   await expect(page.locator('h1.pin')).toHaveText('0042');
   expect(checks).toBe(1);
   await page.getByRole('button', { name: 'Prodloužit platnost', exact: true }).click();
-  await expect(page.locator('.message')).toContainText('14 dní');
+  await expect(page.locator('.validity-date')).toContainText('Platnost prodloužena do');
+  await expect(page.locator('.message')).toBeEmpty();
   expect(renewed).toBe(1);
   available = false;
   await page.reload();

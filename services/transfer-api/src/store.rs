@@ -117,8 +117,8 @@ impl TransferStore {
     }
 
     pub async fn renew_blob(&self, digest: &[u8; 32], token: &str, now: i64) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("UPDATE blob_transfers SET expires_at = ? WHERE pin_digest = ? AND owner_token = ?")
-            .bind(now + 1209600).bind(digest.as_slice()).bind(token).execute(&self.pool).await?;
+        let result = sqlx::query("UPDATE blob_transfers SET expires_at = MAX(expires_at, ?) + 1209600 WHERE pin_digest = ? AND owner_token = ?")
+            .bind(now).bind(digest.as_slice()).bind(token).execute(&self.pool).await?;
         Ok(result.rows_affected() == 1)
     }
 

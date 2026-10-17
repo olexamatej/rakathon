@@ -8,7 +8,7 @@ Rust/Axum + SQLite. Public storage endpoints, plus optional protected administra
 | `GET /v1/transfers/{pin}` | Return the original JSON bytes, HTTP 200 and `Content-Type: application/json`; unknown or invalid PIN returns 404. |
 | `HEAD /v1/transfers/{pin}` | Check availability without consuming JSON; requires `X-Owner-Token`. |
 | `PUT /v1/transfers/{pin}` | Replace JSON under the same PIN; requires `X-Owner-Token`. |
-| `POST /v1/transfers/{pin}/renew` | Extend displayed validity to 14 days from now; requires `X-Owner-Token`, no body. |
+| `POST /v1/transfers/{pin}/renew` | Add 14 days to the existing deadline (or now if already past); requires `X-Owner-Token`, no body. |
 
 Through the VPS frontend proxy, prefix these paths with `/api`.
 POST requires `Content-Type: application/json`; the maximum body is 1 MiB

@@ -97,6 +97,9 @@ fabricated expiration date. Reupload sends the displayed saved snapshot only,
 without silently adding archived unsent edits. Failure retains the expired copy.
 Discard requires confirmation and removes the invalid receipt and archived draft.
 The valid doctor-PIN screen shows only the expiry timestamp, not upload time.
+Renewal atomically adds 14 days to the existing future deadline. The displayed
+date changes to "Platnost prodloužena do" without a separate success message;
+that label remains after reload while the renewed deadline is unchanged.
 The expired screen uses a restrained red "PIN vypršel!" warning without an icon,
 followed immediately by the validity deadline and reupload button. Upload time
 is available through the question-mark help; `invalidatedAt` is not displayed.

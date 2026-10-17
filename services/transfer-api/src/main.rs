@@ -570,6 +570,9 @@ mod blob_tests {
         let (uploaded, expires) = state.store.owner_timestamp(&digest, &token).await.unwrap().unwrap();
         assert_eq!(uploaded, now - 40 * 86400);
         assert!(expires >= now + 14 * 86400);
+        // Repeated renewal adds exactly two weeks to the existing future deadline.
+        assert!(state.store.renew_blob(&digest, &token, now).await.unwrap());
+        assert_eq!(state.store.owner_timestamp(&digest, &token).await.unwrap().unwrap(), (uploaded, expires + 14 * 86400));
         let (first, second) = tokio::join!(state.store.consume_blob(&digest), state.store.consume_blob(&digest));
         assert_ne!(first.unwrap().is_some(), second.unwrap().is_some());
         assert!(state.store.create_owned_blob(&digest, None, b"{\"different\":true}", now, Some(&"b".repeat(64))).await.unwrap());

@@ -133,7 +133,7 @@ function render(focus = false) {
     <section class="current-submission">${receipt.expired ? '<h1 class="expired-heading">PIN vypršel!</h1>' : verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>`
       : `<h1>${checking ? 'Ověřuji platnost…' : 'Platnost není ověřena'}</h1>`}
-    <p class="validity-date${receipt.expired ? ' expired-date' : ''}">${receipt.expiresAt ? `${receipt.expired && Date.parse(receipt.expiresAt) <= Date.now() ? 'Platnost vypršela' : 'Platnost do'} <time datetime="${escape(receipt.expiresAt)}">${escape(formatDate(receipt.expiresAt))}</time>` : 'Datum vypršení platnosti není dostupné.'}
+    <p class="validity-date${receipt.expired ? ' expired-date' : ''}" role="status">${receipt.expiresAt ? `${receipt.expired && Date.parse(receipt.expiresAt) <= Date.now() ? 'Platnost vypršela' : !receipt.expired && receipt.extendedExpiresAt === receipt.expiresAt ? 'Platnost prodloužena do' : 'Platnost do'} <time datetime="${escape(receipt.expiresAt)}">${escape(formatDate(receipt.expiresAt))}</time>` : 'Datum vypršení platnosti není dostupné.'}
     ${receipt.expired ? `<button class="validity-help" data-action="local-copy-help" aria-label="Informace o lokální kopii" aria-expanded="${localCopyInfoOpen}" aria-controls="local-copy-info">?</button>` : receipt.expiresAt ? `<button class="validity-help" data-action="validity-help" aria-label="Informace o platnosti" aria-expanded="${validityInfoOpen}" aria-controls="validity-info">?</button>` : ''}</p>
     ${receipt.expired ? `<button class="primary" data-action="reupload" ${isBusy() ? 'disabled' : ''}>${sending ? 'Nahrávám…' : 'Obnovit záznam a získat nový PIN'}</button>
     <p class="validity-info generated-at" id="local-copy-info" ${localCopyInfoOpen ? '' : 'hidden'}>Lokální kopie pochází z nahrání <time datetime="${escape(receipt.sentAt)}">${escape(formatDate(receipt.sentAt))}</time>.</p>` : ''}
@@ -463,8 +463,8 @@ app.addEventListener('click', async event => {
           handleUnavailableList();
         } else {
           const entry = updateSubmission(state, previous.id, previous.items, receipt, previous.regimen || '');
+          entry.extendedExpiresAt = receipt.expiresAt;
           verifiedEntry = entry;
-          message = 'Platnost obnovena na 14 dní.';
         }
         persist();
       } catch (error) { verifiedEntry = undefined; message = error.message; }

@@ -32,6 +32,7 @@ const isSubmission = (value, legacy = false) => value && isId(value.id) && isRec
   && isItems(value.items) && canSend(value.items) && isRegimen(value.regimen)
   && (value.ownerToken === undefined || isOwnerToken(value.ownerToken))
   && (value.expiresAt === undefined || isDate(value.expiresAt))
+  && (value.extendedExpiresAt === undefined || isDate(value.extendedExpiresAt))
   && (value.invalidatedAt === undefined || isDate(value.invalidatedAt))
   && (value.expired === undefined || typeof value.expired === 'boolean');
 const isState = (state, legacy = false) => state && isItems(state.items) && isRegimen(state.regimen) && Array.isArray(state.submissions)
