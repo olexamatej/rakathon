@@ -1,21 +1,25 @@
-:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #243f38; background: #f7f8f3; --green: #174e43; --line: #dce4db; }
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1c2a3b; background: #f3f6fa; --green: #1f3f6e; --muted: #5d6b7c; --line: #dbe2ec; --tint: #e6edf7; --tint-2: #eff3f9; }
 * { box-sizing: border-box; }
 body { margin: 0; }
 [hidden] { display: none !important; }
 .shell { max-width: 960px; margin: auto; padding: 0 20px; }
 header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
-.brand { color: inherit; font-size: 23px; font-weight: 750; text-decoration: none; }
-h1 { font-size: clamp(28px, 6vw, 40px); letter-spacing: -1px; }
+.brand { color: #14233a; font-size: 23px; font-weight: 750; text-decoration: none; }
+h1 { font-size: clamp(28px, 6vw, 40px); font-weight: 650; letter-spacing: -.8px; }
 p { line-height: 1.6; }
-.note { color: #65736b; font-size: 13px; }
+.note { color: var(--muted); font-size: 13px; }
 form { display: grid; gap: 10px; max-width: 360px; margin: 24px 0; }
-button, input { font: inherit; min-height: 44px; border-radius: 10px; padding: 10px 14px; }
-input { border: 1px solid var(--line); width: 100%; }
-button { border: 1px solid var(--green); background: var(--green); color: white; cursor: pointer; }
-button.secondary { background: white; color: var(--green); border-color: var(--line); }
+button, input { font: inherit; min-height: 44px; border-radius: 12px; padding: 10px 14px; }
+input { border: 1px solid var(--line); border-radius: 8px; width: 100%; background: #f6f8fb; color: #1c2a3b; }
+button { border: 1px solid var(--green); background: var(--green); color: white; cursor: pointer; font-weight: 600; }
+button:hover:not(:disabled) { background: #162f54; }
+button.secondary { background: white; color: var(--green); border-color: #c9d3df; }
+button.secondary:hover:not(:disabled) { background: var(--tint-2); }
 button.danger { background: white; color: #963e26; border-color: #e4c7be; }
-button:disabled { cursor: not-allowed; opacity: .5; }
-button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #589a74; outline-offset: 3px; }
+button.danger:hover:not(:disabled) { background: #fff5f1; border-color: #d7a99c; }
+button:disabled { cursor: not-allowed; background: #e3e8ef; border-color: #e3e8ef; color: #7a8696; }
+input:focus { background: #fff; border-color: var(--green); }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #3b6fb5; outline-offset: 3px; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0; }
 .table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; background: white; }
