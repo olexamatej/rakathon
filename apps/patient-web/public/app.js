@@ -1,4 +1,4 @@
-import { STORAGE_KEY, createState, loadState, saveState, replaceSubmission, updateSubmission, canSend, medicineSummary } from './lists.js';
+import { STORAGE_KEY, createState, loadState, saveState, replaceSubmission, updateSubmission, invalidateSubmission, canSend, medicineSummary } from './lists.js';
 import { recognizePhoto, savePatientList, validateList, renewPatientList, loadRegimens } from './services.js';
 
 const app = document.querySelector('#app');
@@ -28,7 +28,7 @@ try {
 }
 
 // A fresh visit (including a reload of the editor) always returns to the latest saved PIN.
-if (state.submissions.length) {
+if (state.submissions.length && !state.submissions[0].expired) {
   history.replaceState(null, '', `/pacient?pin=${encodeURIComponent(state.submissions[0].id)}`);
 }
 
@@ -124,7 +124,7 @@ function sendHint() {
 
 function render(focus = false) {
   const params = new URLSearchParams(location.search);
-  const receipt = !params.has('list') && !params.has('new') ? state.submissions[0] : undefined;
+  const receipt = !state.submissions[0]?.expired && !params.has('list') && !params.has('new') ? state.submissions[0] : undefined;
   const formatDate = value => new Intl.DateTimeFormat('cs-CZ', {
     dateStyle: 'medium', timeStyle: 'short',
   }).format(new Date(value));
@@ -491,8 +491,8 @@ app.addEventListener('click', async event => {
 });
 
 window.addEventListener('popstate', () => { message = ''; render(true); });
-function clearExpiredList() {
-  state = createState();
+function invalidateCurrentList() {
+  invalidateSubmission(state);
   photos.length = 0;
   regimenOpen = false;
   verifiedEntry = undefined;
@@ -503,15 +503,17 @@ function clearExpiredList() {
 }
 
 function handleUnavailableList() {
-  if (!editingSession) return clearExpiredList();
+  if (!editingSession) return invalidateCurrentList();
+  invalidateSubmission(state, true);
   verifiedEntry = undefined;
+  persist();
   history.replaceState(null, '', `/pacient?list=${encodeURIComponent(state.submissions[0].id)}`);
   message = 'Původní seznam již není platný. Uložte aktuální seznam pro získání nového PINu.';
 }
 
 async function refreshValidity(force = false) {
   const entry = state.submissions[0];
-  if (!entry || loadFailed || checking || sending || processing) return;
+  if (!entry || entry.expired || loadFailed || checking || sending || processing) return;
   // Do not let background checks discard an active edit. Save validates afresh.
   if (!force && new URLSearchParams(location.search).has('list')) return;
   if (!force && Date.now() - lastCheck < 60_000) return;

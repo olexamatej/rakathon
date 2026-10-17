@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { checkList, renewList, sendList, validateList, savePatientList, renewPatientList } from '../apps/patient-web/public/services.js';
-import { createState, recordSubmission, replaceSubmission, updateSubmission, saveState, loadState } from '../apps/patient-web/public/lists.js';
+import { createState, recordSubmission, replaceSubmission, updateSubmission, invalidateSubmission, saveState, loadState } from '../apps/patient-web/public/lists.js';
 
 const token = 'a'.repeat(64);
 const entry = { pin: '0042', ownerToken: token };
@@ -143,6 +143,34 @@ test('unchanged persistence does not invalidate another tab through redundant st
   saveState(storage, state);
   saveState(storage, state);
   assert.equal(writes, 1);
+});
+
+test('invalidation retains the receipt and draft locally without restoring them to fresh upload', () => {
+  const state = createState();
+  state.items = structuredClone(payload.items);
+  state.regimen = payload.regimen;
+  const receipt = recordSubmission(state, state.items, { ...futureEntry, sentAt: headers['x-uploaded-at'] }, payload.regimen);
+  invalidateSubmission(state);
+  assert.equal(state.submissions[0], receipt);
+  assert.equal(receipt.expired, true);
+  assert.deepEqual(state.invalidatedDraft, payload);
+  assert.deepEqual(state.items, []);
+  let serialized;
+  const storage = { getItem: () => serialized ?? null, setItem: (_, value) => { serialized = value; } };
+  saveState(storage, state);
+  assert.deepEqual(loadState(storage).state, state);
+  state.items = structuredClone(payload.items);
+  invalidateSubmission(state);
+  assert.deepEqual(state.items, payload.items);
+});
+
+test('invalidation during an active edit preserves current items for a fresh POST', () => {
+  const state = createState();
+  state.items = structuredClone(payload.items);
+  recordSubmission(state, state.items, { ...futureEntry, sentAt: headers['x-uploaded-at'] });
+  invalidateSubmission(state, true);
+  assert.equal(state.submissions[0].expired, true);
+  assert.deepEqual(state.items, payload.items);
 });
 
 test('receipt uses server time and token; saved snapshots cannot switch PINs', async t => {

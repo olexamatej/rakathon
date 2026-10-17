@@ -17,7 +17,12 @@ async function expectFresh(page) {
   await expect(page.locator('h1.pin, .saved-list, .medicine')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Obnovit platnost' })).toHaveCount(0);
   await expect(page.locator('#message')).toContainText('vypršela');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).toEqual({ items: [], submissions: [] });
+  const state = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
+  expect(state.items).toEqual([]);
+  expect(state.submissions).toHaveLength(1);
+  expect(state.submissions[0].expired).toBe(true);
+  expect(state.submissions[0].items[0].name).toBe(item.name);
+  expect(state.invalidatedDraft.items[0].name).toBe(item.name);
   expect(new URL(page.url()).search).toBe('');
   await expect(page.getByRole('button', { name: 'Z galerie', exact: true })).toBeEnabled();
 }
@@ -77,6 +82,15 @@ for (const expiresAt of ['2020-01-15T12:00:00Z', undefined]) {
     expect(calls).toBe(0);
     await page.reload();
     await expect(page.locator('#photo-title')).toHaveText('Nahrajte fotografie léků');
+    expect((await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).submissions[0].expired).toBe(true);
+    expect(calls).toBe(0);
+    await page.evaluate(item => {
+      const state = JSON.parse(localStorage.getItem('pillgaze:patient:v3'));
+      state.items = [{ ...item, name: 'Nově nahraný seznam' }];
+      localStorage.setItem('pillgaze:patient:v3', JSON.stringify(state));
+    }, item);
+    await page.reload();
+    await expect(page.locator('.medicine-info strong')).toHaveText('Nově nahraný seznam');
     expect(calls).toBe(0);
   });
 }

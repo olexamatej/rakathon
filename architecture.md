@@ -82,8 +82,11 @@ server-side age rejection**. The existing cleanup worker still removes only rate
 limits. The patient checks on load/visible focus and at most once per visible minute,
 hides unverified PINs. On load it first compares the local expiry timestamp; only
 a future deadline permits a HEAD check. Expired/missing deadlines, a server 404,
-or an expired server deadline clear the current local PIN, saved snapshot, draft,
-and regimen and return to photo upload from scratch. Network/service failures
+or an expired server deadline mark the local receipt `expired` and return to
+photo upload from scratch. The old PIN/snapshot stay in localStorage but are
+not shown as usable; unsent items/regimen are retained in `invalidatedDraft`,
+separate from the fresh empty editor. Repeated loads never restore invalid data
+or erase newly uploaded draft items. Network/service failures
 retain local data without showing the unverified PIN. Available lists keep the
 current PIN/editing/extension flow; there is no restore-expired-list button.
 Load, save and extension reuse `validateList`: local deadline first, then HEAD.
@@ -91,7 +94,7 @@ Saving an active draft uses PUT only for an available owned upload; otherwise it
 POSTs the current draft and replaces the local receipt after success. A definite
 PUT 404 between validation and writing permits one POST; network/429/5xx errors
 never trigger a new copy. Background checks skip the editor to avoid destroying
-in-progress work; loading the page still resets expired lists as described above.
+in-progress work; loading the page still invalidates expired lists as described above.
 Opening the editor also revalidates the displayed receipt. Validation checks time
 again after HEAD, including deadlines crossed during a slow request. Extension
 uses the same validation; expired/missing data on that screen returns to fresh

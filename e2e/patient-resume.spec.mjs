@@ -46,7 +46,10 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await page.reload();
   await expect(page.locator('#photo-title')).toHaveText('Nahrajte fotografie léků');
   await expect(page.locator('h1.pin')).toHaveCount(0);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).toEqual({ items: [], submissions: [] });
+  const invalidated = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
+  expect(invalidated.items).toEqual([]);
+  expect(invalidated.submissions[0].expired).toBe(true);
+  expect(invalidated.submissions[0].items[0].name).toBe(item.name);
   await page.route('**/api/transcribe', route => route.fulfill({
     status: 200, contentType: 'application/json',
     body: JSON.stringify([{ name: 'Další syntetické léčivo', strength: '5 mg', schedule: null }]),

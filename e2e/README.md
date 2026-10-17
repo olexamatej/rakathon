@@ -7,7 +7,7 @@ doctor context retrieves the exact list once, deleting the stored row; admin the
 returns to its original inventory.
 
 `storage-validity.spec.mjs` checks local-expiry-first validation without API calls
-for expired receipts, HEAD/renewal for available lists, clearing local data after
+for expired receipts, HEAD/renewal for available lists, retaining invalid local data after
 consumption, and network failures without stale PIN display. `patient-resume.spec.mjs`
 also verifies fresh photo upload after a real doctor's consuming GET.
 Save scenarios cover missing/expired uploads, consumption between HEAD and PUT,

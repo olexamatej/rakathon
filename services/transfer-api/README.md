@@ -58,14 +58,16 @@ column tracks this most recent upload, so updated blobs move up in admin listing
 POST/PUT also return `X-Owner-Token` (random 256-bit upload credential) and
 `X-Expires-At`. Migration 0005 adds ownership and separate expiry timestamps;
 existing rows get a display deadline of upload + 14 days and no ownership token.
-Patient receipts without a valid future local expiry are cleared on load.
+Patient receipts without a valid future local expiry are marked invalid on load.
 Renewal changes only expiry, preserving JSON and the real upload time.
 **Demo only:** validity is display-only. No age-based deletion job or automatic
 age rejection is implemented; cleanup still only deletes rate-limit counters.
 Patient HEAD checks cannot consume data, and stale tokens cannot edit or renew
 a PIN later allocated to another upload. Never log the token.
 Patient load checks local expiry before HEAD. Expired deadlines or missing server
-rows clear the local PIN, saved list and draft and return to fresh photo upload.
+rows mark the local receipt expired and return to fresh photo upload. The invalid
+PIN/list stay locally; unsent edits are retained separately as `invalidatedDraft`.
+Neither is automatically restored or uploaded.
 Network errors retain data for another check; expired lists cannot be restored.
 Saving an active patient draft validates availability first: PUT for an existing
 valid upload, POST with a fresh PIN otherwise. A PUT 404 race permits one POST;

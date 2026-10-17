@@ -34,6 +34,7 @@ const isSubmission = (value, legacy = false) => value && isId(value.id) && isRec
   && (value.expiresAt === undefined || isDate(value.expiresAt))
   && (value.expired === undefined || typeof value.expired === 'boolean');
 const isState = (state, legacy = false) => state && isItems(state.items) && isRegimen(state.regimen) && Array.isArray(state.submissions)
+  && (state.invalidatedDraft === undefined || (state.invalidatedDraft && isItems(state.invalidatedDraft.items) && isRegimen(state.invalidatedDraft.regimen)))
   && state.submissions.every(entry => isSubmission(entry, legacy))
   && new Set(state.submissions.map(entry => entry.id)).size === state.submissions.length;
 
@@ -109,6 +110,18 @@ export function replaceSubmission(state, items, receipt, regimen = '') {
   if (!isSubmission(entry)) throw new Error('Neplatná odpověď při odeslání seznamu.');
   state.submissions = [entry];
   return entry;
+}
+
+// Keep the invalid receipt and any unsent edits locally, but start fresh photo input.
+export function invalidateSubmission(state, preserveActiveDraft = false) {
+  const entry = state.submissions[0];
+  if (!entry) return;
+  const alreadyExpired = entry.expired;
+  entry.expired = true;
+  if (preserveActiveDraft || alreadyExpired) return;
+  state.invalidatedDraft = { items: structuredClone(state.items), regimen: state.regimen || '' };
+  state.items = [];
+  state.regimen = '';
 }
 
 // Replace the local snapshot only after the server confirms the same PIN was saved.
