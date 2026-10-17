@@ -37,8 +37,8 @@ without photographs or local IDs. The doctor also accepts legacy `{ "text": "…
 tab-separated payloads. Patient and doctor share validation for this format. Unknown strength/package fields may be empty; demo photos always include complete PARALEN, IBALGIN and LETROX items.
 It records a local snapshot and displays the returned PIN only after a valid 201
 response. The receipt timestamp is client-side; storage returns only the PIN.
-The patient reopens the latest saved PIN on every page load. Its edit button
-restores that snapshot; saving uses PUT and replaces the local history entry
+The patient reopens the latest saved PIN on every page load. The button below the PIN
+returns to the original list and photo upload screen with that snapshot; saving uses PUT and replaces the local history entry
 only after the server confirms the same PIN. No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
 storage uploads under `/api/v1/` use the same-origin VPS proxy in deployment.
 For local UI development, `npm run web:remote` (or `WEB_BACKEND_URL` set to a
