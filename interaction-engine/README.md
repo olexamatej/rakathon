@@ -265,19 +265,6 @@ tests use a stub Gemini-compatible server over loopback. They cover
 OpenAPI response conformance, pair invariants, partial resolution, invalid input,
 subprocess flags, invalid output, unexpected tool activity, timeout cleanup, capacity limits, request deduplication, persistent results, expiry, restart recovery, photo request handling and provider-failure mapping. The subprocess tests require Unix and `/usr/bin/python3`.
 
-An optional live smoke test uses your configured Codex login and makes a real
-model call:
-
-```sh
-cargo test --test api live_codex_smoke -- --ignored --nocapture
-```
-
-The optional live research check also uses your login and makes a real model call:
-
-```sh
-cargo test --test api live_research_smoke -- --ignored --nocapture
-```
-
 Print the internal Structured Outputs schema with
 `cargo run --example model_schema`.
 

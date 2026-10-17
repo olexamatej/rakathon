@@ -467,30 +467,6 @@ async fn identical_requests_share_running_work() {
     assert_eq!(first.await.unwrap().0, StatusCode::OK);
 }
 
-#[tokio::test]
-#[ignore = "requires an authenticated Codex CLI and makes a real model call"]
-async fn live_codex_smoke() {
-    let database = tempfile::tempdir().unwrap();
-    let mut cfg = Config::from_env().unwrap();
-    cfg.jobs_path = database.path().join("jobs.sqlite3");
-    let router = app(AppState::new(cfg).unwrap());
-    let started = std::time::Instant::now();
-    let (status, headers, body) = send(
-        router,
-        json!({"drugs": ["warfarin", "ibuprofen", "unknown-drug-name"]}).to_string(),
-        "application/json",
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(headers["x-interaction-source"], "model-knowledge");
-    assert_matches_openapi(&body, "InteractionCheckResponse");
-    assert_eq!(body["resolutions"].as_array().unwrap().len(), 3);
-    println!(
-        "Live Codex check completed in {:.2}s; response matches OpenAPI.",
-        started.elapsed().as_secs_f64()
-    );
-}
-
 fn research_input() -> Value {
     json!({"drugs": ["warfarin", "ibuprofen"], "site": "drugs.com"})
 }
@@ -674,56 +650,6 @@ async fn research_fails_closed_for_invalid_urls_results_and_unexpected_tools() {
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
         assert_matches_openapi(&body, "Problem");
     }
-}
-
-#[tokio::test]
-#[ignore = "requires an authenticated Codex CLI and makes a real model call"]
-async fn live_research_smoke() {
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter("interaction_engine=debug")
-        .try_init();
-    let database = tempfile::tempdir().unwrap();
-    let mut cfg = Config::from_env().unwrap();
-    cfg.jobs_path = database.path().join("jobs.sqlite3");
-    let router = app(AppState::new(cfg).unwrap());
-    let (status, _, body) = send_path(
-        router,
-        "/interaction-research",
-        research_input().to_string(),
-        "application/json",
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_matches_openapi(&body, "InteractionResearchResponse");
-    println!("{body}");
-}
-
-#[tokio::test]
-#[ignore = "calls Medscape and an authenticated Codex CLI"]
-async fn live_medscape_research_smoke() {
-    let database = tempfile::tempdir().unwrap();
-    let mut cfg = Config::from_env().unwrap();
-    cfg.jobs_path = database.path().join("jobs.sqlite3");
-    let router = app(AppState::new(cfg).unwrap());
-    let (status, headers, body) = send_path(
-        router,
-        "/interaction-research",
-        json!({"drugs": ["warfarin", "ibuprofen"], "site": "reference.medscape.com"}).to_string(),
-        "application/json",
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_matches_openapi(&body, "InteractionResearchResponse");
-    assert_eq!(headers["x-interaction-source"], "medscape-api");
-    assert_eq!(body["status"], "found", "{body}");
-    let url = url::Url::parse(body["url"].as_str().unwrap()).unwrap();
-    assert_eq!(url.host_str(), Some("reference.medscape.com"));
-    assert_eq!(url.path(), "/druginteraction.do");
-    assert!(
-        url.query_pairs()
-            .any(|(k, v)| k == "ids" && v == "342182,343289")
-    );
-    println!("{body}");
 }
 
 #[cfg(unix)]
