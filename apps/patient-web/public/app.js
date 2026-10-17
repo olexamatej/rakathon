@@ -22,7 +22,6 @@ let localCopyInfoOpen = false;
 try {
   const loaded = loadState(localStorage);
   state = loaded.state;
-  if (loaded.pinMigrated) storageWarning = 'PINy nyní mají 4 číslice. Uložte seznam znovu pro získání nového PINu.';
   if (loaded.skipped) storageWarning = 'Některá starší data nelze načíst. Původní záznamy zůstaly zachované.';
 } catch {
   loadFailed = true;
