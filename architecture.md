@@ -37,8 +37,8 @@ without photographs or local IDs. The doctor also accepts legacy `{ "text": "…
 tab-separated payloads. Patient and doctor share validation for this format. Unknown strength/package fields may be empty; demo photos always include complete PARALEN, IBALGIN and LETROX items.
 It records a local snapshot and displays the returned PIN only after a valid 201
 response. The receipt timestamp is client-side; storage returns only the PIN.
-The patient reopens the latest saved PIN on every page load. Its edit button
-restores that snapshot; saving uses PUT and replaces the local history entry
+The patient reopens the latest saved PIN on every page load. The button below the PIN
+returns to the original list and photo upload screen with that snapshot; saving uses PUT and replaces the local history entry
 only after the server confirms the same PIN. No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
 storage uploads under `/api/v1/` use the same-origin VPS proxy in deployment.
 For local UI development, `npm run web:remote` (or `WEB_BACKEND_URL` set to a
@@ -63,6 +63,15 @@ The migration widening the blob limit copies existing blobs transactionally.
 PostgreSQL is not implemented; its old schema is historical only.
 
 ## Photo transcription
+
+The patient starts with a secondary “Z knihovny” button above a primary
+“Vyfotit” button and can keep
+adding photos while recognition runs. The UI shows a brief loading status and
+recognized medicines, without photo previews, filenames or completed photo cards. A single
+background worker processes the growing queue in order, appending each result
+as it finishes. A failed photo is shown individually and does not stop the queue.
+Saving waits for all queued photos to finish. The native file inputs survive UI
+updates so an open file chooser is preserved.
 
 The patient photo UI currently passes `{ mode: 'demo' }` to `recognizePhoto`,
 producing three complete synthetic medicines without calling Gemini. Calling

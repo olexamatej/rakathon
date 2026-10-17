@@ -43,7 +43,7 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
   await page.goto('/pacient');
   await page.evaluate(value => localStorage.setItem('pillgaze:patient:v2', JSON.stringify(value)), draft);
   await page.reload();
-  const send = page.getByRole('button', { name: 'Odeslat seznam' });
+  const send = page.getByRole('button', { name: 'Uložit seznam' });
   await expect(send).toBeEnabled();
   const uploadPromise = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/transfers');
