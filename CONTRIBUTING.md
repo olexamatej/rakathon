@@ -29,10 +29,9 @@ See [`infra/vps/README.md`](infra/vps/README.md).
 
 ## Application boundaries and small changes
 
-- Keep Expo's entry points (`App.tsx`, `index.ts`) at the root. Reuse `src/ui.tsx`
-  for shared UI and keep medication rules independent of UI in `src/medication.ts`.
-  Add focused modules and tests as features grow, rather than reorganizing files
-  while someone else is editing them.
+- Keep the patient and doctor browser UI in `apps/patient-web/public/` and the
+  local server in `apps/patient-web/server.mjs`. Share medication validation
+  between the patient and doctor flows rather than duplicating it.
 - Add regression tests for changes to validation, export, and handoff behavior.
   Keep fixtures synthetic; do not read patient documents or photographs in tests.
   Offline integrity tests may read the versioned public SÚKL catalog, but must
@@ -48,14 +47,11 @@ See [`infra/vps/README.md`](infra/vps/README.md).
 
 ## Parallel application and service work
 
-- The active Expo patient prototype remains at the repository root; its entry
-  points and current CI assume that location. Do not move or duplicate it while
-  teammates are developing it.
-- Keep the doctor-facing browser client in `apps/doctor-web/`, the Rust transfer
-  service in `services/transfer-api/`, the shared OpenAPI contract in
-   `packages/api-contract/`. `infra/vps/` documents the existing Compose deployment
-   and retains generic frontend image inputs; live operational files stay outside
-   the application checkout.
+- The patient PWA and doctor UI share `apps/patient-web/`. `apps/doctor-web/`
+  is a historical placeholder, not a separate application.
+- Keep the Rust transfer service in `services/transfer-api/` and the shared
+  OpenAPI contract in `packages/api-contract/`. `infra/vps/` documents the existing
+  Compose deployment; live operational files stay outside the checkout.
 - Read [`architecture.md`](architecture.md) before changing a cross-component
   boundary. Update the OpenAPI contract when API behavior changes and coordinate
   the matching patient, doctor, and service updates.
@@ -69,14 +65,13 @@ Before pushing application changes, use Node.js 24 and run:
 
 ```sh
 npm ci
-npm run typecheck
 npm test
-npm run export:web -- --max-workers 1
+node --test apps/storage-admin/tests/*.test.mjs
 ```
 
 On this VPS, run repository installation, tests, and builds only in the sandbox,
 not as the Docker-enabled host account. Use a separate preview directory, never
-the live Actions checkout. A web export checks bundling, not native device behavior.
+the live Actions checkout. Check browser camera/gallery behavior manually when changing that flow.
 
 ## Continuous integration
 
@@ -87,32 +82,15 @@ actionlint. The ignored-file check covers filenames and patterns, not secret
 contents; review commits for credentials as well.
 
 `.github/workflows/application-ci.yml` runs on the same branch events. It uses
-Node.js 24, installs the committed lockfile with `npm ci`, checks TypeScript, runs
-unit tests and the offline public-catalog integrity checks, and exports the Expo
-web bundle with one Metro worker. It also installs a SHA-pinned Rust stable
-toolchain and compiles `services/transfer-api` targets with one Cargo build job
-to fit the sandbox runner's memory limit.
-No application lint rules or formatter are imposed on the active development work.
+Node.js 24, installs the committed lockfile with `npm ci`, runs web application
+and storage admin unit tests, and checks the public catalog offline. The root
+web application has no external npm dependencies. Review any future dependency
+additions and their audit results. The workflow also tests the Rust transfer API
+with locked dependencies on GitHub-hosted runners.
 
-The full `npm audit --audit-level=high` report is deliberately **non-blocking**
-while Expo's upstream tooling findings are being reviewed. An audit failure emits
-a workflow warning and job summary, including when the audit service is unavailable.
-A green application build is not a clean security audit. Review the audit output
-on dependency changes and before deployment; do not run `npm audit fix --force`,
-which currently proposes incompatible framework downgrades. See README for the
-dated findings. Making the audit blocking needs a deliberate review of upstream
-fixes or narrowly scoped, documented exceptions, not silently ignoring advisories.
-
-Both workflows use the existing ARM64 sandbox runner, read-only repository
-permissions, SHA-pinned actions, checkout without persisted credentials, and
-cancellation of older runs on the same branch or pull request. Repository checks
-have a five-minute timeout and configuration-only checkout; application checks
-have a fifteen-minute timeout and exclude all reference `assets/` and the local
-knowledge base. The current app does not import those files. If runtime assets
-are added, explicitly include only the necessary reviewed files in CI checkout.
-Neither workflow uploads artifacts, publishes the prototype, or uses secrets.
-Fork pull requests are excluded from this persistent runner. It has no Docker
-socket or access to the VPS application networks.
+Checks use read-only repository permissions, SHA-pinned actions and checkout
+without persisted credentials. Application checks exclude reference `assets/`
+and the local knowledge base. Neither workflow deploys the application.
 
 Deployment automation needs a defined target and credentials scoped to that target;
 neither workflow deploys the application.

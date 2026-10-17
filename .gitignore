@@ -52,11 +52,7 @@ target/
 
 # Frontend dependencies and generated outputs; lockfiles remain versioned
 node_modules/
-.expo/
 dist/
-web-build/
-/android/
-/ios/
 /.next/
 /.nuxt/
 /.output/

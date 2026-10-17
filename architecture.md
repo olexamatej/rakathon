@@ -7,8 +7,7 @@
 | Area | Responsibility |
 | --- | --- |
 | `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same Node server. Patient uploads and doctor retrieval use storage; interaction checks and site research use the interaction engine. The patient UI explicitly uses demo recognition with three complete synthetic medicines; real photo bytes are proxied to the engine's `/transcribe`. |
-| Root `App.tsx`, `src/` | Separate older Expo prototype; preserve its entry points. |
-| `apps/doctor-web/` | Doctor-facing browser UI area. |
+| `apps/doctor-web/` | Historical placeholder; the implemented doctor UI lives in `apps/patient-web/`. |
 | `services/transcription/` | Standalone Python CLI/HTTP experiment for photo transcription; the patient server no longer uses it. |
 | `services/transfer-api/` | Rust/Axum opaque JSON storage backed by SQLite. |
 | `packages/api-contract/` | OpenAPI storage and separate transcription contracts. |

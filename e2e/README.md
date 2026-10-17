@@ -22,7 +22,7 @@ The `build-api` job builds the checked-out Rust API on a GitHub-hosted ARM64
 Ubuntu VM and uploads a one-day artifact. Only the `storage` browser job runs on
 the Hetzner runner. That runner has Node 24 and Playwright 1.64.1 Chromium
 preinstalled; it downloads this run's API artifact, installs the locked test
-package without install scripts, and runs one browser worker. No Rust, Expo or
+package without install scripts, and runs one browser worker. No Rust or
 Docker build runs on the VPS. Other application CI jobs use GitHub-hosted VMs.
 Fork PRs are skipped. The runner's pre-job hook rejects other workflows/jobs.
 

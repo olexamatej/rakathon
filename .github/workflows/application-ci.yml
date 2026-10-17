@@ -20,7 +20,6 @@ defaults:
 
 env:
   CI: "true"
-  EXPO_NO_TELEMETRY: "1"
   NODE_OPTIONS: --max-old-space-size=1024
   npm_config_cache: .cache/npm
   npm_config_fetch_retries: "0"
@@ -54,7 +53,7 @@ jobs:
         run: cargo test --locked --manifest-path services/transfer-api/Cargo.toml --all-targets
 
   application:
-    name: TypeScript, tests and Expo web export
+    name: Web application tests
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -77,31 +76,5 @@ jobs:
         run: node --test apps/storage-admin/tests/*.test.mjs
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
-      - name: Report dependency vulnerabilities (non-blocking)
-        id: audit
-        # Expo tooling has known upstream findings; do not downgrade it with audit fix.
-        continue-on-error: true
-        run: npm audit --audit-level=high
-      - name: Make dependency audit debt visible
-        if: steps.audit.outcome == 'failure'
-        run: |
-          echo '::warning::Dependency audit did not pass. Review the preceding audit output for vulnerabilities or service errors; this check is intentionally non-blocking, not a security approval.'
-          printf '%s\n' \
-            '### Dependency audit needs review' \
-            'The non-blocking npm audit did not pass. See its output for findings or service errors. A green build is not a clean security audit; do not use npm audit fix --force.' \
-            >> "$GITHUB_STEP_SUMMARY"
-      - name: Check TypeScript
-        run: npm run typecheck
       - name: Run unit tests and public-catalog integrity checks
         run: npm test
-      - name: Export Expo web bundle
-        # Bound Metro parallelism; this is a build, not a deployment.
-        run: npm run export:web -- --max-workers 1
-      - name: Save tested frontend for container build
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: rakathon-web-dist
-          path: dist/
-          if-no-files-found: error
-          retention-days: 3

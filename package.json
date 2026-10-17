@@ -2,38 +2,15 @@
   "name": "pillgaze",
   "version": "0.1.0",
   "private": true,
-  "main": "index.ts",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "BROWSER=none expo start --web",
-    "typecheck": "tsc --noEmit",
+    "start": "node apps/patient-web/server.mjs",
+    "web": "node apps/patient-web/server.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.*",
-    "export:web": "expo export --platform web",
     "web:patient": "node apps/patient-web/server.mjs",
     "engine": "set -a; [ -f .env ] && . ./.env; set +a; export JOBS_PATH=\"${JOBS_PATH:-interaction-engine/data/jobs.sqlite3}\" SUKL_CATALOGUE_PATH=\"${SUKL_CATALOGUE_PATH:-data/sukl/medications.json}\"; cargo run --manifest-path interaction-engine/Cargo.toml",
     "proxy": "cli-proxy-api -config \"$HOME/.cli-proxy-api/config.yaml\""
   },
   "engines": {
     "node": ">=22.13.0"
-  },
-  "dependencies": {
-    "@expo/vector-icons": "15.1.1",
-    "expo": "58.0.14",
-    "expo-clipboard": "58.0.3",
-    "expo-font": "58.0.8",
-    "expo-image-picker": "58.0.10",
-    "expo-status-bar": "58.0.3",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "react-native": "0.88.0",
-    "react-native-safe-area-context": "5.10.1",
-    "react-native-web": "0.21.4"
-  },
-  "devDependencies": {
-    "@types/node": "^24.19.2",
-    "@types/react": "^19.3.0",
-    "typescript": "^7.0.2"
   }
 }

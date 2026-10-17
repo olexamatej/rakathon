@@ -7,8 +7,7 @@ Rust interaction engine (`interaction-engine/`); the engine calls Gemini
 explicitly selects `{ mode: 'demo' }` to provide three complete synthetic
 medicines for the PIN handoff demonstration; that mode makes no request at all.
 Calling `recognizePhoto(file)` without the demo option retains real transcription
-and never replaces errors with mock results. This does not change the separate
-older Expo prototype at the repository root.
+and never replaces errors with mock results.
 
 ## Run
 
@@ -30,8 +29,8 @@ engine the photo flow uses the production service. The engine also accepts
 `GOOGLE_API_KEY` when `GEMINI_API_KEY` is absent, and `GEMINI_TIMEOUT_SECONDS`
 (default 120). Restart after changing configuration.
 
-The key stays in the server environment. Never put it in public JavaScript or an
-`EXPO_PUBLIC_` variable. `.env` is ignored by Git and excluded from Docker input.
+The key stays in the server environment. Never put it in public JavaScript or any
+client-exposed environment variable. `.env` is ignored by Git and excluded from Docker input.
 
 ## Antigravity via a local proxy
 

@@ -1,5 +1,17 @@
 # Rakathon / PillGaze — kontext pro dalšího agenta
 
+### Aktualizace 17. 10. 2026 — odstranění Expo prototypu
+
+- Kořenový Expo prototyp (`App.tsx`, `index.ts`, `src/`), jeho demo testy,
+  konfigurace a npm závislosti byly odstraněny.
+- `npm start`, `npm run web` a `npm run web:patient` spouštějí stejnou PWA
+  z `apps/patient-web/`, včetně lékařského UI na `/lekar`.
+- Aplikační CI nyní spouští webové testy a kontrolu katalogu bez TypeScript
+  kompilace či Expo exportu. Kořenová aplikace nemá externí npm závislosti.
+- Níže uvedené poznámky o Expo a jeho starých worktrees jsou historické;
+  aktuální strukturu popisují `README.md` a `architecture.md`.
+- Tato změna neupravuje živé nasazení ani jiné worktrees.
+
 ### Aktualizace 17. 10. 2026 — úplné odstranění demo rozpoznávání
 
 - Z pacientského `services.js` odstraněna celá demo větev a její tři

@@ -12,5 +12,4 @@ node_modules
 **/*.db
 **/*.log
 assets
-.expo
 infra/azure

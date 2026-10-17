@@ -1,12 +1,11 @@
 # Applications
 
-The active patient-facing Expo application currently lives at the repository
-root (`App.tsx`, `index.ts`, and `src/`). Its existing entry points and CI
-assumptions are kept in place while the team is working on it; do not create a
-second patient app here or move the root app without coordinating that migration.
+`patient-web/` contains the patient PWA (`/pacient`) and doctor browser UI
+(`/lekar`), built with plain HTML, CSS and JavaScript and served by a Node server.
+Run `npm start` (or `npm run web:patient`) from the repository root.
 
-`doctor-web/` is the home for the separate doctor-facing browser client. The
-repository layout and data boundaries are described in [`../architecture.md`](../architecture.md).
+`storage-admin/` contains the separate storage administration UI.
+`doctor-web/` is a historical placeholder with no application code; doctor UI
+changes belong in `patient-web/`.
 
-The old `transfer-demo/` has been removed. Storage now exposes only JSON POST/GET
-operations (plus operational probes), not embedded patient/doctor demo pages.
+See [`../architecture.md`](../architecture.md) for data boundaries and services.
