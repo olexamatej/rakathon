@@ -15,45 +15,80 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build-api:
+    name: Prepare ARM64 test API on GitHub
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+    steps:
+      - name: Check out test backend
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout: services/transfer-api
+      - name: Set up Rust stable
+        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1.16.1
+        with:
+          cache-workspaces: services/transfer-api -> services/transfer-api/target
+      - name: Build API from this checkout
+        run: cargo build --locked --manifest-path services/transfer-api/Cargo.toml
+      - name: Pass test API to Playwright job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: storage-e2e-api-arm64
+          path: services/transfer-api/target/debug/pillgaze-transfer-api
+          if-no-files-found: error
+          retention-days: 1
+
   storage:
     name: Patient upload and authenticated storage admin
-    # Docker builds run on an ephemeral VM, preserving the Hetzner runner's
-    # isolation. The test container itself has no network access beyond loopback.
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    needs: build-api
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Only browser tests run on the VPS. No Docker or Rust builds here.
+    runs-on: [self-hosted, Linux, ARM64, hetzner-sandbox]
+    timeout-minutes: 10
     defaults:
       run:
         shell: bash
+    env:
+      CI: "true"
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      E2E_API_BINARY: ${{ github.workspace }}/e2e/.bin/pillgaze-transfer-api
+      E2E_OUTPUT_DIR: ${{ github.workspace }}/e2e/test-results
+      npm_config_cache: /home/runner/.cache/npm
+      NODE_OPTIONS: --max-old-space-size=384
     steps:
-      - name: Check out test and application sources
+      - name: Check out browser tests and static application
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
-            /.dockerignore
             /e2e/
             /apps/patient-web/
             /apps/storage-admin/
-            /services/transfer-api/
             /data/regimens.json
-      - name: Build isolated application and browser test image
-        run: docker build --file e2e/Dockerfile --tag pillgaze-storage-e2e .
-      - name: Test patient to storage admin flow without external network
+      - name: Download API built by this workflow run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: storage-e2e-api-arm64
+          path: e2e/.bin
+      - name: Install locked Playwright test package
+        working-directory: e2e
+        run: npm ci --ignore-scripts --no-audit --no-fund --fetch-retries=0 --fetch-timeout=60000
+      - name: Run Playwright with one worker against disposable local storage
+        working-directory: e2e
         run: |
-          docker run --rm --name storage-e2e --init \
-            --network none --read-only --user 1000:1000 \
-            --cap-drop ALL --security-opt no-new-privileges \
-            --cpus 2 --memory 2g --pids-limit 256 --shm-size 128m \
-            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m \
-            pillgaze-storage-e2e
+          chmod 0700 "$E2E_API_BINARY"
+          npm test -- --workers=1
           printf '%s\n' \
-            'Patient storage E2E passed: mobile photos, matching admin PIN/JSON, doctor retrieval and confirmed purge verified.' \
-            'Disposable non-root container, network disabled, temporary SQLite; no production access.' \
+            'Playwright ran with one worker on the isolated VPS runner.' \
+            'Rust compilation ran on GitHub; test API and SQLite were disposable.' \
             >> "$GITHUB_STEP_SUMMARY"
-      - name: Remove test container after interruption
+      - name: Remove browser test output
         if: always()
-        run: |
-          if docker container inspect storage-e2e > /dev/null 2>&1; then
-            docker container rm --force storage-e2e
-          fi
+        run: rm -rf -- "$E2E_OUTPUT_DIR"
