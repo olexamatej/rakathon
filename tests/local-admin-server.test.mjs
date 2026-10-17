@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAppServer } from '../../patient-web/server.mjs';
+import { createAppServer } from '../apps/patient-web/server.mjs';
 
 test('remote mode serves local admin assets only from the public allowlist', async t => {
   const server = createAppServer({ backendUrl: 'https://example.invalid' });
