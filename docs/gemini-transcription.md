@@ -40,7 +40,17 @@ subscription. Antigravity has no public API, so a local
 [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) instance sits in
 between and speaks the same Gemini protocol (`/v1beta/models/{model}:generateContent`).
 
-One-time setup outside the repository:
+One-time setup on a fresh machine:
+
+```sh
+scripts/setup-antigravity-proxy.sh
+```
+
+The script installs `cli-proxy-api` into `~/.local/bin`, writes
+`~/.cli-proxy-api/config.yaml` (listener `127.0.0.1:8317`, a fresh client key
+under `access.api-keys`; an existing config is kept), runs the Antigravity OAuth
+login and prints the `.env` values from this page. Re-run it to refresh an
+expired login; `--no-login` skips the browser step. By hand, equivalently:
 
 - Install the `cli-proxy-api` binary and point it at
   `~/.cli-proxy-api/config.yaml` (listener `127.0.0.1:8317`, client key under
