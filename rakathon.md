@@ -1,5 +1,32 @@
 # Rakathon / PillGaze — kontext pro dalšího agenta
 
+### Aktualizace 17. 10. 2026 — produkční napojení fotografií, externí služba blokuje rozpoznání
+
+- Frontend oprava **bf30163** je pushnutá v main a nasazená: kamera i galerie
+  volají skutečné `recognizePhoto(file)` místo vynuceného demo režimu.
+  UI už nepopisuje ukázkové léky.
+- Aktivní web image: `rakathon-web:main-bf301639da73-transcription-tls-depth`,
+  healthy. API/admin zůstaly na `a11be5e`; šlo pouze o deploy webu.
+- `rakathon-site/patient-nginx.conf` směruje přesnou cestu
+  `/api/transcribe` na `https://rakathon.josefkuchar.com/transcribe`.
+  Gateway i web propustí na této cestě 20 MiB; timeouty web/gateway/klient
+  jsou 125/130/135 s. Upstream TLS se ověřuje s hloubkou řetězce 4.
+  Žádné nové porty, změny dat, credentials, DNS či firewallu.
+- Typecheck, **71/71 testů**, Nginx syntaxe a HTTPS/health kontroly prošly.
+  Skutečný Chromium test kamerového rozhraní odeslal syntetický JPEG
+  **1 078 709 bajtů** přes veřejné HTTPS až do externí služby.
+- **Rozpoznávání stále není funkční:** externí služba vrací HTTP 503
+  `Rozpoznávání fotografií není nakonfigurováno.` Podle jejího OpenAPI
+  chybí `GEMINI_API_KEY`. Na tomto VPS konfigurace nebyla nalezena;
+  uživatel dostal dotaz na zapnutí služby nebo jiný endpoint.
+  Neposílat další fotografie bez změny konfigurace.
+- Výsledky, zálohy konfigurací a postup návratu:
+  `/home/rhodes/rakathon-site/state/transcription-20261017/README.md`.
+  Zachovaný návratový image:
+  `rakathon-web-recovery:before-production-transcription-20261017`.
+  Další standardní UI deploy přebírá opravenou proxy z hostové konfigurace.
+
+
 ### Aktuální stav ověřený 16. 10. 2026, přibližně 23:05 UTC
 
 - Transfer API a storage admin jsou nasazené z `main` revize `c63a9158eb42`.
