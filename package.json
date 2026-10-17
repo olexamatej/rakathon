@@ -8,7 +8,7 @@
     "test": "node --experimental-strip-types --test tests/*.test.*",
     "web:patient": "node apps/patient-web/server.mjs",
     "web:remote": "node apps/patient-web/server.mjs --remote",
-    "engine": "set -a; [ -f .env ] && . ./.env; set +a; export JOBS_PATH=\"${JOBS_PATH:-interaction-engine/data/jobs.sqlite3}\" SUKL_CATALOGUE_PATH=\"${SUKL_CATALOGUE_PATH:-data/sukl/medications.json}\"; cargo run --manifest-path interaction-engine/Cargo.toml",
+    "engine": "set -a; [ -f .env ] && . ./.env; set +a; export JOBS_PATH=\"${JOBS_PATH:-interaction-engine/data/jobs.sqlite3}\" SUKL_CATALOGUE_PATH=\"${SUKL_CATALOGUE_PATH:-data/sukl/medications.json}\"; cargo run --manifest-path interaction-engine/Cargo.toml -- --port 6767",
     "proxy": "cli-proxy-api -config \"$HOME/.cli-proxy-api/config.yaml\""
   },
   "engines": {
