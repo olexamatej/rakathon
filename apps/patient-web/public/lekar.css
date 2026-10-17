@@ -100,8 +100,8 @@ h3 { margin: 0; }
 .pair strong { font-weight: 600; color: inherit; overflow-wrap: anywhere; }
 .summary { margin-top: 3px; font-size: 15px; font-weight: 650; letter-spacing: -.2px; line-height: 1.3; }
 
-/* Doctor theme: cool slate/blue, distinct from the green patient app. */
-body.doctor {
+/* Shared cool slate/blue theme for patient and doctor views. */
+body.cool-theme {
   --green: #1f3f6e;
   --muted: #5d6b7c;
   --line: #dbe2ec;
@@ -110,23 +110,23 @@ body.doctor {
   background: #f3f6fa;
   color: #1c2a3b;
 }
-body.doctor .brand { color: #14233a; }
-body.doctor .primary { background: var(--green); border-color: var(--green); }
-body.doctor .primary:not(:disabled):hover { background: #162f54; }
-body.doctor .primary:disabled, body.doctor .secondary:disabled { background: #e3e8ef; border-color: #e3e8ef; color: #7a8696; }
-body.doctor .secondary { border-color: #c9d3df; }
-body.doctor .secondary:not(:disabled):hover { background: var(--tint-2); }
-body.doctor input { background: #f6f8fb; }
-body.doctor input:focus { background: #fff; }
-body.doctor input:focus-visible { box-shadow: 0 0 0 3px #3b6fb533; }
-body.doctor input[aria-invalid="true"] { border-color: #c0553a; background: #fff5f1; }
-body.doctor button:focus-visible, body.doctor a:focus-visible { outline-color: #3b6fb5; }
-body.doctor .doc-empty { background: #fff; }
-body.doctor .regimen-row, body.doctor .table-wrap, body.doctor .history-item[aria-current="true"] { background: #fff; }
-body.doctor .med-table tbody tr:hover { background: #f8fafd; }
-body.doctor dialog { background: #fff; }
-body.doctor dialog::backdrop { background: #101c2e66; }
-body.doctor .brand img { filter: hue-rotate(60deg) saturate(1.1); }
+body.cool-theme .brand { color: #14233a; }
+body.cool-theme .primary { background: var(--green); border-color: var(--green); }
+body.cool-theme .primary:not(:disabled):hover { background: #162f54; }
+body.cool-theme .primary:disabled, body.cool-theme .secondary:disabled { background: #e3e8ef; border-color: #e3e8ef; color: #7a8696; }
+body.cool-theme .secondary { border-color: #c9d3df; }
+body.cool-theme .secondary:not(:disabled):hover { background: var(--tint-2); }
+body.cool-theme input { background: #f6f8fb; }
+body.cool-theme input:focus { background: #fff; }
+body.cool-theme input:focus-visible { box-shadow: 0 0 0 3px #3b6fb533; }
+body.cool-theme input[aria-invalid="true"] { border-color: #c0553a; background: #fff5f1; }
+body.cool-theme button:focus-visible, body.cool-theme a:focus-visible { outline-color: #3b6fb5; }
+body.cool-theme .doc-empty { background: #fff; }
+body.cool-theme .regimen-row, body.cool-theme .table-wrap, body.cool-theme .history-item[aria-current="true"] { background: #fff; }
+body.cool-theme .med-table tbody tr:hover { background: #f8fafd; }
+body.cool-theme dialog { background: #fff; }
+body.cool-theme dialog::backdrop { background: #101c2e66; }
+body.cool-theme .brand img { filter: hue-rotate(60deg) saturate(1.1); }
 .med-table { table-layout: fixed; }
 .med-table th:nth-child(1) { width: 26%; }
 .med-table th:nth-child(2) { width: 24%; }

@@ -6,7 +6,7 @@
 
 | Area | Responsibility |
 | --- | --- |
-| `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same Node server. Patient uploads and doctor retrieval use storage; interaction checks and site research use the interaction engine. Photo bytes are proxied to the engine's `/transcribe`. |
+| `apps/patient-web/` | Patient PWA with storage upload, plus the `/lekar` doctor UI served by the same Node server. Patient uploads and doctor retrieval use storage; interaction checks and site research use the interaction engine. The patient UI explicitly uses demo recognition with three complete synthetic medicines; real photo bytes are proxied to the engine's `/transcribe`. |
 | Root `App.tsx`, `src/` | Separate older Expo prototype; preserve its entry points. |
 | `apps/doctor-web/` | Doctor-facing browser UI area. |
 | `services/transcription/` | Standalone Python CLI/HTTP experiment for photo transcription; the patient server no longer uses it. |
@@ -32,7 +32,7 @@ control and images; rotation invalidates outstanding PINs.
 
 The patient PWA sends `{ "version": 1, "regimen": "…", "items": […] }`,
 without photographs or local IDs. The doctor also accepts legacy `{ "text": "…" }`
-tab-separated payloads. Unknown strength/package fields may be empty.
+tab-separated payloads. Patient and doctor share validation for this format. Unknown strength/package fields may be empty; demo photos always include complete PARALEN, IBALGIN and LETROX items.
 It records a local snapshot and displays the returned PIN only after a valid 201
 response. The receipt timestamp is client-side; storage returns only the PIN.
 No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
@@ -41,6 +41,8 @@ storage uploads under `/api/v1/` require the same-origin VPS proxy.
 Admin-only endpoints, enabled with `STORAGE_ADMIN_PASSWORD`:
 `GET /v1/admin/blobs` lists paginated size/HMAC metadata;
 `DELETE /v1/admin/blobs/{pinDigest}` hard deletes a selected blob.
+`DELETE /v1/admin/blobs` hard deletes all current blobs across all pages with the
+same admin authentication; the UI requires confirmation.
 
 There is no expiry, public DELETE, revocation, idempotency key, or single-use retrieval.
 Each POST creates a new blob. The old encrypted endpoints and embedded browser
@@ -50,6 +52,10 @@ The migration widening the blob limit copies existing blobs transactionally.
 PostgreSQL is not implemented; its old schema is historical only.
 
 ## Photo transcription
+
+The patient photo UI currently passes `{ mode: 'demo' }` to `recognizePhoto`,
+producing three complete synthetic medicines without calling Gemini. Calling
+`recognizePhoto(file)` retains real transcription, with no automatic mock fallback.
 
 `POST /api/transcribe` on the patient Node server accepts raw JPEG, PNG or WebP
 (up to 20 MiB) and proxies the bytes to the interaction engine's

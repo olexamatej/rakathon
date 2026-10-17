@@ -1,4 +1,5 @@
 import { normalizePin, isPin, validateItem } from './doctor.js';
+import { buildTransferPayload } from './lists.js';
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -7,17 +8,10 @@ export function parsePatientList(blob) {
   const invalid = () => { throw new Error('Uložený záznam nemá platný formát seznamu léčiv.'); };
   // Current patient uploads are structured JSON. Keep the text parser below for existing PINs.
   if (blob && blob.version === 1 && Array.isArray(blob.items)) {
-    if (blob.items.length === 0 || typeof (blob.regimen ?? '') !== 'string' || (blob.regimen ?? '').length > 200) return invalid();
-    const items = blob.items.map(item => {
-      if (!item || typeof item.name !== 'string' || typeof item.dosage !== 'string'
-          || typeof item.dosesPerPackage !== 'string'
-          || (item.schedule !== undefined && typeof item.schedule !== 'string')) return invalid();
-      const clean = { name: item.name, dosage: item.dosage, dosesPerPackage: item.dosesPerPackage,
-        ...(item.schedule ? { schedule: item.schedule } : {}) };
-      if (clean.name.length > 120 || clean.dosage.length > 120 || Object.keys(validateItem(clean)).length) return invalid();
-      return clean;
-    });
-    return { regimen: blob.regimen || '', items };
+    try {
+      const { regimen, items } = buildTransferPayload(blob.items, blob.regimen ?? '');
+      return { regimen, items };
+    } catch { return invalid(); }
   }
   if (!blob || typeof blob.text !== 'string') return invalid();
   const rows = blob.text.split(/\r?\n/);
@@ -200,7 +194,7 @@ export async function fetchInteractions(items, regimen, options = {}) {
 }
 
 // Sites the research agent can search, as accepted by /interaction-research.
-export const RESEARCH_SITES = ['drugs.com', 'webmd.com', 'patient.info', 'rxlist.com', 'reference.medscape.com', 'rxlabelguard.com', 'rxcheck.dev'];
+export const RESEARCH_SITES = ['drugs.com', 'rxlist.com', 'reference.medscape.com'];
 
 // Asks an agent to find a page dedicated to exactly this pair on one site. Resolves to
 // { status: 'found' | 'not_found' | 'inconclusive', url: https url | null, summary, site, checkedAt }.

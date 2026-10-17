@@ -393,6 +393,14 @@ $('#pin-form').addEventListener('submit', async event => {
   }
 });
 
+// A shared doctor link can carry the patient's PIN in the query string.
+// Load it through the same form flow so errors are shown in the usual place.
+const sharedPin = new URLSearchParams(location.search).get('pin');
+if (sharedPin) {
+  pinInput.value = normalizePin(sharedPin).slice(0, 6);
+  $('#pin-form').requestSubmit();
+}
+
 // --- history and list actions ---
 $('#history').addEventListener('click', event => {
   const button = event.target.closest('[data-action="open"]');

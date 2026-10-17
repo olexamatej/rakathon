@@ -1,11 +1,14 @@
 # Gemini photo transcription
 
-The patient PWA's photo/gallery flow calls `POST /api/transcribe` on the patient
-Node server. That endpoint does no recognition itself: it proxies the raw photo
-to `POST /transcribe` on the Rust interaction engine (`interaction-engine/`),
-which calls Gemini **3.6 Flash** and returns strict minimal rows. It no longer
-returns hard-coded example medicines. This does not change the separate older
-Expo prototype at the repository root.
+The patient PWA's photo/gallery flow posts to `POST /api/transcribe` on the
+patient Node server, which proxies the raw photo to `POST /transcribe` on the
+Rust interaction engine (`interaction-engine/`); the engine calls Gemini
+**3.6 Flash** and returns strict minimal rows. The patient PWA currently
+explicitly selects `{ mode: 'demo' }` to provide three complete synthetic
+medicines for the PIN handoff demonstration; that mode makes no request at all.
+Calling `recognizePhoto(file)` without the demo option retains real transcription
+and never replaces errors with mock results. This does not change the separate
+older Expo prototype at the repository root.
 
 ## Run
 

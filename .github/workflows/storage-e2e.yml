@@ -48,7 +48,7 @@ jobs:
             --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m \
             pillgaze-storage-e2e
           printf '%s\n' \
-            'Patient storage E2E passed: 101 → 102 records, server PIN and stored payload verified.' \
+            'Patient storage E2E passed: mobile photos, matching admin PIN/JSON, doctor retrieval and confirmed purge verified.' \
             'Disposable non-root container, network disabled, temporary SQLite; no production access.' \
             >> "$GITHUB_STEP_SUMMARY"
       - name: Remove test container after interruption

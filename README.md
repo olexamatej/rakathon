@@ -37,22 +37,30 @@ npm run web:patient
 
 Fotografie z galerie nebo fotoaparátu přidají léčiva do seznamu. Na počítači
 fotoaparát otevře náhled webkamery, na telefonu systémový fotoaparát. Položky lze
-odstranit; seznam a historii odeslání uchovává localStorage tohoto prohlížeče.
-Volitelný režim onkologické léčby má našeptávání z HemOncKB a uchovává se také
-v historii odeslání. Poslední PIN lze znovu otevřít a zkopírovat.
-Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva a v historii;
+odstranit; rozepsaný seznam uchovává localStorage tohoto prohlížeče.
+Pacientské UI historii odeslání nezobrazuje ani nenabízí její procházení.
+Po odeslání se PIN zobrazí přímo na potvrzovací obrazovce ke zkopírování.
+Volitelný režim onkologické léčby má našeptávání z HemOncKB.
+Volitelný rozpis užívání (např. `1-0-0`) se zobrazuje u léčiva;
 pokud je vyplněný, textové předání přidá sloupec **Kdy**.
 Instalace PWA a přístup k webkameře vyžadují HTTPS nebo localhost.
 
-Fotografie se odesílá přes `POST /api/transcribe` na lokálním Node serveru, který
-ji proxyuje na interaction engine (`POST /transcribe`); teprve engine volá Gemini
-3.6 Flash a drží klíč. Engine načítá `GEMINI_API_KEY` a `GEMINI_MODEL` z prostředí
-(`npm run engine` načte kořenové `.env`); klíč se nikdy neposílá do prohlížeče.
-Místo klíče lze použít předplatné
-Antigravity přes lokální proxy CLIProxyAPI (`GEMINI_API_BASE`, `npm run proxy`) —
-viz [Gemini transcription](docs/gemini-transcription.md). Pro lokální rozpoznávání
-nastavte v `.env` `TRANSCRIBE_API_URL=http://127.0.0.1:3000` a spusťte
-`npm run engine` vedle `npm run web:patient`. Rozpoznávání vrací pouze
+Pacientské UI nyní výslovně používá demo režim: každá fotografie přidá kompletní
+ukázkový seznam PARALEN, IBALGIN a LETROX, včetně síly, počtu dávek a rozpisu.
+Fotografie se v tomto režimu neposílá do Gemini. Odesílání i lékařské čtení
+používají stejnou validaci formátu seznamu.
+
+Skutečné rozpoznávání zůstává dostupné voláním `recognizePhoto(file)` bez
+`{ mode: 'demo' }`. Fotografie se pak odesílá přes `POST /api/transcribe` na
+lokálním Node serveru, který ji proxyuje na interaction engine
+(`POST /transcribe`); teprve engine volá Gemini 3.6 Flash a drží klíč. Engine
+načítá `GEMINI_API_KEY` a `GEMINI_MODEL` z prostředí (`npm run engine` načte
+kořenové `.env`); klíč se nikdy neposílá do prohlížeče. Místo klíče lze použít
+předplatné Antigravity přes lokální proxy CLIProxyAPI (`GEMINI_API_BASE`,
+`npm run proxy`) — viz [Gemini transcription](docs/gemini-transcription.md).
+Pro lokální rozpoznávání nastavte v `.env`
+`TRANSCRIBE_API_URL=http://127.0.0.1:3000` a spusťte `npm run engine` vedle
+`npm run web:patient`. Rozpoznávání vrací pouze
 `[{"name":"Concor 5 mg","schedule":"1-0-0"}]`; nečitelné údaje jsou `null`.
 Viditelná síla zůstává v názvu. Samostatná síla a počet dávek v balení zůstávají
 prázdné a neblokují předání; řádek s nečitelným názvem je nutné odebrat a vyfotit znovu.
@@ -60,8 +68,8 @@ Podrobnosti: [Gemini transcription](docs/gemini-transcription.md). „Odeslat se
 uloží verzovaný strukturovaný JSON `{ version: 1, regimen, items }` přes
 `POST /api/v1/transfers`. Každá položka obsahuje pouze název, dávkování, počet
 dávek v balení a případný rozpis užívání; lékař tyto položky načte a vykreslí.
-PIN vrací storage API a PWA jej zobrazí i uloží do historie až po úspěšném
-odeslání. Blob lze vyzvednout přes `GET /api/v1/transfers/{pin}`. Lékař nadále
+PIN vrací storage API a PWA jej zobrazí po úspěšném odeslání. Blob lze vyzvednout
+přes `GET /api/v1/transfers/{pin}`. Lékař nadále
 umí načíst i dřívější textový formát `{ text }`.
 Používejte pouze syntetická data: storage nevynucuje šifrování ani expiraci.
 Lokální Node server obsluhuje UI, proxy rozpoznávání fotografií a proxy interakcí; předání seznamu

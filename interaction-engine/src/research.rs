@@ -6,16 +6,8 @@ use url::Url;
 
 use crate::{Config, codex, model::strict_objects};
 
-const SITES: [(&str, &str); 7] = [
+const SITES: [(&str, &str); 3] = [
     ("drugs.com", "https://www.drugs.com/drug_interactions.html"),
-    (
-        "webmd.com",
-        "https://www.webmd.com/interaction-checker/default.htm",
-    ),
-    (
-        "patient.info",
-        "https://patient.info/treatment-medication/interaction-checker",
-    ),
     (
         "rxlist.com",
         "https://www.rxlist.com/drug-interaction-checker.htm",
@@ -24,8 +16,6 @@ const SITES: [(&str, &str); 7] = [
         "reference.medscape.com",
         "https://reference.medscape.com/drug-interactionchecker",
     ),
-    ("rxlabelguard.com", "https://rxlabelguard.com/"),
-    ("rxcheck.dev", "https://rxcheck.dev/"),
 ];
 
 #[derive(Deserialize, Serialize)]
@@ -46,7 +36,7 @@ pub(crate) fn site(value: &str) -> Option<(&'static str, &'static str)> {
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "snake_case")]
-enum Status {
+pub(crate) enum Status {
     Found,
     NotFound,
     Inconclusive,
@@ -54,10 +44,10 @@ enum Status {
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
-struct ResearchResult {
-    status: Status,
-    url: Option<String>,
-    summary: String,
+pub(crate) struct ResearchResult {
+    pub status: Status,
+    pub url: Option<String>,
+    pub summary: String,
 }
 
 fn output_schema() -> Value {
@@ -101,18 +91,23 @@ fn validate(result: &ResearchResult, domain: &str) -> anyhow::Result<()> {
 
 pub(crate) async fn research(config: &Config, request: &ResearchRequest) -> anyhow::Result<Value> {
     let (domain, entry) = site(&request.site).context("unsupported site")?;
-    let input = json!({"drugs": request.drugs, "site": domain, "checkerUrl": entry});
-    let result: ResearchResult = serde_json::from_value(
-        codex::run(
-            config,
-            &input,
-            &output_schema(),
-            include_str!("research_prompt.txt"),
-            Some(domain),
+    let result = if domain == "reference.medscape.com" {
+        crate::medscape::research(config, &request.drugs).await?
+    } else {
+        let input = json!({"drugs": request.drugs, "site": domain, "checkerUrl": entry});
+        let result: ResearchResult = serde_json::from_value(
+            codex::run(
+                config,
+                &input,
+                &output_schema(),
+                include_str!("research_prompt.txt"),
+                Some(domain),
+            )
+            .await?,
         )
-        .await?,
-    )
-    .context("invalid research result")?;
+        .context("invalid research result")?;
+        result
+    };
     validate(&result, domain)?;
     Ok(json!({
         "drugs": request.drugs,

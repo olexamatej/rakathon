@@ -87,3 +87,35 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
   expect(before.every(digest => after.includes(digest)), 'Existing rows must remain present').toBe(true);
   console.info(`Storage admin: ${before.length} → ${after.length} records; PIN and stored payload verified.`);
 });
+
+test('admin can cancel or confirm deleting all records across pages', async ({ page, context }) => {
+  await page.goto('/storage-admin');
+  await page.evaluate(() => { document.getElementById('password').value = 'local-e2e-password'; });
+  await adminAction(page, () => page.getByRole('button', { name: 'Přihlásit', exact: true }).click());
+  const syntheticPin = await page.locator('#rows code').first().textContent();
+  const before = await inventory(page);
+  expect(before.length, 'Purge must cover more than the visible page').toBeGreaterThan(100);
+  await expect(page.locator('#page')).toHaveText('Strana 2');
+
+  let deletes = 0;
+  page.on('request', request => {
+    if (request.method() === 'DELETE' && new URL(request.url()).pathname === '/api/v1/admin/blobs') deletes++;
+  });
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.getByRole('button', { name: 'Smazat vše', exact: true }).click();
+  expect(deletes, 'Cancellation must never send a delete').toBe(0);
+  await expect(page.locator('#page')).toHaveText('Strana 2');
+
+  const deletionPromise = page.waitForResponse(response => response.request().method() === 'DELETE'
+    && new URL(response.url()).pathname === '/api/v1/admin/blobs');
+  page.once('dialog', dialog => dialog.accept());
+  await adminAction(page, () => page.getByRole('button', { name: 'Smazat vše', exact: true }).click());
+  expect((await deletionPromise).status(), 'Authenticated purge must succeed').toBe(204);
+  expect(deletes).toBe(1);
+  await expect(page.locator('#rows tr')).toHaveCount(0);
+  await expect(page.locator('#page')).toHaveText('Strana 1');
+  await expect(page.locator('#previous')).toBeDisabled();
+  await expect(page.locator('#next')).toBeDisabled();
+  const missing = await context.request.get(`/api/v1/transfers/${syntheticPin}`, { maxRedirects: 0 });
+  expect(missing.status(), 'Deleted synthetic PIN must no longer retrieve a list').toBe(404);
+});

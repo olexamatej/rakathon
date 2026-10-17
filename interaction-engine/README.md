@@ -111,8 +111,9 @@ with `Retry-After`; existing requests can still be polled when the queue is full
 
 ## External-site research
 
-`POST /interaction-research` queues a fresh agent to research exactly two
-names on one supported site using live web search:
+`POST /interaction-research` queues research for exactly two names on one
+supported site. Medscape uses its checker JSON endpoints directly; other sites
+use a fresh agent with live web search:
 
 ```sh
 curl http://127.0.0.1:3000/interaction-research \
@@ -120,28 +121,56 @@ curl http://127.0.0.1:3000/interaction-research \
   -d '{"drugs":["warfarin","ibuprofen"],"site":"drugs.com"}'
 ```
 
-Supply `site` as `drugs.com`, `webmd.com`, `patient.info`, `rxlist.com`,
-`reference.medscape.com`, `rxlabelguard.com`, or `rxcheck.dev`. The exact seven
-checker URLs listed in the OpenAPI request schema are also accepted. The
-response always uses the canonical domain.
+Supply `site` as `drugs.com`, `rxlist.com`, or `reference.medscape.com`. The
+exact three checker URLs listed in the OpenAPI request schema are also accepted.
+The response always uses the canonical domain.
 
 Responses contain `drugs`, `site`, `checkedAt`, `status`, `url`, and `summary`:
 
-- `found`: the agent reports retrieving a dedicated page for that pair; `url`
-  contains its HTTPS address on the selected site. The short Czech summary
-  describes the interaction, severity, and precautions where the page provides
-  them. A page explicitly reporting no known interaction can also qualify.
-- `not_found`: no dedicated pair page was found; `url` is null. This does not
+- `found`: the selected site provides explicit evidence for that pair, from a
+  dedicated pair page, monograph, interaction article, sufficiently explicit live
+  search snippet, or validated Medscape checker API response. `url` contains the
+  actual HTTPS source address. The short Czech summary describes the supported
+  finding, severity, and precautions where available. Snippet-only findings are
+  explicitly labeled for physician verification. An explicit no-known-interaction
+  result can also qualify; `found` is an evidence match, not clinical confirmation.
+- `not_found`: no qualifying pair evidence was found; `url` is null. This does not
   establish safety or absence of an interaction.
 - `inconclusive`: access restrictions, ambiguous names, or insufficient
   accessible evidence prevented a reliable answer; `url` is null.
 
-Generic checkers and homepages do not qualify as result URLs. The agent is
-instructed to retrieve the actual pair page and use only its clinical claims;
+Medscape is a special case: the server resolves each name using the public
+checker typeahead API, preferring a display or canonical name match
+(case/whitespace insensitive). Otherwise it takes the first suggestion supporting
+interaction checks, in Medscape's response order, even when several drugs match.
+This can select a different formulation or combination product; the result
+summarizes the selected Medscape records. Missing suggestions and two aliases of
+the same record return `inconclusive`. This does not translate Czech names or local
+brands that Medscape does not recognize.
+It then calls `druginteraction.do?action=getMultiInteraction&ids=...`, validates
+that every returned record names the resolved pair, and uses a tool-free model
+call only to summarize those records in Czech. An explicitly empty API response
+returns `found` with a qualified no-record summary. The result URL points to the
+actual pair-specific JSON request. No browser, login, cookies, or new server
+configuration is required. HTTP access/transport failures return `inconclusive`;
+malformed data or mismatched pairs fail closed with 503. These undocumented
+endpoints may change or be blocked from a hosting provider; deployment should
+include a live check. The server makes these HTTPS requests directly; model
+command network access stays disabled. Redirects are disabled, each HTTP request
+has a 15-second limit and a 1 MiB response limit, and the overall operation shares
+the configured research deadline.
+
+For other sites, generic checkers and homepages do not qualify as result URLs. The agent is
+instructed to prioritize recall for physician review: try generic/brand equivalents
+and monograph/article searches before returning no match. It attempts source
+retrieval but may use a live search snippet that explicitly establishes both drugs
+and the interaction, labeling that limitation in the summary. Merely mentioning
+both drugs or giving a class warning does not qualify. Clinical claims must come
+from the source;
 the server validates URL structure, host, status consistency, summary length,
 and that the returned URL appeared in the web tool results.
 These are agent-reported findings, not independent clinical verification.
-Search is configured with a domain filter for the selected site. The endpoint
+Search is configured with a domain filter for the selected site. The web-search path
 requires a completed web-search tool event and rejects other tool activity.
 The Code Mode host is enabled for research because CLI 0.163 requires it to
 expose web tools; Code Mode execution remains disabled. Live retrieval is
@@ -154,7 +183,8 @@ of `CODEX_MODEL` and `CODEX_SERVICE_TIER`. It shares `CODEX_TIMEOUT_SECONDS`
 receive 429 when the queue is full, and return a retained 503 for model/process
 failures, timeouts, or invalid output. Completed negative and inconclusive
 research returns 200. Responses declare `Content-Language: cs`,
-`X-Interaction-Source: web-search`, and `Cache-Control: no-store`.
+`X-Interaction-Source: web-search` (or `medscape-api` for Medscape), and
+`Cache-Control: no-store`.
 
 Web-search settings follow the official
 [Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).

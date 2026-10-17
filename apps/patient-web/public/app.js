@@ -29,7 +29,6 @@ const icons = {
   arrow: '<path d="m9 5 7 7-7 7"/>',
   camera: '<path d="M4 6h4l2-3h4l2 3h4v14H4z"/><circle cx="12" cy="13" r="4"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',
-  history: '<path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/>',
   list: '<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h4"/>',
   trash: '<path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
@@ -39,8 +38,6 @@ const icons = {
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</svg>`;
-const date = value => new Intl.DateTimeFormat('cs', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value));
-const time = value => new Intl.DateTimeFormat('cs', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 const itemCount = count => `${count} ${count === 1 ? 'léčivo' : count > 1 && count < 5 ? 'léčiva' : 'léčiv'}`;
 const isBusy = () => loadFailed || processing || sending;
 
@@ -66,16 +63,6 @@ function saveStatus() {
     : '';
 }
 
-function historyView() {
-  return `<h1 class="sr-only">Historie odeslání</h1>
-    ${state.submissions.length ? `<div class="history-list">${state.submissions.map(entry => `
-      <details class="submission"><summary><span>${escape(date(entry.sentAt))} v ${escape(time(entry.sentAt))}<small>${itemCount(entry.items.length)}</small></span>
-        <code>${escape(entry.pin)}</code></summary>
-        ${entry.regimen ? `<p class="submission-regimen">Režim: <strong>${escape(entry.regimen)}</strong></p>` : ''}<ul>${entry.items.map(item => `<li><strong>${escape(item.name)}</strong><span>${escape(medicineSummary(item))}</span></li>`).join('')}</ul>
-      </details>`).join('')}</div>`
-      : `<div class="empty-history">${icon('history')}<h2>Zatím žádná odeslání</h2></div>`}`;
-}
-
 function photoRows() {
   if (!photos.length) return '';
   return `<ul class="photo-jobs" aria-label="Zpracování fotografií" aria-live="polite">${photos.map(job => `
@@ -86,15 +73,9 @@ function photoRows() {
     </li>`).join('')}</ul>`;
 }
 
-function lastCode() {
-  const last = state.submissions[0];
-  if (!last) return '';
-  return `<div class="last-code"><a href="/pacient?pin=${encodeURIComponent(last.id)}" data-action="receipt" data-id="${escape(last.id)}"><span class="last-code-label">Poslední kód<small>${escape(date(last.sentAt))}</small></span> <code>${escape(last.pin)}</code></a></div>`;
-}
-
 function editor() {
   const busy = isBusy();
-  return `${lastCode()}<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
+  return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
     <form id="list-form"><section class="medicines" aria-labelledby="medicines-title">
       ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
         <legend class="list-heading">Léčiva v seznamu <span>${itemCount(state.items.length)}</span></legend>${state.items.map((item, index) => `
@@ -111,6 +92,7 @@ function editor() {
       <ul id="regimen-list" role="listbox" aria-label="Návrhy režimů" hidden></ul></div></section>`
       : `<button type="button" class="add-link" data-action="add-regimen" ${busy ? 'disabled' : ''}>${icon('plus')} Přidat režim onkologické léčby</button>`}
     <section class="photo-section" aria-labelledby="photo-title"><div class="section-heading"><h2 id="photo-title">Přidejte fotografie</h2></div>
+      <p>Ukázkový režim: každá fotografie přidá tři připravená léčiva. Odeslaný seznam si lékař načte pomocí PINu.</p>
       <div class="photo-actions"><button type="button" class="secondary" data-action="gallery" ${busy ? 'disabled' : ''}>${icon('image')} Z galerie</button>
         <button type="button" class="secondary" data-action="camera" ${busy ? 'disabled' : ''}>${icon('camera')} Vyfotit</button></div>
       <input type="file" id="camera" accept="image/*" capture="environment" hidden ${busy ? 'disabled' : ''}>
@@ -130,26 +112,22 @@ function sendHint() {
 function render(focus = false) {
   const params = new URLSearchParams(location.search);
   const receipt = state.submissions.find(entry => entry.id === params.get('pin'));
-  const showHistory = params.has('historie');
-  if ((receipt || showHistory) && !processing) {
+  if (receipt && !processing) {
     photos.splice(0).forEach(job => { if (job.url) URL.revokeObjectURL(job.url); });
   }
   const content = receipt ? `<main id="main" class="pin-screen">
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>
     <div class="pin-actions"><button class="secondary" data-action="copy" data-pin="${escape(receipt.pin)}">${icon('copy')} <span>Kopírovat PIN</span></button>
     <button class="primary" data-action="home">Domů</button></div></main>`
-    : showHistory ? historyView() : editor();
+    : editor();
   const header = `<header><a class="brand" href="/pacient" data-action="home"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
     <button class="install-button" data-action="install" aria-label="Nainstalovat aplikaci">${icon('download')}</button></header>`;
   app.innerHTML = receipt ? `<div class="shell">${header}${content}</div>` : `<div class="shell">${header}
-    <main id="main"><nav class="view-tabs" aria-label="Přehled pacienta">
-      <a href="/pacient" data-action="home" ${!showHistory ? 'aria-current="page"' : ''}>Seznam</a>
-      <a href="/pacient?historie=1" data-action="history" ${showHistory ? 'aria-current="page"' : ''}>Historie odeslání</a>
-    </nav>
+    <main id="main">
       ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
       <p class="save-status" id="save-status" role="status">${saveStatus()}</p>
       ${content}<p class="message" role="status" id="message">${escape(message)}</p></main></div>`;
-  document.title = `${receipt ? 'PIN' : showHistory ? 'Historie odeslání' : 'Seznam'} · PillGaze`;
+  document.title = `${receipt ? 'PIN' : 'Seznam'} · PillGaze`;
   if (focus) {
     app.querySelector('h1').tabIndex = -1;
     app.querySelector('h1').focus({ preventScroll: true });
@@ -174,7 +152,7 @@ async function addPhotos(files) {
       image.src = job.url;
       await image.decode().catch(() => { throw new Error('Fotku nelze přečíst. Zkuste JPEG, PNG nebo WebP.'); });
       render();
-      const result = await recognizePhoto(job.file);
+      const result = await recognizePhoto(job.file, { mode: 'demo' });
       const items = Array.isArray(result) ? result : result.items;
       const regimen = Array.isArray(result) ? '' : String(result.regimen || '').trim().slice(0, 200);
       job.count = items.length;
@@ -359,14 +337,7 @@ app.addEventListener('submit', async event => {
   let entry;
   try {
     // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
-    const payload = {
-      version: 1,
-      regimen,
-      items: items.map(({ name, dosage, dosesPerPackage, schedule }) => ({
-        name, dosage, dosesPerPackage, ...(schedule ? { schedule } : {}),
-      })),
-    };
-    const receipt = await sendList(payload);
+    const receipt = await sendList({ items, regimen });
     entry = recordSubmission(state, items, receipt, regimen);
     persist();
   } catch (error) {
@@ -384,8 +355,6 @@ app.addEventListener('click', async event => {
   event.preventDefault();
   switch (button.dataset.action) {
     case 'home': navigate(); break;
-    case 'history': navigate('?historie=1'); break;
-    case 'receipt': navigate(`?pin=${encodeURIComponent(button.dataset.id)}`); break;
     case 'camera': await openCamera(); break;
     case 'gallery': document.getElementById('gallery').click(); break;
     case 'add-regimen':

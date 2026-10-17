@@ -512,6 +512,20 @@ async fn research_rejects_invalid_input_before_launching_agent() {
         ("drugs", json!(["a", " "])),
         ("drugs", json!(["a", "x".repeat(201)])),
         ("site", json!("drugs.com.evil.test")),
+        ("site", json!("webmd.com")),
+        ("site", json!("patient.info")),
+        ("site", json!("rxlabelguard.com")),
+        ("site", json!("rxcheck.dev")),
+        (
+            "site",
+            json!("https://www.webmd.com/interaction-checker/default.htm"),
+        ),
+        (
+            "site",
+            json!("https://patient.info/treatment-medication/interaction-checker"),
+        ),
+        ("site", json!("https://rxlabelguard.com/")),
+        ("site", json!("https://rxcheck.dev/")),
         (
             "site",
             json!("https://www.drugs.com/drug_interactions.html?evil=true"),
@@ -681,6 +695,34 @@ async fn live_research_smoke() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_matches_openapi(&body, "InteractionResearchResponse");
+    println!("{body}");
+}
+
+#[tokio::test]
+#[ignore = "calls Medscape and an authenticated Codex CLI"]
+async fn live_medscape_research_smoke() {
+    let database = tempfile::tempdir().unwrap();
+    let mut cfg = Config::from_env().unwrap();
+    cfg.jobs_path = database.path().join("jobs.sqlite3");
+    let router = app(AppState::new(cfg).unwrap());
+    let (status, headers, body) = send_path(
+        router,
+        "/interaction-research",
+        json!({"drugs": ["warfarin", "ibuprofen"], "site": "reference.medscape.com"}).to_string(),
+        "application/json",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_matches_openapi(&body, "InteractionResearchResponse");
+    assert_eq!(headers["x-interaction-source"], "medscape-api");
+    assert_eq!(body["status"], "found", "{body}");
+    let url = url::Url::parse(body["url"].as_str().unwrap()).unwrap();
+    assert_eq!(url.host_str(), Some("reference.medscape.com"));
+    assert_eq!(url.path(), "/druginteraction.do");
+    assert!(
+        url.query_pairs()
+            .any(|(k, v)| k == "ids" && v == "342182,343289")
+    );
     println!("{body}");
 }
 

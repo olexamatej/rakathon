@@ -227,13 +227,14 @@ fn submit_inner(
     let kind_json = serde_json::to_string(&kind)?;
     // Exact names/order are retained because reports reference input indexes.
     let identity = json!([
-        "contract-async-1",
+        "contract-async-3-medscape-name-resolution",
         kind_json,
         request,
         state.config.model,
         state.config.service_tier,
         include_str!("prompt.txt"),
-        include_str!("research_prompt.txt")
+        include_str!("research_prompt.txt"),
+        include_str!("medscape_prompt.txt")
     ]);
     let key = Sha256::digest(serde_json::to_vec(&identity)?)
         .iter()
@@ -279,6 +280,7 @@ fn submit_inner(
     tx.commit()?;
     drop(db);
     state.jobs.notify.notify_one();
+    let medscape = body["site"] == "reference.medscape.com";
     let mut response = (status, Json(body)).into_response();
     let headers = response.headers_mut();
     headers.insert(header::CACHE_CONTROL, "no-store".parse()?);
@@ -294,6 +296,7 @@ fn submit_inner(
             "x-interaction-source",
             match kind {
                 Kind::Check => "model-knowledge",
+                Kind::Research if medscape => "medscape-api",
                 Kind::Research => "web-search",
             }
             .parse()?,

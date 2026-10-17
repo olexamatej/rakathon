@@ -80,8 +80,25 @@ export function recordSubmission(state, items, receipt, regimen = '') {
 // Photo transcription provides name (including visible strength) and optional schedule.
 // Missing strength/package information remains empty, never guessed to satisfy validation.
 export function canSend(items) {
-  return items.length > 0 && items.every(item => item.name.trim()
-    && (item.dosesPerPackage === '' || /^[1-9]\d{0,5}$/.test(item.dosesPerPackage)));
+  return Array.isArray(items) && items.length > 0 && items.every(item => item
+    && isText(item.name, 120) && item.name.trim()
+    && isText(item.dosage, 120)
+    && isText(item.dosesPerPackage, 6) && (item.dosesPerPackage === '' || /^[1-9]\d{0,5}$/.test(item.dosesPerPackage))
+    && (item.schedule === undefined || isText(item.schedule, 120)));
+}
+
+// The patient upload and doctor's reader share this exact JSON format.
+export function buildTransferPayload(items, regimen = '') {
+  if (!canSend(items) || !isText(regimen, 200)) {
+    throw new Error('Seznam nemá platný formát pro lékaře. Zkontrolujte údaje léčiv.');
+  }
+  return {
+    version: 1,
+    regimen,
+    items: items.map(({ name, dosage, dosesPerPackage, schedule }) => ({
+      name, dosage, dosesPerPackage, ...(schedule ? { schedule } : {}),
+    })),
+  };
 }
 
 export const medicineSummary = item => [item.dosage,

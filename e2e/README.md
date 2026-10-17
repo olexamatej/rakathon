@@ -6,11 +6,15 @@ server-issued PIN and exact structured list read back through that PIN, loads th
 by PIN in a separate doctor browser context, then reloads admin and requires
 **exactly one additional record**.
 
-`patient-doctor.spec.mjs` covers the focused handoff: a patient uploads a tiny
-synthetic image, a Playwright stub of `/api/transcribe` returns two medicines, and the
+`patient-doctor.spec.mjs` covers both mobile **Vyfotit** and **Z galerie** with
+service workers enabled: a patient uploads a tiny synthetic image, the app's mock
+recognizer creates three complete sample medicines, and the
 patient submits them to the real Rust storage API. A clean doctor browser context
 uses the server-issued PIN and verifies the same medicine names, dosages, and
-schedule from storage, with unknown fields kept empty. Gemini is stubbed; uploads, storage, and PINs are not.
+schedule from storage. Admin diagnostics must show the exact same PIN and JSON.
+The recognizer is mocked; uploads, storage, and PINs are not. The final admin
+scenario tests cancelling deletion, then deleting every temporary record from
+the second page and verifying that the synthetic PIN no longer retrieves data.
 
 `.github/workflows/storage-e2e.yml` runs automatically on pushes and PRs to
 main/pillgaze, and can also be started manually without inputs or secrets.
@@ -23,7 +27,8 @@ memory and processes, temporary storage, no host mounts, no Docker socket and no
 published ports. Patient UI, admin and API communicate only over container
 loopback ports 4180/4181. The API gets a random HMAC secret, a fixed test-only
 password and temporary SQLite. Its 101 synthetic baseline rows also exercise
-pagination; the test verifies 101 → 102 records. The container and database are
+pagination; the storage test verifies exactly one additional record. The final
+purge test removes all disposable rows. The container and database are
 removed after the test, including on failure. No production URL, production
 credential or production database is used; `E2E_BASE_URL` is explicitly rejected.
 

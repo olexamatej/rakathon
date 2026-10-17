@@ -166,7 +166,7 @@ test('fetchInteractions polls until the engine answers and reports problems in C
 });
 
 test('web research polls the engine and keeps only valid HTTPS result pages', async () => {
-  assert.ok(RESEARCH_SITES.includes('drugs.com') && RESEARCH_SITES.length === 7);
+  assert.deepEqual(RESEARCH_SITES, ['drugs.com', 'rxlist.com', 'reference.medscape.com']);
   const original = globalThis.fetch;
   try {
     const calls = [];
@@ -183,13 +183,13 @@ test('web research polls the engine and keeps only valid HTTPS result pages', as
 
     const reply = body => { globalThis.fetch = async () => new Response(JSON.stringify(body), { status: 200 }); };
     reply({ status: 'not_found', url: null, summary: 'Nenalezeno.' });
-    assert.equal((await researchInteraction(['a', 'b'], 'webmd.com')).url, null);
+    assert.equal((await researchInteraction(['a', 'b'], 'rxlist.com')).url, null);
     reply({ status: 'found', url: 'javascript:alert(1)', summary: 'x' });
-    assert.equal((await researchInteraction(['a', 'b'], 'webmd.com')).url, null);
+    assert.equal((await researchInteraction(['a', 'b'], 'rxlist.com')).url, null);
     reply({ status: 'weird' });
-    await assert.rejects(researchInteraction(['a', 'b'], 'webmd.com'), /neplatnou odpověď/);
+    await assert.rejects(researchInteraction(['a', 'b'], 'rxlist.com'), /neplatnou odpověď/);
     globalThis.fetch = async () => new Response(JSON.stringify({ detail: 'Neplatná dvojice.' }), { status: 400 });
-    await assert.rejects(researchInteraction(['a', 'b'], 'webmd.com'), /Neplatná dvojice/);
+    await assert.rejects(researchInteraction(['a', 'b'], 'rxlist.com'), /Neplatná dvojice/);
   } finally {
     globalThis.fetch = original;
   }

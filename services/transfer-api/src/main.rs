@@ -176,7 +176,7 @@ fn storage_router(state: AppState) -> Router {
     Router::new()
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))
-        .route("/v1/admin/blobs", get(admin::list_blobs))
+        .route("/v1/admin/blobs", get(admin::list_blobs).delete(admin::delete_all_blobs))
         .route("/v1/admin/blobs/{pin_digest}", delete(admin::delete_blob))
         .route("/v1/transfers", post(create_blob))
         .route("/v1/transfers/{pin}", get(get_blob))
