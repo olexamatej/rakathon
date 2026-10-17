@@ -66,7 +66,7 @@ test('network failure keeps local data without displaying stale PIN or claiming 
   await page.reload();
   await expect(page.locator('h1')).toHaveText('Platnost není ověřena');
   await expect(page.locator('h1.pin')).toHaveCount(0);
-  await expect(page.locator('.saved-list')).toContainText(item.name);
+  await expect(page.locator('.saved-list')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Ověřit platnost' })).toBeEnabled();
   expect((await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).submissions).toHaveLength(1);
 });
@@ -145,7 +145,7 @@ for (const scenario of ['missing', 'expired', 'consumed-during-put', 'head-netwo
     });
     await page.reload();
     await expect(page.locator('h1.pin')).toHaveText('0042');
-    await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+    await page.getByRole('button', { name: 'K seznamu' }).click();
     await page.locator('#regimen').fill('Aktuální rozepsaný režim');
     editing = true;
     if (scenario === 'expired') await page.clock.setSystemTime(new Date('2100-01-01T00:00:00Z'));
@@ -178,7 +178,7 @@ test('doctor consumes the upload during patient editing; save POSTs the current 
   }] })), { item, pin, headers: upload.headers() });
   await page.reload();
   await expect(page.locator('h1.pin')).toHaveText(pin);
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await page.locator('#regimen').fill('Aktuální rozepsaný režim');
   const consumed = await context.request.get(`/api/v1/transfers/${pin}`);
   expect(consumed.status()).toBe(200);
@@ -206,7 +206,7 @@ test('opening the editor rechecks a PIN consumed since the screen was displayed'
   await page.reload();
   await expect(page.locator('h1.pin')).toHaveText('0042');
   available = false;
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await expectFresh(page);
 });
 
@@ -215,7 +215,7 @@ test('another tab changing the receipt blocks stale writes and preserves its sto
   await page.route('**/api/v1/transfers/**', route => route.fulfill({ status: 200, headers }));
   await page.reload();
   await expect(page.locator('h1.pin')).toHaveText('0042');
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await page.locator('#regimen').fill('Stará editace');
   const other = await page.context().newPage();
   await other.goto('/storage-admin');
@@ -231,11 +231,11 @@ test('returning through the PIN screen does not overwrite unsaved editor changes
   await page.route('**/api/v1/transfers/**', route => route.fulfill({ status: 200, headers }));
   await page.reload();
   await expect(page.locator('h1.pin')).toHaveText('0042');
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await page.locator('#regimen').fill('Neuložená editace');
   await page.locator('[data-action="home"]').click();
   await expect(page.locator('h1.pin')).toHaveText('0042');
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await expect(page.locator('#regimen')).toHaveValue('Neuložená editace');
 });
 
@@ -244,7 +244,7 @@ test('expiry during photo recognition preserves edits and saves them with POST',
   await page.route('**/api/v1/transfers/**', route => route.fulfill({ status: 200, headers }));
   await page.reload();
   await expect(page.locator('h1.pin')).toHaveText('0042');
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   let transcription;
   await page.route('**/api/transcribe', route => { transcription = route; });
   await page.locator('#gallery').setInputFiles({ name: 'synthetic.png', mimeType: 'image/png',
@@ -281,7 +281,7 @@ test('expired local copy shows dates and explicitly reuploads the displayed snap
   await expect(page.locator('.generated-at')).toHaveCount(0);
   await expect(page.locator('time[datetime="2026-10-17T12:00:00Z"]')).toHaveCount(0);
   await expect(page.locator('time[datetime="2099-10-31T12:00:00Z"]')).toBeVisible();
-  await expect(page.locator('.saved-list h2')).toHaveText('Uložený seznam léčiv:');
+  await expect(page.locator('.saved-list')).toHaveCount(0);
   await expect(page.locator('.current-submission')).not.toContainText('Po načtení lékařem');
   expect(await page.locator('[data-action="renew"]').evaluate(button => button.previousElementSibling.classList.contains('validity-date'))).toBe(true);
   const help = page.getByRole('button', { name: 'Informace o platnosti' });

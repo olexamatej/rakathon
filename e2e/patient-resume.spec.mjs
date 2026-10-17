@@ -20,13 +20,13 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await expect(page.locator('h1.pin')).toHaveText(pin);
   await expect(page.locator('.submission-history, #history-title')).toHaveCount(0);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')).submissions.length)).toBe(1);
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await expect(page.locator('.medicine-info strong')).toHaveText(item.name);
   await expect(page.locator('.medicine input')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Z galerie', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('h1.pin')).toHaveText(pin);
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await page.locator('#regimen').fill('Upravený režim');
   const saved = page.waitForResponse(response => response.request().method() === 'PUT');
   await page.getByRole('button', { name: 'Uložit seznam' }).click();
@@ -66,7 +66,7 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
   await page.getByRole('button', { name: 'Uložit seznam' }).click();
   await expect(page.locator('h1.pin')).toBeVisible();
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await expect(page.locator('.medicine')).toHaveCount(1);
   await expect(page.locator('.photo-status')).toHaveCount(0);
   await expect(page.locator('.photo-section img, .photo-job')).toHaveCount(0);
@@ -81,7 +81,7 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
     items: [], submissions: [{ id: 'latest-local-id', pin, ownerToken, expiresAt, sentAt: '2026-10-17T12:00:00Z', items: [{ id: 'medicine-local-id', ...item }] }],
   })), { pin, item, ownerToken: upload.headers()['x-owner-token'], expiresAt: upload.headers()['x-expires-at'] });
   await page.reload();
-  await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
+  await page.getByRole('button', { name: 'K seznamu' }).click();
   await page.getByRole('button', { name: 'Přidat režim onkologické léčby' }).click();
   await page.locator('#regimen').fill('Neuložená změna');
   let writes = 0;

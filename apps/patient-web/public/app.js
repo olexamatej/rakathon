@@ -139,13 +139,13 @@ function render(focus = false) {
     <p class="validity-info" id="validity-info" ${validityInfoOpen ? '' : 'hidden'}>Data jsou uchována pouze dokud nejsou zobrazena zdravotníkem, nebo do uvedeného data platnosti. Pokud je vaše plánovaná návštěva až po konci platnosti, musíte platnost před návštěvou prodloužit.</p>` : ''}
     ${receipt.expired ? `<p class="notice">Původní PIN už nelze použít pro předání lékaři. Tady vidíte pouze lokální kopii uloženou v tomto zařízení, nikoli aktuálně sdílený seznam. Kopie pochází z data nahrání uvedeného výše. Zkontrolujte, zda jsou léky stále aktuální. Seznam můžete zahodit, nebo jej znovu nahrát a získat nový PIN.</p>
       ${receipt.invalidatedAt ? `<p>Nedostupnost zjištěna <time datetime="${escape(receipt.invalidatedAt)}">${escape(formatDate(receipt.invalidatedAt))}</time>.</p>` : ''}` : ''}
-    <div class="saved-list"><h2>Uložený seznam léčiv:</h2>
+    ${receipt.expired ? `<div class="saved-list"><h2>Uložený seznam léčiv:</h2>
     ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
-    ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>
+    ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>` : ''}
     ${receipt.expired ? `<button class="primary" data-action="reupload" ${isBusy() ? 'disabled' : ''}>${sending ? 'Nahrávám…' : 'Znovu nahrát a získat nový PIN'}</button>
     <button class="secondary" data-action="discard-expired" ${isBusy() ? 'disabled' : ''}>Zahodit seznam</button>` : `
     ${verifiedEntry !== receipt && !checking ? `<button class="secondary" data-action="check-validity" ${loadFailed ? 'disabled' : ''}>Ověřit platnost</button>` : ''}
-    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>`}
+    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>K seznamu ${icon('arrow')}</button>`}
     ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
     <p class="save-status" role="status">${saveStatus()}</p><p class="message" role="status">${escape(message)}</p></section>
     </main>`
