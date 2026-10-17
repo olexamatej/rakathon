@@ -120,7 +120,6 @@ if (typeof document !== 'undefined') {
     element('previous').disabled = offset === 0;
     element('next').disabled = !data.hasMore;
     element('page').textContent = `Strana ${offset / 100 + 1}`;
-    status(data.items.length ? `Zobrazeno ${data.items.length} záznamů.` : 'Žádné uložené záznamy na této straně.');
   }
 
   async function load() {

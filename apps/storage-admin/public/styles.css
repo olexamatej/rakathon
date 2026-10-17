@@ -20,6 +20,7 @@
 body { margin: 0; min-width: 320px; }
 [hidden] { display: none !important; }
 .shell { max-width: 1120px; margin: 0 auto; padding: 0 32px 52px; }
+.dev-disclaimer { margin: 12px 0 0; padding: 10px 13px; border: 1px solid #e8c98f; border-radius: 8px; background: #fff8e8; color: #79531c; font-size: 12px; font-weight: 600; line-height: 1.5; }
 .topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-size: 19px; font-weight: 760; letter-spacing: -.6px; }
 .brand > span:last-child > span { color: var(--brand); }
@@ -28,15 +29,6 @@ body { margin: 0; min-width: 320px; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #8198b8; box-shadow: 0 0 0 3px #e6edf7; }
 .meta-divider { color: #b7c3d2; }
 main { max-width: 920px; margin: 0 auto; }
-.intro { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding: 48px 0 23px; }
-.eyebrow { margin: 0 0 10px; color: var(--brand); font-size: 10px; font-weight: 750; letter-spacing: 1.55px; }
-h1 { margin: 0; font-size: clamp(30px, 4vw, 39px); line-height: 1.1; letter-spacing: -1.45px; font-weight: 650; }
-.intro-copy { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
-.privacy-badge { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; margin-bottom: 5px; padding: 8px 11px; border: 1px solid #dbe2ec; border-radius: 999px; background: #f6f8fb; color: #536781; font-size: 11px; font-weight: 650; }
-.privacy-badge span { font-size: 16px; line-height: 10px; }
-.notice { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border: 1px solid #dbe2ec; border-radius: 10px; background: #f6f8fb; color: #536781; }
-.notice p { margin: 0; font-size: 12px; line-height: 1.55; }
-.notice-icon { width: 19px; height: 19px; flex: 0 0 19px; display: grid; place-items: center; border: 1px solid #c5d1e1; border-radius: 50%; color: #536781; font-size: 11px; font-family: Georgia, serif; font-weight: 700; }
 .login-card, .storage-card { margin-top: 23px; overflow: hidden; border: 1px solid var(--line); border-radius: 13px; background: #fff; box-shadow: 0 5px 20px rgb(28 42 59 / 4%); }
 .login-card { max-width: 590px; padding: 23px; }
 .login-heading { display: flex; align-items: center; gap: 13px; margin-bottom: 21px; }
@@ -96,7 +88,6 @@ pre { max-width: 440px; max-height: 125px; overflow: auto; margin: 0; white-spac
   .shell { padding: 0 18px 35px; }
   .topbar { min-height: 65px; }
   .topbar-meta { font-size: 10px; }
-  .intro { padding-top: 35px; }
   .storage-toolbar { align-items: flex-start; flex-direction: column; gap: 15px; }
   .storage-toolbar .actions { justify-content: flex-start; flex-wrap: wrap; }
   .table-scroll { margin: 0 -1px; }
@@ -105,8 +96,6 @@ pre { max-width: 440px; max-height: 125px; overflow: auto; margin: 0; white-spac
 @media (max-width: 430px) {
   .shell { padding-right: 14px; padding-left: 14px; }
   .topbar-meta { gap: 6px; font-size: 9px; }
-  .intro { align-items: flex-start; flex-direction: column; gap: 14px; }
-  .privacy-badge { margin: 0; }
   .login-card { padding: 18px; }
   .login-controls { align-items: stretch; flex-direction: column; }
   .login-controls button { min-height: 42px; }

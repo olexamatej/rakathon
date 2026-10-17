@@ -10,6 +10,7 @@
 </head>
 <body>
   <div class="shell">
+    <aside class="dev-disclaimer">Pouze pro vývojové účely. V reálném produkčním prostředí tato stránka vůbec nebude.</aside>
     <header class="topbar">
       <a href="/pacient" class="brand" aria-label="PillGaze, úvodní stránka">
         <span class="brand-mark" aria-hidden="true">P</span>
@@ -19,20 +20,6 @@
     </header>
 
     <main>
-      <section class="intro">
-        <div>
-          <p class="eyebrow">SPRÁVA ÚLOŽIŠTĚ</p>
-          <h1>Uložené záznamy</h1>
-          <p class="intro-copy">Přehled anonymních seznamů předaných přes PillGaze.</p>
-        </div>
-        <div class="privacy-badge"><span aria-hidden="true">⌁</span> Citlivá data</div>
-      </section>
-
-      <aside class="notice" aria-label="Upozornění k debug zobrazení">
-        <span class="notice-icon" aria-hidden="true">i</span>
-        <p>Debug zobrazení řídí server. PINy uložené před zapnutím režimu nelze zpětně obnovit.</p>
-      </aside>
-
       <form id="login" class="login-card">
         <div class="login-heading"><span class="lock-icon" aria-hidden="true">⌑</span><div><h2>Přihlášení správce</h2><p>Přístup je chráněný heslem administrátora.</p></div></div>
         <label for="password">Heslo administrátora</label>
