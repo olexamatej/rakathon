@@ -3,43 +3,69 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1f3f6e">
-  <title>PillGaze — Storage admin</title>
+  <meta name="theme-color" content="#f5f7f4">
+  <title>PillGaze — Správa úložiště</title>
   <link rel="stylesheet" href="/storage-admin/styles.css">
   <script type="module" src="/storage-admin/app.mjs"></script>
 </head>
-<body class="cool-theme">
+<body>
   <div class="shell">
-    <header><a href="/pacient" class="brand">PillGaze</a><span>Storage admin</span></header>
+    <header class="topbar">
+      <a href="/pacient" class="brand" aria-label="PillGaze, úvodní stránka">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>Pill<span>Gaze</span></span>
+      </a>
+      <div class="topbar-meta"><span class="status-dot" aria-hidden="true"></span> Interní nástroj <span class="meta-divider">/</span> Storage admin</div>
+    </header>
+
     <main>
-      <h1>Uložené záznamy</h1>
-      <p class="note">Debug zobrazení je řízené serverovým příznakem. PINy uložené před zapnutím režimu nelze zpětně obnovit.</p>
-      <form id="login">
+      <section class="intro">
+        <div>
+          <p class="eyebrow">SPRÁVA ÚLOŽIŠTĚ</p>
+          <h1>Uložené záznamy</h1>
+          <p class="intro-copy">Přehled anonymních seznamů předaných přes PillGaze.</p>
+        </div>
+        <div class="privacy-badge"><span aria-hidden="true">⌁</span> Citlivá data</div>
+      </section>
+
+      <aside class="notice" aria-label="Upozornění k debug zobrazení">
+        <span class="notice-icon" aria-hidden="true">i</span>
+        <p>Debug zobrazení řídí server. PINy uložené před zapnutím režimu nelze zpětně obnovit.</p>
+      </aside>
+
+      <form id="login" class="login-card">
+        <div class="login-heading"><span class="lock-icon" aria-hidden="true">⌑</span><div><h2>Přihlášení správce</h2><p>Přístup je chráněný heslem administrátora.</p></div></div>
         <label for="password">Heslo administrátora</label>
-        <input id="password" type="password" autocomplete="current-password" required maxlength="256">
-        <button type="submit">Přihlásit</button>
+        <div class="login-controls">
+          <input id="password" type="password" autocomplete="current-password" required maxlength="256" placeholder="Zadejte heslo">
+          <button type="submit">Přihlásit <span aria-hidden="true">→</span></button>
+        </div>
       </form>
       <p id="status" role="status" aria-live="polite"></p>
-      <section id="storage" hidden aria-label="Správa storage">
-        <label><input id="show-sensitive" type="checkbox" checked> Zobrazit PINy a uložený obsah (debug)</label>
-        <div class="actions">
-          <button id="refresh" type="button">Obnovit</button>
-          <button id="delete-all" class="danger" type="button">Smazat vše</button>
-          <button id="logout" class="secondary" type="button">Odhlásit</button>
+
+      <section id="storage" hidden aria-label="Správa úložiště" class="storage-card">
+        <div class="storage-toolbar">
+          <div><h2>Databáze záznamů</h2><p>Seznamy jsou řazeny podle přijetí.</p></div>
+          <div class="actions">
+            <button id="refresh" class="secondary" type="button"><span aria-hidden="true">↻</span> Obnovit</button>
+            <button id="delete-all" class="danger" type="button">Smazat vše</button>
+            <button id="logout" class="quiet" type="button">Odhlásit</button>
+          </div>
         </div>
+        <label class="debug-toggle"><input id="show-sensitive" type="checkbox" checked><span class="toggle-track" aria-hidden="true"></span><span>Zobrazit PINy a uložený obsah <small>Debug režim</small></span></label>
         <div class="table-scroll">
           <table>
-            <thead><tr><th scope="col">Velikost</th><th scope="col">PIN / HMAC</th><th scope="col">Uložený text</th><th scope="col">Akce</th></tr></thead>
+            <thead><tr><th scope="col">Velikost</th><th scope="col">PIN / HMAC</th><th scope="col">Uložený obsah</th><th scope="col">Akce</th></tr></thead>
             <tbody id="rows"></tbody>
           </table>
         </div>
-        <div class="actions">
-          <button id="previous" class="secondary" type="button">Předchozí</button>
-          <span id="page"></span>
-          <button id="next" class="secondary" type="button">Další</button>
+        <div class="pagination">
+          <span id="page" class="page-label"></span>
+          <div class="actions"><button id="previous" class="secondary" type="button"><span aria-hidden="true">←</span> Předchozí</button><button id="next" class="secondary" type="button">Další <span aria-hidden="true">→</span></button></div>
         </div>
       </section>
-      <p class="note">Hackathonový prototyp, pouze syntetická data. Smazání je nevratné v živé databázi; nemusí odstranit kopie ze záloh.</p>
+
+      <footer class="footnote"><span aria-hidden="true">◇</span><p>Hackathonový prototyp určený pouze pro syntetická data. Smazání je nevratné v živé databázi a nemusí odstranit kopie ze záloh.</p></footer>
     </main>
   </div>
 </body>
