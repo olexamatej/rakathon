@@ -12,6 +12,7 @@ let storageWarning = '';
 let message = '';
 let regimenOpen = false;
 let installPrompt;
+let historyLimit = 10;
 
 try {
   const loaded = loadState(localStorage);
@@ -119,14 +120,17 @@ function render(focus = false) {
   const formatDate = value => new Intl.DateTimeFormat('cs-CZ', {
     dateStyle: 'medium', timeStyle: 'short',
   }).format(new Date(value));
+  const visibleHistory = state.submissions.slice(0, historyLimit);
+  if (receipt && !visibleHistory.some(entry => entry.id === receipt.id)) visibleHistory.push(receipt);
   const history = state.submissions.length ? `<section class="submission-history" aria-labelledby="history-title">
     <h2 id="history-title">Historie uložených seznamů</h2>
     <p>Platnost starších PINů aplikace neověřuje.</p>
-    <ul>${state.submissions.map(entry => `<li><details ${entry.id === receipt?.id ? 'open' : ''}>
+    <ul>${visibleHistory.map(entry => `<li><details ${entry.id === receipt?.id ? 'open' : ''}>
       <summary><code>${escape(entry.pin)}</code><time datetime="${escape(entry.sentAt)}">${escape(formatDate(entry.sentAt))}</time></summary>
       <ul class="history-items">${entry.items.map(item => `<li><strong>${escape(item.name || 'Nečitelný název léčiva')}</strong><span>${escape(medicineSummary(item))}</span></li>`).join('')}
       ${entry.regimen ? `<li><strong>Režim onkologické léčby</strong><span>${escape(entry.regimen)}</span></li>` : ''}</ul>
-    </details></li>`).join('')}</ul></section>` : '';
+    </details></li>`).join('')}</ul>
+    ${state.submissions.length > visibleHistory.length ? '<button class="secondary full" data-action="more-history">Zobrazit starší záznamy</button>' : ''}</section>` : '';
   const content = receipt ? `<main id="main" class="pin-screen">
     <section class="current-submission"><p class="pin-caption">PIN pro lékaře</p>
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>
@@ -405,6 +409,10 @@ app.addEventListener('click', async event => {
       regimenOpen = false;
       persist();
       navigate('?new=1');
+      break;
+    case 'more-history':
+      historyLimit += 10;
+      render();
       break;
     case 'install':
       if (installPrompt) {

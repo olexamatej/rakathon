@@ -110,6 +110,7 @@ input:disabled { opacity: .7; }
 .submission-history > p { margin-top: 6px; color: var(--muted); font-size: 12px; }
 .submission-history > ul { list-style: none; margin: 14px 0 0; padding: 0; }
 .submission-history > ul > li + li { margin-top: 8px; }
+.submission-history > .full { margin-top: 12px; }
 .submission-history details { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
 .submission-history summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 14px; cursor: pointer; }
 .submission-history summary code { color: var(--brand); font-size: 16px; font-weight: 700; letter-spacing: .12em; }
