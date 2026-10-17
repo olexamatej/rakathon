@@ -194,7 +194,7 @@ export async function fetchInteractions(items, regimen, options = {}) {
 }
 
 // Sites the research agent can search, as accepted by /interaction-research.
-export const RESEARCH_SITES = ['drugs.com', 'webmd.com', 'patient.info', 'rxlist.com', 'reference.medscape.com', 'rxlabelguard.com', 'rxcheck.dev'];
+export const RESEARCH_SITES = ['drugs.com', 'rxlist.com', 'reference.medscape.com'];
 
 // Asks an agent to find a page dedicated to exactly this pair on one site. Resolves to
 // { status: 'found' | 'not_found' | 'inconclusive', url: https url | null, summary, site, checkedAt }.

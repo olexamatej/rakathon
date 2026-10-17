@@ -6,16 +6,8 @@ use url::Url;
 
 use crate::{Config, codex, model::strict_objects};
 
-const SITES: [(&str, &str); 7] = [
+const SITES: [(&str, &str); 3] = [
     ("drugs.com", "https://www.drugs.com/drug_interactions.html"),
-    (
-        "webmd.com",
-        "https://www.webmd.com/interaction-checker/default.htm",
-    ),
-    (
-        "patient.info",
-        "https://patient.info/treatment-medication/interaction-checker",
-    ),
     (
         "rxlist.com",
         "https://www.rxlist.com/drug-interaction-checker.htm",
@@ -24,8 +16,6 @@ const SITES: [(&str, &str); 7] = [
         "reference.medscape.com",
         "https://reference.medscape.com/drug-interactionchecker",
     ),
-    ("rxlabelguard.com", "https://rxlabelguard.com/"),
-    ("rxcheck.dev", "https://rxcheck.dev/"),
 ];
 
 #[derive(Deserialize, Serialize)]

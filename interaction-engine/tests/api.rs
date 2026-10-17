@@ -507,6 +507,20 @@ async fn research_rejects_invalid_input_before_launching_agent() {
         ("drugs", json!(["a", " "])),
         ("drugs", json!(["a", "x".repeat(201)])),
         ("site", json!("drugs.com.evil.test")),
+        ("site", json!("webmd.com")),
+        ("site", json!("patient.info")),
+        ("site", json!("rxlabelguard.com")),
+        ("site", json!("rxcheck.dev")),
+        (
+            "site",
+            json!("https://www.webmd.com/interaction-checker/default.htm"),
+        ),
+        (
+            "site",
+            json!("https://patient.info/treatment-medication/interaction-checker"),
+        ),
+        ("site", json!("https://rxlabelguard.com/")),
+        ("site", json!("https://rxcheck.dev/")),
         (
             "site",
             json!("https://www.drugs.com/drug_interactions.html?evil=true"),

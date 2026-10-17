@@ -114,10 +114,9 @@ curl http://127.0.0.1:3000/interaction-research \
   -d '{"drugs":["warfarin","ibuprofen"],"site":"drugs.com"}'
 ```
 
-Supply `site` as `drugs.com`, `webmd.com`, `patient.info`, `rxlist.com`,
-`reference.medscape.com`, `rxlabelguard.com`, or `rxcheck.dev`. The exact seven
-checker URLs listed in the OpenAPI request schema are also accepted. The
-response always uses the canonical domain.
+Supply `site` as `drugs.com`, `rxlist.com`, or `reference.medscape.com`. The
+exact three checker URLs listed in the OpenAPI request schema are also accepted.
+The response always uses the canonical domain.
 
 Responses contain `drugs`, `site`, `checkedAt`, `status`, `url`, and `summary`:
 
