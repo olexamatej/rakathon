@@ -11,11 +11,15 @@ test('patient returns from the latest PIN to the original photo upload screen an
   await page.evaluate(({ pin, item }) => {
     localStorage.setItem('pillgaze:patient:v2', JSON.stringify({
       items: [], submissions: [{ id: 'latest-local-id', pin, sentAt: '2026-10-17T12:00:00Z',
-        items: [{ id: 'medicine-local-id', ...item }], regimen: 'Původní režim' }],
+        items: [{ id: 'medicine-local-id', ...item }], regimen: 'Původní režim' },
+        { id: 'older-local-id', pin: 'ABC234', sentAt: '2026-10-16T12:00:00Z',
+          items: [{ id: 'older-medicine-id', ...item }] }],
     }));
   }, { pin, item });
   await page.goto('/pacient?new=1');
   await expect(page.locator('h1.pin')).toHaveText(pin);
+  await expect(page.locator('.submission-history, #history-title')).toHaveCount(0);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v2')).submissions.length)).toBe(1);
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await expect(page.locator('.medicine-info strong')).toHaveText(item.name);
   await expect(page.locator('.medicine input')).toHaveCount(0);

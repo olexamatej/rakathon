@@ -98,19 +98,6 @@ input:disabled { opacity: .7; }
 .pin { font-size: clamp(36px, 10vw, 60px); letter-spacing: .16em; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .generated-at { color: var(--muted); font-size: 13px; }
 .current-submission .primary { min-height: 52px; margin-top: 8px; font-size: 16px; }
-.submission-history { border-top: 1px solid var(--line); padding-top: 20px; }
-.submission-history > p { margin-top: 6px; color: var(--muted); font-size: 12px; }
-.submission-history > ul { list-style: none; margin: 14px 0 0; padding: 0; }
-.submission-history > ul > li + li { margin-top: 8px; }
-.submission-history > .full { margin-top: 12px; }
-.submission-history details { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
-.submission-history summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 14px; cursor: pointer; }
-.submission-history summary code { color: var(--brand); font-size: 16px; font-weight: 700; letter-spacing: .12em; }
-.submission-history summary time { color: var(--muted); font-size: 12px; text-align: right; }
-.history-items { list-style: none; margin: 0; padding: 0 14px 12px; }
-.history-items li { display: grid; gap: 3px; padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
-.history-items strong { font-size: 13px; font-weight: 600; }
-.history-items span { color: var(--muted); font-size: 12px; }
 .notice { padding: 10px; margin-top: 12px; background: var(--tint); color: #365578; font-size: 13px; line-height: 1.6; border-radius: 10px; }
 .text-button { background: none; border: 0; padding: 8px 0; color: inherit; text-decoration: underline; }
 .message { font-size: 13px; margin-top: 12px; }

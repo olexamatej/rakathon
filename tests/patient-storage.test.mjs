@@ -74,24 +74,24 @@ test('patient uploads its structured JSON and records exactly the storage-issued
   assert.equal(fetch.mock.callCount(), 1);
 });
 
-test('sending the same list twice uploads twice and preserves both independent receipts', async t => {
+test('saving the same patient list twice reuses its PIN and keeps one receipt', async t => {
   const state = createState();
   state.items.push({ id: 'local-id', name: 'Ukázkové léčivo', dosage: '10 mg', dosesPerPackage: '30' });
   const payload = { version: 1, regimen: '', items: [{ name: state.items[0].name, dosage: state.items[0].dosage, dosesPerPackage: state.items[0].dosesPerPackage }] };
-  const pins = ['01Z9QW', '23ABCD'];
+  const pin = '01Z9QW';
   const bodies = [];
   t.mock.method(globalThis, 'fetch', async (_, options) => {
     bodies.push(options.body);
-    return new Response(JSON.stringify({ pin: pins[bodies.length - 1] }), { status: 201 });
+    assert.equal(options.method, bodies.length === 1 ? 'POST' : 'PUT');
+    return new Response(JSON.stringify({ pin }), { status: bodies.length === 1 ? 201 : 200 });
   });
   for (let i = 0; i < 2; i++) {
-    recordSubmission(state, state.items, await sendList(payload));
+    recordSubmission(state, state.items, await sendList(payload, state.submissions[0]?.pin));
   }
   assert.equal(bodies.length, 2);
   assert.equal(bodies[0], bodies[1]);
-  assert.equal(state.submissions.length, 2);
-  assert.deepEqual(state.submissions.map(entry => entry.pin), [...pins].reverse());
-  assert.notEqual(state.submissions[0].id, state.submissions[1].id);
+  assert.equal(state.submissions.length, 1);
+  assert.equal(state.submissions[0].pin, pin);
   let saved;
   const storage = { setItem: (_, value) => { saved = value; }, getItem: () => saved };
   saveState(storage, state);
@@ -99,15 +99,15 @@ test('sending the same list twice uploads twice and preserves both independent r
 });
 
 test('storage PINs containing 0 and 1 and old simulated PINs remain readable', () => {
-  const state = createState();
-  state.items.push({ id: 'local-id', name: 'Ukázkové léčivo', dosage: '10 mg', dosesPerPackage: '30' });
   for (const pin of ['01Z9QW', 'ILOU23']) {
+    const state = createState();
+    state.items.push({ id: 'local-id', name: 'Ukázkové léčivo', dosage: '10 mg', dosesPerPackage: '30' });
     recordSubmission(state, state.items, { pin, sentAt: new Date().toISOString() });
+    let saved;
+    const storage = { setItem: (_, value) => { saved = value; }, getItem: () => saved };
+    saveState(storage, state);
+    assert.deepEqual(loadState(storage).state, state);
   }
-  let saved;
-  const storage = { setItem: (_, value) => { saved = value; }, getItem: () => saved };
-  saveState(storage, state);
-  assert.deepEqual(loadState(storage).state, state);
 });
 
 test('empty input never reaches storage', async t => {

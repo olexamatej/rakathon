@@ -51,7 +51,7 @@ test('the single list restores edits, unfinished fields and removals after reloa
   assert.deepEqual(loadState(storage).state.items, []);
 });
 
-test('each submission keeps an independent snapshot without clearing the main list', () => {
+test('saving again keeps one PIN and updates its snapshot without clearing the draft', () => {
   const storage = memoryStorage();
   const state = createState();
   state.items.push(medicine());
@@ -59,15 +59,17 @@ test('each submission keeps an independent snapshot without clearing the main li
   const first = recordSubmission(state, state.items, receipt());
   assert.deepEqual(state.items, original);
   state.items[0].name = 'Změna po odeslání';
-  const second = recordSubmission(state, state.items, { ...receipt(), pin: 'DEF567' });
-  assert.notEqual(first.id, second.id);
+  const second = recordSubmission(state, state.items, receipt());
+  assert.equal(first.id, second.id);
+  assert.equal(second.pin, first.pin);
+  assert.deepEqual(first.items, original);
   state.items = [];
   saveState(storage, state);
   const restored = loadState(storage).state;
   assert.deepEqual(restored.items, []);
-  assert.deepEqual(restored.submissions[1].items, original);
+  assert.equal(restored.submissions.length, 1);
   assert.equal(restored.submissions[0].items[0].name, 'Změna po odeslání');
-  assert.equal(restored.submissions[1].pin, first.pin);
+  assert.equal(restored.submissions[0].pin, first.pin);
 });
 
 test('invalid server responses cannot create a submission', () => {
@@ -206,4 +208,21 @@ test('legacy demo option cannot bypass the real transcription endpoint', async t
   });
   await assert.rejects(recognizePhoto(photo, { mode: 'demo' }));
   assert.equal(request.mock.callCount(), 1);
+});
+
+
+test('previous patient history migrates to just the latest PIN and preserves the draft', () => {
+  const storage = memoryStorage();
+  const state = createState();
+  state.items.push(medicine());
+  const latest = { id: newId(), ...receipt(), items: [medicine()] };
+  const older = { id: newId(), ...receipt(), pin: 'DEF567', items: [medicine()] };
+  storage.setItem(STORAGE_KEY, JSON.stringify({ ...state, submissions: [latest, older] }));
+  const loaded = loadState(storage).state;
+  assert.deepEqual(loaded.items, state.items);
+  assert.deepEqual(loaded.submissions, [latest]);
+  saveState(storage, loaded);
+  assert.deepEqual(JSON.parse(storage.getItem(STORAGE_KEY)).submissions, [latest]);
+  assert.throws(() => recordSubmission(loaded, loaded.items, { ...receipt(), pin: 'DEF567' }));
+  assert.deepEqual(loaded.submissions, [latest]);
 });

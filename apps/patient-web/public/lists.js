@@ -33,6 +33,8 @@ export function loadState(storage) {
   if (saved !== null) {
     const state = JSON.parse(saved);
     if (!isState(state)) throw new Error('Neplatný formát uloženého seznamu.');
+    // Migrate previous patient history to its latest PIN, preserving the draft.
+    state.submissions = state.submissions.slice(0, 1);
     return { state, skipped: 0 };
   }
 
@@ -59,21 +61,24 @@ export function loadState(storage) {
     items: structuredClone(legacy[0]?.items || []),
     submissions: legacy.filter(list => list.receipt).map(list => ({
       id: list.id, pin: list.receipt.pin, sentAt: list.receipt.sentAt, items: list.items,
-    })).sort((a, b) => Date.parse(b.sentAt) - Date.parse(a.sentAt)),
+    })).sort((a, b) => Date.parse(b.sentAt) - Date.parse(a.sentAt)).slice(0, 1),
   };
   return { state, skipped };
 }
 
 export function saveState(storage, state) {
   if (!isState(state)) throw new Error('Neplatný formát seznamu.');
-  storage.setItem(STORAGE_KEY, JSON.stringify(state));
+  storage.setItem(STORAGE_KEY, JSON.stringify({ ...state, submissions: state.submissions.slice(0, 1) }));
 }
 
 export function recordSubmission(state, items, receipt, regimen = '') {
+  if (state.submissions[0]) {
+    return updateSubmission(state, state.submissions[0].id, items, receipt, regimen);
+  }
   const entry = { id: newId(), pin: receipt?.pin, sentAt: receipt?.sentAt, items: structuredClone(items) };
   if (regimen.trim()) entry.regimen = regimen.trim();
   if (!isSubmission(entry)) throw new Error('Neplatná odpověď při odeslání seznamu.');
-  state.submissions.unshift(entry);
+  state.submissions = [entry];
   return entry;
 }
 
@@ -85,7 +90,7 @@ export function updateSubmission(state, id, items, receipt, regimen = '') {
   if (!previous || previous.pin !== entry.pin || !isSubmission(entry)) {
     throw new Error('Neplatná odpověď při uložení seznamu.');
   }
-  state.submissions = [entry, ...state.submissions.filter(saved => saved.id !== id)];
+  state.submissions = [entry];
   return entry;
 }
 
