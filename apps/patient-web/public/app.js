@@ -121,6 +121,7 @@ function render(focus = false) {
     <button class="primary" data-action="home">Domů</button></div></main>`
     : editor();
   const header = `<header><a class="brand" href="/pacient" data-action="home"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
+    <nav class="role-nav" aria-label="Zobrazení aplikace"><a href="/pacient" aria-current="page">Pacient</a><a href="/lekar">Lékař</a></nav>
     <button class="install-button" data-action="install" aria-label="Nainstalovat aplikaci">${icon('download')}</button></header>`;
   app.innerHTML = receipt ? `<div class="shell">${header}${content}</div>` : `<div class="shell">${header}
     <main id="main">

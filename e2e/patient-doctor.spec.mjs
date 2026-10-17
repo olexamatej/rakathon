@@ -2,17 +2,34 @@ import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
 const medicines = [
-  { name: 'PARALEN', dosage: '500 mg', dosesPerPackage: '24', schedule: '1-0-1' },
-  { name: 'IBALGIN', dosage: '400 mg', dosesPerPackage: '30', schedule: '0-1-0' },
-  { name: 'LETROX', dosage: '50 mikrogramů', dosesPerPackage: '100', schedule: '1-0-0' },
+  { name: 'PARALEN 500 mg', dosage: '', dosesPerPackage: '', schedule: '1-0-1' },
+  { name: 'IBALGIN 400 mg', dosage: '', dosesPerPackage: '', schedule: '0-1-0' },
+  { name: 'LETROX 50 mikrogramů', dosage: '', dosesPerPackage: '', schedule: '1-0-0' },
 ];
+const transcription = medicines.map(({ name, schedule }) => ({ name, schedule }));
 
 for (const source of ['gallery', 'camera']) {
   test.describe(`patient photo from ${source}`, () => {
     test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'allow' });
 
-    test('stores readable mock medicines under the same PIN in admin and doctor', async ({ page, context }) => {
+    test('stores mocked transcription results under the same PIN in admin and doctor', async ({ page, context }) => {
+      let recognitionRequests = 0;
+      await page.route('**/api/transcribe', async route => {
+        const request = route.request();
+        expect(request.method()).toBe('POST');
+        expect(request.headers()['content-type']).toBe('image/png');
+        expect(request.postDataBuffer()?.byteLength ?? 0).toBeGreaterThan(0);
+        recognitionRequests++;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(transcription) });
+      });
       await page.goto('/pacient');
+      const roleNav = page.getByRole('navigation', { name: 'Zobrazení aplikace' });
+      await expect(roleNav.getByRole('link', { name: 'Pacient' })).toHaveAttribute('aria-current', 'page');
+      await roleNav.getByRole('link', { name: 'Lékař' }).click();
+      await expect(page).toHaveURL(/\/lekar$/);
+      await expect(page.getByRole('navigation', { name: 'Zobrazení aplikace' }).getByRole('link', { name: 'Lékař' })).toHaveAttribute('aria-current', 'page');
+      await page.getByRole('navigation', { name: 'Zobrazení aplikace' }).getByRole('link', { name: 'Pacient' }).click();
+      await expect(page).toHaveURL(/\/pacient$/);
       const chooserPromise = page.waitForEvent('filechooser');
       await page.getByRole('button', { name: source === 'camera' ? 'Vyfotit' : 'Z galerie', exact: true }).click();
       await (await chooserPromise).setFiles({
@@ -20,6 +37,7 @@ for (const source of ['gallery', 'camera']) {
         buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64'),
       });
       for (const item of medicines) await expect(page.getByText(item.name, { exact: true })).toBeVisible();
+      expect(recognitionRequests).toBe(1);
 
       const uploadPromise = page.waitForResponse(response => response.request().method() === 'POST'
         && new URL(response.url()).pathname === '/api/v1/transfers');
