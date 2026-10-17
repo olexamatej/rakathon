@@ -79,18 +79,22 @@ function photoStatus() {
     ${photos.filter(job => job.status === 'error').map(job => `<p class="notice" role="alert">${escape(job.error)}</p>`).join('')}`;
 }
 
-function editor() {
-  const busy = isBusy();
+function photoUpload() {
   const photoInputBlocked = loadFailed || sending;
-  return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
-    <form id="list-form">
-    <section class="photo-section" aria-label="Nahrání fotografií">
+  return `<section class="photo-section" aria-labelledby="photo-title">
+      <h2 id="photo-title">Nahrajte ${state.items.length ? 'další ' : ''}fotografie léků</h2>
       <div class="photo-actions">
         <button type="button" class="secondary full" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Z knihovny</button>
         <button type="button" class="primary full" data-action="camera" ${photoInputBlocked ? 'disabled' : ''}>${icon('camera')} Vyfotit</button>
       </div>
       ${photoStatus()}
-    </section>
+    </section>`;
+}
+
+function editor() {
+  const busy = isBusy();
+  return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
+    <form id="list-form">
     <section class="medicines" aria-labelledby="medicines-title">
       ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
         <legend class="list-heading">Léčiva v seznamu <span>${itemCount(state.items.length)}</span></legend>${state.items.map((item, index) => `
@@ -101,6 +105,7 @@ function editor() {
         </article>`).join('')}</fieldset>`
       : ''}
     </section>
+    ${photoUpload()}
     ${state.items.length || state.regimen || regimenOpen ? `${state.regimen || regimenOpen ? `<section class="regimen-section"><label for="regimen" class="sr-only">Režim onkologické léčby (volitelné)</label>
       <div class="combo"><input id="regimen" name="regimen" value="${escape(state.regimen || '')}" maxlength="200" placeholder="Režim onkologické léčby (volitelné)" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="regimen-list" aria-autocomplete="list" ${busy ? 'disabled' : ''}>
       <button type="button" class="icon-button" data-action="remove-regimen" aria-label="Odebrat režim" ${busy ? 'disabled' : ''}>${icon('close')}</button>

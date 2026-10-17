@@ -95,6 +95,7 @@ test('patient can queue more photos during recognition and a failed photo does n
   await page.route('**/api/transcribe', route => { requests.push(route); });
   await page.goto('/pacient');
   await expect(page.locator('#list-form button')).toHaveCount(2);
+  await expect(page.locator('#photo-title')).toHaveText('Nahrajte fotografie léků');
   await expect(page.locator('#list-form')).not.toContainText('Z fotografie');
   await expect(page.locator('.photo-actions button')).toHaveText(['Z knihovny', 'Vyfotit']);
   await expect(page.locator('[data-action="gallery"]')).toHaveClass(/secondary/);
@@ -114,6 +115,11 @@ test('patient can queue more photos during recognition and a failed photo does n
     body: JSON.stringify([{ name: 'První léčivo', strength: '10 mg', schedule: null }]) });
   await expect.poll(() => requests.length).toBe(2);
   await expect(page.locator('.medicine-info strong')).toHaveText('První léčivo');
+  await expect(page.locator('#photo-title')).toHaveText('Nahrajte další fotografie léků');
+  await expect(page.locator('.photo-actions button')).toHaveText(['Z knihovny', 'Vyfotit']);
+  expect(await page.locator('.medicines').evaluate(list => Boolean(
+    list.compareDocumentPosition(document.querySelector('.photo-section')) & Node.DOCUMENT_POSITION_FOLLOWING
+  ))).toBe(true);
   await expect(page.locator('#send')).toBeDisabled();
   await requests[1].fulfill({ status: 503, contentType: 'application/json', body: '{}' });
   await expect.poll(() => requests.length).toBe(3);
