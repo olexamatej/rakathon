@@ -44,11 +44,22 @@ secret makes existing PINs unusable. On this VPS, run builds/tests only in an
 isolated non-root sandbox, not as the Docker-enabled host user.
 
 Operational probes remain `GET /health/live` and `GET /health/ready`.
-The latter checks SQLite. Source rate limits are 30 POSTs and 20 GETs per minute;
+The latter checks SQLite. Source rate limits are 30 combined POST/PUT writes and 20 GETs per minute;
 clients behind the current proxy share the socket-IP limit. HTTP 429 includes
 `Retry-After: 60`. The cleanup worker deletes only expired rate-limit counters.
 All responses carry `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
-Do not log request bodies or request URLs: GET URLs contain the secret PIN.
+In POC mode, every storage GET handler emits INFO events `storage_read_attempt`
+(before validation/rate limiting/database access) and `storage_read_result`
+(with the HTTP status, including 404, 429 and 503). Each carries an explicit UTC
+`timestamp`, `pin`, fixed placeholder `user="poc-user"`, and socket `source_ip`.
+The pair shares a process-local `read_id` for correlation during concurrent reads.
+The identity is not authenticated; behind a proxy the IP identifies the proxy.
+Valid PINs are logged in full; invalid input is escaped and capped at 128 characters.
+An attempt without a result means the operation did not finish (for example shutdown).
+These events use the existing process log stream; no database migration or log
+volume is added. `RUST_LOG` defaults to `info`; a stricter filter suppresses them.
+After deployment, inspect using `docker logs --since 10m pillgaze-transfer-api`.
+Do not log request bodies or full request URLs.
 Ensure gateways, analytics, and access logs do not record those URLs either.
 
 ## Boundaries and compatibility

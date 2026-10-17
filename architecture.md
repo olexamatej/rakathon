@@ -104,8 +104,11 @@ Limit requests by socket IP (30 combined POST/PUT writes, 20 GETs per minute); c
 current proxy share limits. Return `Retry-After: 60` on 429. Cleanup deletes only
 expired rate-limit counters, not blobs. Storage grows without automatic expiry;
 retention, backups, production authentication, and monitoring need separate work.
-Use HTTPS and `Cache-Control: no-store`. Never log bodies, PINs, or GET request
-URLs containing PINs, including at gateways or in analytics.
+Use HTTPS and `Cache-Control: no-store`. The POC storage read audit intentionally
+logs the requested PIN, UTC timestamp, placeholder user `poc-user`, socket source
+IP and resulting status at INFO level. It logs attempts before validation/rate
+limiting and their results separately. Invalid PIN text is escaped and bounded.
+Do not log payloads, credentials or full request URLs at gateways or in analytics.
 
 ## VPS deployment
 

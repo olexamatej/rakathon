@@ -6,7 +6,7 @@ use std::{
     env,
     net::{IpAddr, SocketAddr},
     path::PathBuf,
-    sync::Arc,
+    sync::{Arc, atomic::{AtomicU64, Ordering}},
     time::Duration,
 };
 
@@ -26,6 +26,8 @@ use store::TransferStore;
 use tokio::time::{interval, MissedTickBehavior};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{error, info};
+
+static NEXT_READ_ID: AtomicU64 = AtomicU64::new(1);
 
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 const DEFAULT_BIND_ADDRESS: &str = "127.0.0.1:3000";
@@ -57,15 +59,21 @@ enum ApiError {
     Unavailable,
 }
 
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        let (status, code) = match self {
+impl ApiError {
+    fn status_and_code(&self) -> (StatusCode, &'static str) {
+        match self {
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             Self::BadRequest => (StatusCode::BAD_REQUEST, "bad_request"),
             Self::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             Self::RateLimited => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
             Self::Unavailable => (StatusCode::SERVICE_UNAVAILABLE, "unavailable"),
-        };
+        }
+    }
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        let (status, code) = self.status_and_code();
         let mut response = (status, Json(ErrorBody { error: code })).into_response();
         if status == StatusCode::TOO_MANY_REQUESTS {
             response
@@ -332,22 +340,43 @@ async fn get_blob(
     ConnectInfo(address): ConnectInfo<SocketAddr>,
     Path(pin): Path<String>,
 ) -> Result<Response, ApiError> {
-    let now = Utc::now().timestamp();
-    enforce_source_limit(&state, address.ip(), b"rate:get:source", 20, now).await?;
-    if !crypto::valid_pin(&pin) {
-        return Err(ApiError::NotFound);
-    }
-    let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
-    let payload = state
-        .store
-        .get_blob(&pin_digest)
-        .await
-        .map_err(|_| {
-            error!("blob transfer lookup failed");
-            ApiError::Unavailable
-        })?
-        .ok_or(ApiError::NotFound)?;
-    Ok(([(header::CONTENT_TYPE, "application/json")], payload).into_response())
+    // POC audit: the identity is a placeholder, not an authenticated account.
+    // Debug formatting escapes user-controlled PIN text onto a single log line.
+    let read_id = NEXT_READ_ID.fetch_add(1, Ordering::Relaxed);
+    let logged_pin: String = pin.chars().take(128).collect();
+    info!(
+        event = "storage_read_attempt", read_id, timestamp = %Utc::now().to_rfc3339(),
+        pin = ?logged_pin, user = "poc-user", source_ip = %address.ip(),
+        "storage read attempt"
+    );
+    let result: Result<Response, ApiError> = async {
+        let now = Utc::now().timestamp();
+        enforce_source_limit(&state, address.ip(), b"rate:get:source", 20, now).await?;
+        if !crypto::valid_pin(&pin) {
+            return Err(ApiError::NotFound);
+        }
+        let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
+        let payload = state
+            .store
+            .get_blob(&pin_digest)
+            .await
+            .map_err(|_| {
+                error!("blob transfer lookup failed");
+                ApiError::Unavailable
+            })?
+            .ok_or(ApiError::NotFound)?;
+        Ok(([(header::CONTENT_TYPE, "application/json")], payload).into_response())
+    }.await;
+    let status = match &result {
+        Ok(response) => response.status(),
+        Err(error) => error.status_and_code().0,
+    };
+    info!(
+        event = "storage_read_result", read_id, timestamp = %Utc::now().to_rfc3339(),
+        pin = ?logged_pin, user = "poc-user", source_ip = %address.ip(),
+        status = status.as_u16(), "storage read result"
+    );
+    result
 }
 
 async fn enforce_source_limit(
@@ -460,6 +489,71 @@ mod blob_tests {
         request.extensions_mut().insert(ConnectInfo(address));
         assert_eq!(app.oneshot(request).await.unwrap().status(), StatusCode::PAYLOAD_TOO_LARGE);
         assert_eq!(state.store.get_blob(&digest).await.unwrap().unwrap(), payload);
+    }
+
+    #[derive(Clone)]
+    struct AuditWriter(Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl std::io::Write for AuditWriter {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+    }
+
+    #[tokio::test]
+    async fn read_audit_records_pin_time_identity_and_all_outcomes_without_payload() {
+        use tracing::instrument::WithSubscriber;
+        let output = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let writer = AuditWriter(output.clone());
+        let subscriber = tracing_subscriber::fmt().without_time().with_ansi(false)
+            .with_max_level(tracing::Level::INFO)
+            .with_writer(move || writer.clone()).finish();
+        async {
+            let state = state().await;
+            let address = "127.0.0.1:1234".parse::<SocketAddr>().unwrap();
+            let (_, Json(receipt)) = create_blob(State(state.clone()), ConnectInfo(address),
+                json_headers(), Bytes::from_static(b"{\"secret\":\"not-in-audit\"}"))
+                .await.unwrap_or_else(|_| panic!("create failed"));
+            let missing = if receipt.pin == "ABC234" { "DEF567" } else { "ABC234" };
+            for (pin, status) in [(receipt.pin.as_str(), StatusCode::OK),
+                (missing, StatusCode::NOT_FOUND), ("bad\nPIN", StatusCode::NOT_FOUND)] {
+                let result = get_blob(State(state.clone()), ConnectInfo(address), Path(pin.to_owned())).await;
+                assert_eq!(result.into_response().status(), status);
+            }
+            let now = Utc::now().timestamp();
+            // Fill this and the next minute's bucket to avoid a boundary race.
+            for period in [now, now + 60] {
+                for _ in 0..20 {
+                    state.store.allow_source(&state.pepper, b"rate:get:source", address.ip(), 20, period).await.unwrap();
+                }
+            }
+            assert_eq!(get_blob(State(state.clone()), ConnectInfo(address), Path(receipt.pin.clone()))
+                .await.into_response().status(), StatusCode::TOO_MANY_REQUESTS);
+            let pool = SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+            pool.close().await;
+            let mut unavailable = state;
+            unavailable.store = TransferStore::new(pool);
+            assert_eq!(get_blob(State(unavailable), ConnectInfo(address), Path(receipt.pin.clone()))
+                .await.into_response().status(), StatusCode::SERVICE_UNAVAILABLE);
+            let logs = String::from_utf8(output.lock().unwrap().clone()).unwrap();
+            assert!(logs.contains(&format!("pin=\"{}\"", receipt.pin)));
+            assert!(logs.contains("pin=\"bad\\nPIN\""));
+        }.with_subscriber(subscriber).await;
+        let logs = String::from_utf8(output.lock().unwrap().clone()).unwrap();
+        let attempts: Vec<_> = logs.lines().filter(|line| line.contains("event=\"storage_read_attempt\"")).collect();
+        let results: Vec<_> = logs.lines().filter(|line| line.contains("event=\"storage_read_result\"")).collect();
+        assert_eq!(attempts.len(), 5);
+        assert_eq!(results.len(), 5);
+        for line in attempts.iter().chain(results.iter()) {
+            assert!(line.contains("read_id="));
+            assert!(line.contains("timestamp="));
+            assert!(line.contains("user=\"poc-user\""));
+            assert!(line.contains("source_ip=127.0.0.1"));
+        }
+        for status in [200, 404, 429, 503] { assert!(logs.contains(&format!("status={status}"))); }
+        assert!(!logs.contains("not-in-audit"));
     }
 
     #[tokio::test]

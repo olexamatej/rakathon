@@ -6,7 +6,9 @@ info:
     Store opaque JSON and retrieve its exact bytes using a six-character PIN.
     No expiry, consumption, revocation, or encryption enforcement. Synthetic data only.
     Optional password-protected admin lists metadata and deletes selected or all blobs.
-    Responses use Cache-Control: no-store. Never log payloads, PINs or admin credentials.
+    Responses use Cache-Control: no-store. POC storage reads log the requested PIN,
+    UTC timestamp, placeholder user poc-user, source IP and result status.
+    Never log payloads or admin credentials.
 paths:
   /v1/transfers:
     post:
