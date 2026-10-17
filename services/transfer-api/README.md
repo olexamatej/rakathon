@@ -11,7 +11,10 @@ Through the VPS frontend proxy, prefix these paths with `/api`.
 POST requires `Content-Type: application/json`; the maximum body is 1 MiB
 (1,048,576 bytes), enforced by the API and SQLite.
 No medication schema, wrapper, or encryption envelope is required.
-PINs use six random Crockford Base32 characters. Collisions never overwrite data;
+New PINs use six uniformly random characters from `23456789ABCDEFGHJKMNPQRSTVWXYZ`,
+excluding ambiguous `0`, `1`, `I`, `L`, and `O` (and the previously excluded `U`).
+Previously issued PINs containing `0` or `1` remain valid for retrieval.
+Collisions never overwrite data;
 only keyed PIN digests are stored in SQLite. GET is repeatable and does not delete
 or consume the blob. There is no expiry, public DELETE, revocation, or idempotency key.
 Each successful POST creates a separate database row with a distinct PIN, even

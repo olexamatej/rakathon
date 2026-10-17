@@ -205,6 +205,9 @@ components:
   schemas:
     Pin:
       type: string
+      description: >-
+        Six-character PIN. New PINs use 23456789ABCDEFGHJKMNPQRSTVWXYZ;
+        existing PINs containing 0 or 1 remain accepted for retrieval.
       pattern: '^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$'
   responses:
     BadRequest:
