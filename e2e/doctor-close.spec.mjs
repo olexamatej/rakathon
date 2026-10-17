@@ -17,8 +17,10 @@ test('close clears the displayed PIN, list and shared link without deleting stor
     if (new URL(request.url()).pathname.startsWith('/api/')) apiMethods.push(request.method());
   });
   await page.goto('/lekar?pin=ABC234&source=test');
-  await expect(page.locator('#main code')).toHaveText('ABC234');
+  await expect(page.locator('#pin')).toHaveValue('ABC234');
   await expect(page.locator('.list-head #pin-form')).toBeVisible();
+  await expect(page.locator('.list-head h1, .list-head code')).toHaveCount(0);
+  await expect(page.locator('.upload-info')).toHaveText('Nahráno pacientem');
   await expect(page.locator('.doc-side')).toHaveCount(0);
   await expect(page.locator('#main tbody tr')).toHaveCount(2);
   const close = page.getByRole('button', { name: 'Zavřít aktuální seznam', exact: true });
@@ -52,7 +54,7 @@ test('closing the current list prevents a pending PIN request from reopening it'
     await route.fulfill({ json: payload });
   });
   await page.goto('/lekar?pin=ABC234');
-  await expect(page.locator('#main code')).toHaveText('ABC234');
+  await expect(page.locator('#pin')).toHaveValue('ABC234');
   await page.locator('#pin').fill('DEF567');
   await page.locator('#pin-submit').click();
   await requested;
@@ -67,5 +69,5 @@ test('closing the current list prevents a pending PIN request from reopening it'
   await expect(page.locator('#pin-submit')).toBeEnabled();
   await page.locator('#pin').fill('ABC234');
   await page.locator('#pin-submit').click();
-  await expect(page.locator('#main code')).toHaveText('ABC234');
+  await expect(page.locator('#pin')).toHaveValue('ABC234');
 });

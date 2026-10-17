@@ -13,7 +13,6 @@ const escape = value => String(value).replace(/[&<>"']/g, char => ({
 })[char]);
 const date = value => new Intl.DateTimeFormat('cs', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value));
 const time = value => new Intl.DateTimeFormat('cs', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
-const itemCount = count => `${count} ${count === 1 ? 'léčivo' : count > 1 && count < 5 ? 'léčiva' : 'léčiv'}`;
 const icons = {
   trash: '<path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
@@ -224,8 +223,8 @@ function cellInput(item, field, label, attributes = {}) {
 }
 
 function listView(list) {
-  return `<div class="list-head"><button type="button" class="icon-button close-list" data-action="close-list" aria-label="Zavřít aktuální seznam" title="Zavřít aktuální seznam">${icon('close')}</button><h1>Seznam léčiv</h1>
-      <p>PIN <code>${escape(list.pin)}</code> · ${list.sentAt ? 'odesláno' : 'načteno'} ${escape(date(list.sentAt || list.loadedAt))} v ${escape(time(list.sentAt || list.loadedAt))} · ${itemCount(list.items.length)}</p><div id="pin-entry"></div></div>
+  return `<div class="list-head"><button type="button" class="icon-button close-list" data-action="close-list" aria-label="Zavřít aktuální seznam" title="Zavřít aktuální seznam">${icon('close')}</button><div id="pin-entry"></div>
+      <p class="upload-info">Nahráno pacientem${list.sentAt ? ` ${escape(date(list.sentAt))} v ${escape(time(list.sentAt))}` : ''}</p></div>
     ${regimenRow(list)}
     ${list.items.length ? `<div class="table-wrap"><table class="med-table"><thead><tr>
         <th>Léčivo</th><th>Síla / dávkování</th><th>Kdy</th><th>Léčivé látky</th><th><span class="sr-only">Akce</span></th></tr></thead><tbody>
@@ -247,7 +246,7 @@ function render() {
   const pinForm = $('#pin-form');
   const list = currentList();
   $('#main').innerHTML = list ? listView(list)
-    : '<div class="list-head"><h1>Seznam léčiv</h1><div id="pin-entry"></div></div>';
+    : '<div class="list-head"><div id="pin-entry"></div></div>';
   // Move the existing form to preserve its listeners, value and loading/error state.
   $('#pin-entry').append(pinForm);
   document.title = `${list ? `PIN ${list.pin}` : 'Lékař'} · PillGaze`;
@@ -369,7 +368,7 @@ $('#pin-form').addEventListener('submit', async event => {
     applySubstances(list.items, await loadSuklSubstances());
     if (request !== pinRequest) return;
     state = nextState;
-    pinInput.value = '';
+    pinInput.value = pin;
     render();
   } catch (error) {
     if (request !== pinRequest) return;
