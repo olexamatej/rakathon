@@ -289,6 +289,56 @@ async fn maps_provider_failures_to_problem_statuses() {
 }
 
 #[tokio::test]
+async fn logs_provider_error_details_without_exposing_the_api_key() {
+    #[derive(Clone)]
+    struct LogWriter(Arc<Mutex<Vec<u8>>>);
+    impl std::io::Write for LogWriter {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    let logs = Arc::new(Mutex::new(Vec::new()));
+    let writer = LogWriter(logs.clone());
+    let subscriber = tracing_subscriber::fmt()
+        .without_time()
+        .with_ansi(false)
+        .with_writer(move || writer.clone())
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    for provider_status in [StatusCode::TOO_MANY_REQUESTS, StatusCode::BAD_REQUEST] {
+        let (base, _) = stub(
+            json!({"error": {"message": "Unsupported model; key=proxy-key"}}),
+            provider_status,
+        )
+        .await;
+        let router = app(AppState::new(config(base, None)).unwrap());
+        let (status, _, body) = post_image(router, "image/png", PNG.to_vec()).await;
+        assert_eq!(
+            status,
+            if provider_status == StatusCode::TOO_MANY_REQUESTS {
+                StatusCode::TOO_MANY_REQUESTS
+            } else {
+                StatusCode::BAD_GATEWAY
+            }
+        );
+        let logs = String::from_utf8(logs.lock().unwrap().clone()).unwrap();
+        assert!(logs.contains("Unsupported model"), "{logs}");
+        assert!(logs.contains(provider_status.as_str()), "{logs}");
+        assert!(logs.contains("generateContent"), "{logs}");
+        assert!(logs.contains("test-model"), "{logs}");
+        assert!(logs.contains("[REDACTED]"), "{logs}");
+        assert!(!logs.contains("proxy-key"), "{logs}");
+        assert!(!String::from_utf8_lossy(&body).contains("Unsupported model"));
+    }
+}
+
+#[tokio::test]
 async fn unavailable_provider_yields_gateway_error() {
     let router = app(AppState::new(config("http://127.0.0.1:1/v1beta".into(), None)).unwrap());
     let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;

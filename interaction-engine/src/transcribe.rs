@@ -28,6 +28,7 @@ const FIELD_MAX_CHARS: usize = 120;
 const MAX_OUTPUT_TOKENS: u32 = 8192;
 const CATALOGUE_CHARS: usize = 2 * 1024 * 1024;
 const DELETE_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_ERROR_BODY_BYTES: usize = 8192;
 const GOOGLE_API: &str = "https://generativelanguage.googleapis.com/v1beta";
 const GOOGLE_UPLOAD: &str = "https://generativelanguage.googleapis.com/upload/v1beta/files";
 
@@ -374,6 +375,28 @@ fn upload_failed() -> Problem {
     )
 }
 
+async fn log_api_error(mut response: reqwest::Response, operation: &str, api_key: &str) {
+    let status = response.status();
+    let mut body = Vec::new();
+    while body.len() <= MAX_ERROR_BODY_BYTES {
+        match response.chunk().await {
+            Ok(Some(chunk)) => {
+                let remaining = MAX_ERROR_BODY_BYTES + 1 - body.len();
+                body.extend_from_slice(&chunk[..chunk.len().min(remaining)]);
+            }
+            Ok(None) => break,
+            Err(error) => {
+                tracing::warn!(operation, %status, error = %error.without_url(), "Could not read Gemini error response");
+                break;
+            }
+        }
+    }
+    let truncated = body.len() > MAX_ERROR_BODY_BYTES;
+    body.truncate(MAX_ERROR_BODY_BYTES);
+    let detail = String::from_utf8_lossy(&body).replace(api_key, "[REDACTED]");
+    tracing::error!(operation, %status, response_body = %detail, truncated, "Gemini API request failed");
+}
+
 async fn upload_image(
     client: &reqwest::Client,
     api_key: &str,
@@ -394,7 +417,10 @@ async fn upload_image(
         .json(&json!({"file": {"display_name": "medication-photo"}}))
         .send()
         .await
-        .map_err(|_| upload_failed())?;
+        .map_err(|error| {
+            tracing::error!(operation = "upload_start", error = %error.without_url(), "Gemini request failed");
+            upload_failed()
+        })?;
     let status = start.status();
     let upload_url = start
         .headers()
@@ -402,6 +428,7 @@ async fn upload_image(
         .and_then(|value| value.to_str().ok())
         .map(str::to_string);
     if !status.is_success() {
+        log_api_error(start, "upload_start", api_key).await;
         return Err(if status == StatusCode::TOO_MANY_REQUESTS {
             rate_limited()
         } else {
@@ -423,9 +450,13 @@ async fn upload_image(
         .body(bytes.to_vec())
         .send()
         .await
-        .map_err(|_| upload_failed())?;
+        .map_err(|error| {
+            tracing::error!(operation = "upload_finalize", error = %error.without_url(), "Gemini request failed");
+            upload_failed()
+        })?;
     let status = response.status();
     if !status.is_success() {
+        log_api_error(response, "upload_finalize", api_key).await;
         return Err(if status == StatusCode::TOO_MANY_REQUESTS {
             rate_limited()
         } else {
@@ -497,6 +528,8 @@ async fn generate(
         .send()
         .await
         .map_err(|error| {
+            let error = error.without_url();
+            tracing::error!(%model, operation = "generateContent", %error, "Gemini request failed");
             if error.is_timeout() {
                 Problem::new(
                     StatusCode::GATEWAY_TIMEOUT,
@@ -509,27 +542,38 @@ async fn generate(
                 )
             }
         })?;
-    if response.status() == StatusCode::TOO_MANY_REQUESTS {
-        return Err(rate_limited());
-    }
-    if !response.status().is_success() {
+    let status = response.status();
+    if !status.is_success() {
+        tracing::error!(%model, %status, "Gemini transcription failed");
+        log_api_error(response, "generateContent", api_key).await;
+        if status == StatusCode::TOO_MANY_REQUESTS {
+            return Err(rate_limited());
+        }
         return Err(Problem::new(
             StatusCode::BAD_GATEWAY,
             "Služba rozpoznávání fotografií není dostupná. Zkuste to znovu.",
         ));
     }
-    let result: Value = response.json().await.map_err(|_| invalid_output())?;
+    let result: Value = response.json().await.map_err(|error| {
+        tracing::error!(%model, error = %error.without_url(), "Invalid Gemini JSON response");
+        invalid_output()
+    })?;
     if result
         .pointer("/promptFeedback/blockReason")
         .is_some_and(|reason| !reason.is_null())
     {
+        tracing::warn!(%model, block_reason = %result["promptFeedback"]["blockReason"], "Gemini blocked transcription");
         return Err(Problem::new(
             StatusCode::UNPROCESSABLE_ENTITY,
             "Tuto fotografii nelze zpracovat. Zkuste jiný snímek.",
         ));
     }
-    let candidate = result.pointer("/candidates/0").ok_or_else(invalid_output)?;
+    let candidate = result.pointer("/candidates/0").ok_or_else(|| {
+        tracing::error!(%model, "Gemini response has no candidate");
+        invalid_output()
+    })?;
     if candidate.get("finishReason").and_then(Value::as_str) != Some("STOP") {
+        tracing::warn!(%model, finish_reason = ?candidate.get("finishReason"), "Gemini transcription did not finish");
         return Err(Problem::new(
             StatusCode::BAD_GATEWAY,
             "Rozpoznávání nebylo dokončeno. Zkuste fotografii znovu.",
@@ -546,7 +590,10 @@ async fn generate(
                 .collect::<String>()
         })
         .unwrap_or_default();
-    let rows = parse_medications(&text).map_err(|_| invalid_output())?;
+    let rows = parse_medications(&text).map_err(|_| {
+        tracing::error!(%model, "Gemini returned invalid medication rows");
+        invalid_output()
+    })?;
 
     let mut response = (StatusCode::OK, Json(rows)).into_response();
     response
