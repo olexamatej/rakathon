@@ -23,6 +23,11 @@
 - `PUT /v1/transfers/{pin}`: replace an existing JSON blob, return HTTP 200
   with the same PIN. Unknown PINs return 404 without creating a blob. The PIN
   authorizes both reading and editing; concurrent writes use last write wins.
+- Successful storage GETs also return `X-Uploaded-At`, the server UTC time of
+  the most recent POST/PUT. JSON bytes remain unchanged. The doctor displays
+  that time beside the PIN in one card containing the regimen and medicines.
+  The existing SQLite `created_at` field tracks this last upload; updating a
+  blob now moves it to the top of the admin listing without changing its PIN.
 - Operational probes: `GET /health/live` and `GET /health/ready`.
 
 Use `/api` before these paths through the frontend proxy. POST requires

@@ -86,3 +86,16 @@ test('minimal recognized medicines reach the doctor without invented fields', ()
   const list = addList(createDoctorState(), { pin: 'ABC234', ...parsePatientList(payload) });
   assert.deepEqual(list.items.map(({ id, ...item }) => item), items);
 });
+
+
+test('doctor uses the storage upload timestamp and never invents a missing or invalid one', async t => {
+  for (const timestamp of ['2026-10-17T12:34:56Z', 'not-a-date', null]) {
+    t.mock.method(globalThis, 'fetch', async () => Response.json({ version: 1, regimen: '', items }, {
+      headers: timestamp === null ? {} : { 'X-Uploaded-At': timestamp },
+    }));
+    const received = await fetchListByPin('ABC234');
+    assert.equal(received.sentAt, timestamp === '2026-10-17T12:34:56Z' ? '2026-10-17T12:34:56.000Z' : undefined);
+    assert.deepEqual(received.items, items);
+    t.mock.restoreAll();
+  }
+});

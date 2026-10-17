@@ -14,9 +14,16 @@
 .doc-empty { text-align: center; padding: 80px 20px; border: 1px dashed var(--line); border-radius: 20px; background: #fff; color: var(--muted); }
 .doc-empty svg { width: 34px; height: 34px; color: #8a97a8; margin-bottom: 10px; }
 .doc-empty strong { display: block; color: inherit; font-size: 17px; margin-bottom: 4px; }
-.list-head { position: relative; margin-bottom: 18px; padding: 16px 64px 16px 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 8px 24px #1b2b4408; }
+.list-head { position: relative; margin-bottom: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 8px 24px #1b2b4408; }
 .close-list { position: absolute; top: 8px; right: 8px; color: var(--muted); }
-.list-head .upload-info { margin-top: 8px; color: var(--muted); font-size: 13px; }
+.patient-record { padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 8px 24px #1b2b4408; }
+.record-heading { position: relative; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 20px; padding: 0 44px 16px 0; border-bottom: 1px solid var(--line); }
+.record-pin { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 24px; font-weight: 700; letter-spacing: .1em; color: var(--brand); }
+.record-heading .upload-info { color: var(--muted); font-size: 13px; }
+.record-heading .close-list { top: -8px; right: -8px; }
+.patient-record .regimen-row { margin: 0; padding: 16px 0; border: 0; border-radius: 0; background: transparent; }
+.patient-record .table-wrap { border: 0; border-radius: 0; box-shadow: none; }
+.patient-record .table-actions { margin-top: 16px; }
 .close-list:hover { background: var(--tint); color: var(--brand); }
 .regimen-row { margin: 20px 0 16px; padding: 12px 14px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
 .regimen-row .label { color: var(--muted); font-size: 13px; }
@@ -80,8 +87,9 @@ input[aria-invalid="true"] { border-color: #c0553a; background: #fff5f1; }
   .doc-shell { padding: 0 12px 24px; }
   .doc-shell header { padding: 12px 0; }
   .doc-layout { margin-top: 16px; }
-  .list-head { padding: 16px 64px 16px 16px; }
+  .list-head { padding: 16px; }
   .table-wrap { border-radius: 12px; }
+  .patient-record { padding: 16px; }
   .med-table { min-width: 760px; }
   #details-dialog { width: calc(100% - 24px); max-height: calc(100dvh - 24px); padding: 20px 16px; }
 }

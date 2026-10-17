@@ -96,6 +96,12 @@ paths:
       responses:
         '200':
           description: Exact original request bytes, with application/json content type.
+          headers:
+            X-Uploaded-At:
+              description: UTC time of the most recent successful POST or PUT, recorded by storage.
+              schema:
+                type: string
+                format: date-time
           content:
             application/json:
               schema: {}

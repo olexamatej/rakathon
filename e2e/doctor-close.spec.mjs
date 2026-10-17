@@ -8,7 +8,7 @@ const payload = { version: 1, regimen: '', items: [
 test.beforeEach(async ({ page }) => {
   await page.route('**/sukl-substances.json', route => route.fulfill({ json: { PARALEN: ['Paracetamol'], IBALGIN: ['Ibuprofen'] } }));
   await page.route('**/regimen-drugs.json', route => route.fulfill({ json: {} }));
-  await page.route('**/api/v1/transfers/*', route => route.fulfill({ json: payload }));
+  await page.route('**/api/v1/transfers/*', route => route.fulfill({ json: payload, headers: { 'X-Uploaded-At': '2026-10-17T12:34:56Z' } }));
 });
 
 test('close clears the displayed PIN, list and shared link without deleting storage', async ({ page }) => {
@@ -20,7 +20,11 @@ test('close clears the displayed PIN, list and shared link without deleting stor
   await expect(page.locator('#pin')).toHaveValue('ABC234');
   await expect(page.locator('.list-head #pin-form')).toBeVisible();
   await expect(page.locator('.list-head h1, .list-head code')).toHaveCount(0);
-  await expect(page.locator('.upload-info')).toHaveText('Nahráno pacientem');
+  await expect(page.locator('.patient-record .record-pin')).toHaveText('PIN ABC234');
+  await expect(page.locator('.patient-record .upload-info')).toContainText('Nahráno pacientem');
+  await expect(page.locator('.patient-record time')).toHaveAttribute('datetime', '2026-10-17T12:34:56.000Z');
+  await expect(page.locator('.patient-record .regimen-row')).toBeVisible();
+  await expect(page.locator('.patient-record .med-table')).toBeVisible();
   await expect(page.locator('.doc-side')).toHaveCount(0);
   await expect(page.locator('#main tbody tr')).toHaveCount(2);
   const close = page.getByRole('button', { name: 'Zavřít aktuální seznam', exact: true });
@@ -51,7 +55,7 @@ test('closing the current list prevents a pending PIN request from reopening it'
   await page.route('**/api/v1/transfers/DEF567', async route => {
     started();
     await pending;
-    await route.fulfill({ json: payload });
+    await route.fulfill({ json: payload, headers: { 'X-Uploaded-At': '2026-10-17T12:34:56Z' } });
   });
   await page.goto('/lekar?pin=ABC234');
   await expect(page.locator('#pin')).toHaveValue('ABC234');

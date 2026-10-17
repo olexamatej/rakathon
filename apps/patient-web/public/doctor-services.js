@@ -55,7 +55,10 @@ export async function fetchListByPin(value) {
   let blob;
   try { blob = await response.json(); }
   catch { throw new Error('Úložiště nevrátilo platný seznam léčiv.'); }
-  return parsePatientList(blob);
+  const list = parsePatientList(blob);
+  const uploadedAt = response.headers.get('X-Uploaded-At');
+  if (uploadedAt && Number.isFinite(Date.parse(uploadedAt))) list.sentAt = new Date(uploadedAt).toISOString();
+  return list;
 }
 
 let suklNames;

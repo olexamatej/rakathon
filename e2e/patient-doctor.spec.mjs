@@ -69,6 +69,9 @@ for (const source of ['mobile', 'desktop']) {
         await doctor.locator('#pin-submit').click();
         const retrieval = await retrievalPromise;
         expect(retrieval.status(), 'Doctor must retrieve by PIN alone').toBe(200);
+        const uploadedAt = retrieval.headers()['x-uploaded-at'];
+        expect(Number.isFinite(Date.parse(uploadedAt))).toBe(true);
+        await expect(doctor.locator('.patient-record time')).toHaveAttribute('datetime', new Date(uploadedAt).toISOString());
         expect(await retrieval.json()).toEqual(payload);
         await expect(doctor.locator('#main tbody tr')).toHaveCount(medicines.length);
         for (const [index, item] of medicines.entries()) {

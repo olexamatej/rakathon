@@ -15,7 +15,7 @@ test('remote backend preserves storage bytes, query, auth, status and retry-afte
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     requests.push({ method: req.method, url: req.url, headers: req.headers, body: Buffer.concat(chunks) });
-    const headers = { 'Content-Type': 'application/json', 'Set-Cookie': 'private=secret' };
+    const headers = { 'Content-Type': 'application/json', 'Set-Cookie': 'private=secret', 'X-Uploaded-At': '2026-10-17T12:34:56Z' };
     if (req.method === 'DELETE') return res.writeHead(204, headers).end();
     if (req.url.includes('offset=100')) return res.writeHead(429, { ...headers, 'Retry-After': '60' }).end('{"status":429}');
     if (req.url.endsWith('/MISSING')) return res.writeHead(404, headers).end('{"status":404}');
@@ -38,6 +38,7 @@ test('remote backend preserves storage bytes, query, auth, status and retry-afte
   for (const name of ['authorization', 'cookie', 'x-forwarded-for']) assert.equal(requests[0].headers[name], undefined);
   const retrieval = await fetch(base + '/api/v1/transfers/A7K2QM');
   assert.equal(await retrieval.text(), payload);
+  assert.equal(retrieval.headers.get('x-uploaded-at'), '2026-10-17T12:34:56Z');
   assert.equal((await fetch(base + '/api/v1/transfers/MISSING')).status, 404);
   const admin = await fetch(base + '/api/v1/admin/blobs?offset=100', { headers: { Authorization: 'Bearer synthetic-test-password' } });
   assert.equal(admin.status, 429);

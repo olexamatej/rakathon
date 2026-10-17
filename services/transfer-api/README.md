@@ -43,6 +43,12 @@ Keep the database and HMAC secret outside Git and images. Changing the HMAC
 secret makes existing PINs unusable. On this VPS, run builds/tests only in an
 isolated non-root sandbox, not as the Docker-enabled host user.
 
+Successful GETs return `X-Uploaded-At` (RFC 3339 UTC) from the stored upload
+timestamp. POST sets it, PUT updates it atomically with the payload. Existing
+rows retain their original upload time until updated. The existing `created_at`
+column tracks this most recent upload, so updated blobs move up in admin listings.
+No schema migration is required.
+
 Operational probes remain `GET /health/live` and `GET /health/ready`.
 The latter checks SQLite. Source rate limits are 30 combined POST/PUT writes and 20 GETs per minute;
 clients behind the current proxy share the socket-IP limit. HTTP 429 includes

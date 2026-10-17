@@ -167,7 +167,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(config.cors_origins.clone()))
         .allow_methods([Method::GET, Method::POST, Method::PUT])
-        .allow_headers([header::CONTENT_TYPE]);
+        .allow_headers([header::CONTENT_TYPE])
+        .expose_headers([HeaderName::from_static("x-uploaded-at")]);
 
     let app = storage_router(state)
         .layer(cors);
@@ -325,7 +326,7 @@ async fn update_blob(
         return Err(ApiError::BadRequest);
     }
     let digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
-    let updated = state.store.update_blob(&digest, &body).await.map_err(|_| {
+    let updated = state.store.update_blob(&digest, &body, now).await.map_err(|_| {
         error!("blob transfer update failed");
         ApiError::Unavailable
     })?;
@@ -356,16 +357,19 @@ async fn get_blob(
             return Err(ApiError::NotFound);
         }
         let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
-        let payload = state
+        let (payload, uploaded_at) = state
             .store
-            .get_blob(&pin_digest)
+            .get_blob_with_uploaded_at(&pin_digest)
             .await
             .map_err(|_| {
                 error!("blob transfer lookup failed");
                 ApiError::Unavailable
             })?
             .ok_or(ApiError::NotFound)?;
-        Ok(([(header::CONTENT_TYPE, "application/json")], payload).into_response())
+        let uploaded_at = chrono::DateTime::from_timestamp(uploaded_at, 0)
+            .ok_or(ApiError::Unavailable)?.to_rfc3339();
+        Ok(([(header::CONTENT_TYPE.as_str(), "application/json"),
+            ("x-uploaded-at", uploaded_at.as_str())], payload).into_response())
     }.await;
     let status = match &result {
         Ok(response) => response.status(),
@@ -574,6 +578,7 @@ mod blob_tests {
             ).await.unwrap_or_else(|_| panic!("lookup failed"));
             assert_eq!(response.status(), StatusCode::OK);
             assert_eq!(response.headers()[header::CONTENT_TYPE], "application/json");
+            assert!(chrono::DateTime::parse_from_rfc3339(response.headers()["x-uploaded-at"].to_str().unwrap()).is_ok());
             let body = axum::body::to_bytes(response.into_body(), MAX_BODY_BYTES).await.unwrap();
             assert_eq!(&body[..], payload.as_bytes());
         }

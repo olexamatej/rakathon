@@ -81,15 +81,25 @@ impl TransferStore {
         Ok(result.rows_affected() == 1)
     }
 
-    pub async fn update_blob(&self, pin_digest: &[u8; 32], payload: &[u8]) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("UPDATE blob_transfers SET payload = ? WHERE pin_digest = ?")
+    pub async fn update_blob(&self, pin_digest: &[u8; 32], payload: &[u8], uploaded_at: i64) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query("UPDATE blob_transfers SET payload = ?, created_at = ? WHERE pin_digest = ?")
             .bind(payload)
+            .bind(uploaded_at)
             .bind(pin_digest.as_slice())
             .execute(&self.pool)
             .await?;
         Ok(result.rows_affected() == 1)
     }
 
+    // The existing timestamp tracks the last patient upload (POST or PUT).
+    pub async fn get_blob_with_uploaded_at(&self, pin_digest: &[u8; 32]) -> Result<Option<(Vec<u8>, i64)>, sqlx::Error> {
+        sqlx::query_as("SELECT payload, created_at FROM blob_transfers WHERE pin_digest = ?")
+            .bind(pin_digest.as_slice())
+            .fetch_optional(&self.pool)
+            .await
+    }
+
+    #[cfg(test)]
     pub async fn get_blob(&self, pin_digest: &[u8; 32]) -> Result<Option<Vec<u8>>, sqlx::Error> {
         sqlx::query_scalar("SELECT payload FROM blob_transfers WHERE pin_digest = ?")
             .bind(pin_digest.as_slice())
@@ -151,6 +161,21 @@ mod tests {
         assert_eq!(store.get_blob(&digest).await.unwrap().unwrap(), payload);
         assert_eq!(store.get_blob(&digest).await.unwrap().unwrap(), payload);
         assert!(store.get_blob(&[8; 32]).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn uploaded_at_tracks_post_and_put_without_changing_pin_or_bytes() {
+        let pool = SqlitePoolOptions::new().max_connections(1)
+            .connect("sqlite::memory:").await.unwrap();
+        crate::migrate(&pool).await.unwrap();
+        let store = TransferStore::new(pool);
+        let digest = [4; 32];
+        assert!(store.create_blob(&digest, None, b"{}", 10).await.unwrap());
+        assert_eq!(store.get_blob_with_uploaded_at(&digest).await.unwrap(), Some((b"{}".to_vec(), 10)));
+        assert!(store.update_blob(&digest, b" {\"changed\":true} ", 20).await.unwrap());
+        assert_eq!(store.get_blob_with_uploaded_at(&digest).await.unwrap(), Some((b" {\"changed\":true} ".to_vec(), 20)));
+        assert!(!store.update_blob(&[5; 32], b"{}", 30).await.unwrap());
+        assert_eq!(store.list_blobs(0, false).await.unwrap().len(), 1);
     }
 
     #[tokio::test]

@@ -87,7 +87,7 @@ async function proxyBackend(req, res, origin, path) {
       redirect: 'error', signal: AbortSignal.timeout(path === '/api/transcribe' ? 130_000 : 35_000),
     });
     const responseHeaders = { ...securityHeaders, 'Cache-Control': 'no-store' };
-    for (const name of ['content-type', 'retry-after', 'content-language', 'allow']) {
+    for (const name of ['content-type', 'retry-after', 'content-language', 'allow', 'x-uploaded-at']) {
       if (response.headers.has(name)) responseHeaders[name] = response.headers.get(name);
     }
     const body = Buffer.from(await response.arrayBuffer());

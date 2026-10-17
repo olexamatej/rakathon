@@ -223,8 +223,13 @@ function cellInput(item, field, label, attributes = {}) {
 }
 
 function listView(list) {
-  return `<div class="list-head"><button type="button" class="icon-button close-list" data-action="close-list" aria-label="Zavřít aktuální seznam" title="Zavřít aktuální seznam">${icon('close')}</button><div id="pin-entry"></div>
-      <p class="upload-info">Nahráno pacientem${list.sentAt ? ` ${escape(date(list.sentAt))} v ${escape(time(list.sentAt))}` : ''}</p></div>
+  return `<div class="list-head"><div id="pin-entry"></div></div>
+    <section class="patient-record" aria-label="Seznam pacienta">
+      <div class="record-heading">
+        <strong class="record-pin">PIN ${escape(list.pin)}</strong>
+        <p class="upload-info">Nahráno pacientem ${list.sentAt ? `<time datetime="${escape(list.sentAt)}">${escape(date(list.sentAt))} v ${escape(time(list.sentAt))}</time>` : '· čas nahrání není dostupný'}</p>
+        <button type="button" class="icon-button close-list" data-action="close-list" aria-label="Zavřít aktuální seznam" title="Zavřít aktuální seznam">${icon('close')}</button>
+      </div>
     ${regimenRow(list)}
     ${list.items.length ? `<div class="table-wrap"><table class="med-table"><thead><tr>
         <th>Léčivo</th><th>Síla / dávkování</th><th>Kdy</th><th>Léčivé látky</th><th><span class="sr-only">Akce</span></th></tr></thead><tbody>
@@ -239,6 +244,7 @@ function listView(list) {
     <div class="table-actions"><button type="button" class="small-button" data-action="add-item">${icon('plus')} Přidat léčivo</button>
       <span class="copy-group"><button type="button" class="small-button" data-action="copy-lines" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat v tabulce</span></button>
       <button type="button" class="small-button" data-action="copy-inline" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat do řádku</span></button></span></div>
+    </section>
     <div id="interactions-slot">${interactionsView(list)}</div>`;
 }
 
