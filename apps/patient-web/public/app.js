@@ -43,7 +43,6 @@ const icons = {
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</svg>`;
-const itemCount = count => `${count} ${count === 1 ? 'léčivo' : count > 1 && count < 5 ? 'léčiva' : 'léčiv'}`;
 const isBusy = () => loadFailed || processing || sending;
 
 function persist() {
@@ -90,8 +89,8 @@ function editor() {
   return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
     <form id="list-form">
     <section class="medicines" aria-labelledby="medicines-title">
-      ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
-        <legend class="list-heading">Léčiva v seznamu <span>${itemCount(state.items.length)}</span></legend>${state.items.map((item, index) => `
+      ${state.items.length ? `<fieldset aria-labelledby="list-title" ${busy ? 'disabled' : ''}>
+        <h2 id="list-title" class="list-heading">Seznam léčiv</h2>${state.items.map((item, index) => `
         <article class="medicine"><div class="medicine-info">
           <strong>${escape(item.name || 'Nečitelný název léčiva')}</strong>
           <span>${escape(medicineSummary(item))}</span></div>
