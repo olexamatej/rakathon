@@ -11,10 +11,11 @@ test('transcribed photo uploads a structured list readable by the actual doctor 
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     assert.equal(url, '/api/transcribe');
     assert.equal(options.method, 'POST');
-    return Response.json([{ name: 'Syntetické léčivo 10 mg', schedule: '1-0-0' }]);
+    return Response.json([{ name: 'Syntetické léčivo', strength: '10 mg', schedule: '1-0-0' }]);
   });
   const items = await recognizePhoto(new File(['synthetic image'], 'photo.jpg', { type: 'image/jpeg' }));
-  assert.deepEqual(items.map(item => item.name), ['Syntetické léčivo 10 mg']);
+  assert.deepEqual(items.map(item => item.name), ['Syntetické léčivo']);
+  assert.equal(items[0].dosage, '10 mg');
   const expected = items.map(({ id, ...item }) => item);
   let stored;
   t.mock.method(globalThis, 'fetch', async (_, options) => {

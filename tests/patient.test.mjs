@@ -147,11 +147,13 @@ test('a photo uses the transcription endpoint and preserves unknown fields', asy
     assert.equal(options.body, photo);
     assert.equal(options.headers['Content-Type'], 'image/png');
     assert.equal(options.cache, 'no-store');
-    return Response.json([{ name: 'Concor 5 mg', schedule: '1-0-0' }, { name: 'X', schedule: null }]);
+    return Response.json([{ name: 'Concor', strength: '5 mg', schedule: '1-0-0' }, { name: 'X', strength: null, schedule: null }]);
   });
   const items = await recognizePhoto(photo);
   assert.equal(items[0].schedule, '1-0-0');
-  assert.equal(items[0].dosage, '');
+  assert.equal(items[0].name, 'Concor');
+  assert.equal(items[0].dosage, '5 mg');
+  assert.equal(items[1].dosage, '');
   assert.equal(items[0].dosesPerPackage, '');
   assert.equal(items[1].schedule, undefined);
   assert.equal(items.length, 2);
@@ -183,12 +185,13 @@ test('optional API-provided schedule is passed to the handoff but never required
 test('recognition errors and invalid outputs never produce example medicines', async t => {
   const photo = new File(['synthetic fixture'], 'fixture.png', { type: 'image/png' });
   for (const response of [new Response('', { status: 429 }), new Response('', { status: 503 }), Response.json({ items: [] }),
-    Response.json([{ name: 'X', schedule: '1-0-0', extra: true }]), new Response('{broken')]) {
+    ...[undefined, '', 5, '5\nmg', 'x'.repeat(121)].map(strength => Response.json([{ name: 'X', strength, schedule: null }])),
+    Response.json([{ name: 'X', strength: null, schedule: '1-0-0', extra: true }]), new Response('{broken')]) {
     t.mock.method(globalThis, 'fetch', async () => response);
     await assert.rejects(recognizePhoto(photo));
     t.mock.restoreAll();
   }
-  t.mock.method(globalThis, 'fetch', async () => Response.json([{ name: null, schedule: null }]));
+  t.mock.method(globalThis, 'fetch', async () => Response.json([{ name: null, strength: null, schedule: null }]));
   const items = await recognizePhoto(photo);
   assert.equal(items[0].name, '');
   assert.equal(canSend(items), false);

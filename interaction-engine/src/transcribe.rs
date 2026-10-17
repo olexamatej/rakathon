@@ -34,8 +34,11 @@ const GOOGLE_UPLOAD: &str = "https://generativelanguage.googleapis.com/upload/v1
 pub const DEFAULT_MODEL: &str = "gemini-3.6-flash";
 
 const PROMPT: &str = r#"Transcribe medication information visible in this photograph.
-Return only a JSON array of objects with exactly name and schedule.
-name is the visible medicine name INCLUDING its visible strength and qualifiers.
+Return only a JSON array of objects with exactly name, strength and schedule.
+name is the visible medicine name and qualifiers, WITHOUT its strength.
+strength is the visible medicine strength, including units, e.g. 5 mg, 50 mikrogramů
+or 875 mg/125 mg. Keep combination strengths together. Do not infer missing units
+or derive strength from the dosing schedule.
 schedule is the patient's written dosing, e.g. 1-0-0, 0-0-1, 1/2-0-0 or 0-0-0-1.
 Preserve fractions, units, decimals and free-text instructions as written.
 Normalize spaces around dose-schedule hyphens. Never invent a three-slot schedule
@@ -53,6 +56,7 @@ If no medicines are visible, return []. No explanations or additional fields."#;
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Row {
     pub name: Option<String>,
+    pub strength: Option<String>,
     pub schedule: Option<String>,
 }
 
@@ -137,8 +141,9 @@ fn catalogue_block(names: &[String]) -> String {
 The lines below are official SÚKL catalogue medicine names.
 When a visible medicine name clearly matches one of them despite handwriting,
 case, spacing or a small typo, write that catalogue name exactly as listed and
-keep the visible strength and qualifiers after it as written (visible
-"Concord 5 mg" with catalogue CONCOR becomes "CONCOR 5 mg"). Change only the
+keep qualifiers in name and the visible strength in the separate strength field
+as written (visible "Concord 5 mg" with catalogue CONCOR becomes name "CONCOR"
+and strength "5 mg"). Change only the
 name spelling; never take strengths, forms or dosing from the catalogue, never
 use the catalogue to fill an unreadable name, and transcribe as written when
 there is no clear match.
@@ -153,9 +158,10 @@ fn medication_schema() -> Value {
     json!({
         "type": "array", "maxItems": MAX_ROWS,
         "items": {
-            "type": "object", "additionalProperties": false, "required": ["name", "schedule"],
+            "type": "object", "additionalProperties": false, "required": ["name", "strength", "schedule"],
             "properties": {
                 "name": {"type": ["string", "null"], "maxLength": FIELD_MAX_CHARS},
+                "strength": {"type": ["string", "null"], "maxLength": FIELD_MAX_CHARS},
                 "schedule": {"type": ["string", "null"], "maxLength": FIELD_MAX_CHARS}
             }
         }
@@ -231,10 +237,13 @@ pub fn parse_medications(text: &str) -> anyhow::Result<Vec<Row>> {
     for row in rows {
         let object = row.as_object().context("row is not an object")?;
         anyhow::ensure!(
-            object.len() == 2 && object.contains_key("name") && object.contains_key("schedule"),
-            "row fields are not exactly name and schedule"
+            object.len() == 3
+                && ["name", "strength", "schedule"]
+                    .iter()
+                    .all(|field| object.contains_key(*field)),
+            "row fields are not exactly name, strength and schedule"
         );
-        for field in ["name", "schedule"] {
+        for field in ["name", "strength", "schedule"] {
             let value = &object[field];
             if value.is_null() {
                 continue;
@@ -253,6 +262,7 @@ pub fn parse_medications(text: &str) -> anyhow::Result<Vec<Row>> {
         let schedule = read("schedule").map(|value| normalize_schedule(&value));
         parsed.push(Row {
             name: read("name"),
+            strength: read("strength"),
             schedule,
         });
     }

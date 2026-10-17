@@ -80,25 +80,27 @@ image/jpeg`, `image/png` or `image/webp`. Maximum raw size: 20 MiB. The engine
 checks the file signature. HEIC must be converted to one of these formats first.
 
 ```json
-[{"name":"Concor 5 mg","schedule":"1-0-0"},{"name":"Example 20 mg","schedule":null}]
+[{"name":"Concor","strength":"5 mg","schedule":"1-0-0"},{"name":"Example","strength":null,"schedule":null}]
 ```
 
-The response is an array with exactly `name` and `schedule` per row. Either field
-can be `null`; strings are at most 120 characters, and there are at most 200 rows.
-Visible strength stays in `name`. Fractions and written instructions are preserved;
+The response is an array with exactly `name`, `strength` and `schedule` per row.
+Any field can be `null`; strings are at most 120 characters, and there are at most
+200 rows. Visible strength, including units, is returned separately in `strength`;
+`name` keeps the name and qualifiers. Fractions and written instructions are preserved;
 only numeric schedule separators are normalized (`1/2 – 0 – 0` → `1/2-0-0`).
 A handwritten list takes precedence over a printed list in the same photo.
 When the local SÚKL catalogue is available, the engine appends its official
 medicine names to the instruction: a clearly matching visible name may be written
-with the catalogue spelling (visible strength stays, e.g. `CONCOR 5 mg`).
+with the catalogue spelling (e.g. `name: "CONCOR"`, `strength: "5 mg"`).
 Strengths, forms and dosing are never taken from the catalogue, an unreadable
 name is never filled from it, and no values are invented. The catalogue is read
 from `SUKL_CATALOGUE_PATH` (`npm run engine` defaults to
 `data/sukl/medications.json`); a missing catalogue only skips name correction.
 No medicines gives `[]`.
 
-The existing UI adds local IDs, maps null names to empty editable names, keeps
-unknown dosage/package fields empty, and omits null schedules. An unreadable name
+The existing UI adds local IDs, maps null names to empty editable names, maps
+`strength` to the editable `dosage` field, keeps unknown strength/package fields
+empty, and omits null schedules. An unreadable name
 blocks submission; remove that row and take a clearer photograph. Empty dosage/package fields are valid in
 patient/doctor handoff. This avoids inventing package sizes merely to pass form
 validation. Storage retains its existing structured payload shape.

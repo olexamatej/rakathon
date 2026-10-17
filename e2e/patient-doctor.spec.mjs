@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
 const medicines = [
-  { name: 'PARALEN 500 mg', dosage: '', dosesPerPackage: '', schedule: '1-0-1' },
-  { name: 'IBALGIN 400 mg', dosage: '', dosesPerPackage: '', schedule: '0-1-0' },
-  { name: 'LETROX 50 mikrogramů', dosage: '', dosesPerPackage: '', schedule: '1-0-0' },
+  { name: 'PARALEN', dosage: '500 mg', dosesPerPackage: '', schedule: '1-0-1' },
+  { name: 'IBALGIN', dosage: '400 mg', dosesPerPackage: '', schedule: '0-1-0' },
+  { name: 'LETROX', dosage: '50 mikrogramů', dosesPerPackage: '', schedule: '1-0-0' },
 ];
-const transcription = medicines.map(({ name, schedule }) => ({ name, schedule }));
+const transcription = medicines.map(({ name, dosage, schedule }) => ({ name, strength: dosage, schedule }));
 
 for (const source of ['gallery', 'camera']) {
   test.describe(`patient photo from ${source}`, () => {

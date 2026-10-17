@@ -17,8 +17,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 
 const PNG: &[u8] = &[137, 80, 78, 71, 13, 10, 26, 10];
-const ROWS: &str =
-    r#"[{"name":" CONCOR 5 mg ","schedule":"1/2 – 0 – 0"},{"name":null,"schedule":null}]"#;
+const ROWS: &str = r#"[{"name":" CONCOR ","strength":" 5 mg ","schedule":"1/2 – 0 – 0"},{"name":null,"strength":null,"schedule":null}]"#;
 
 #[derive(Default)]
 struct Captured {
@@ -145,7 +144,7 @@ async fn transcribes_with_catalogue_and_keeps_the_key_in_headers() {
     let rows: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(
         rows,
-        json!([{"name": "CONCOR 5 mg", "schedule": "1/2-0-0"}, {"name": null, "schedule": null}])
+        json!([{"name": "CONCOR", "strength": "5 mg", "schedule": "1/2-0-0"}, {"name": null, "strength": null, "schedule": null}])
     );
     assert_matches_openapi(&rows, "TranscriptionRows");
 
@@ -168,6 +167,12 @@ async fn transcribes_with_catalogue_and_keeps_the_key_in_headers() {
         "application/json"
     );
     assert_eq!(request.body["generationConfig"]["maxOutputTokens"], 8192);
+    let schema = &request.body["generationConfig"]["responseJsonSchema"];
+    assert_eq!(
+        schema["items"]["required"],
+        json!(["name", "strength", "schedule"])
+    );
+    assert!(schema["items"]["properties"]["strength"].is_object());
     let prompt = request.body["systemInstruction"]["parts"][0]["text"]
         .as_str()
         .unwrap();
@@ -260,7 +265,10 @@ async fn maps_provider_failures_to_problem_statuses() {
             StatusCode::BAD_GATEWAY,
         ),
         (
-            canned(r#"[{"name":"X","schedule":null,"extra":1}]"#, "STOP"),
+            canned(
+                r#"[{"name":"X","strength":null,"schedule":null,"extra":1}]"#,
+                "STOP",
+            ),
             StatusCode::OK,
             StatusCode::BAD_GATEWAY,
         ),
@@ -293,11 +301,13 @@ fn parsing_normalizes_only_schedule_typography_and_rejects_incomplete_rows() {
         parse_medications(ROWS).unwrap(),
         vec![
             Row {
-                name: Some("CONCOR 5 mg".into()),
+                name: Some("CONCOR".into()),
+                strength: Some("5 mg".into()),
                 schedule: Some("1/2-0-0".into())
             },
             Row {
                 name: None,
+                strength: None,
                 schedule: None
             }
         ]
@@ -308,22 +318,43 @@ fn parsing_normalizes_only_schedule_typography_and_rejects_incomplete_rows() {
         ("V pondělí večer 1 tableta", "V pondělí večer 1 tableta"),
         ("1-2-3-4-5", "1-2-3-4-5"),
     ] {
-        let rows =
-            parse_medications(&json!([{"name": "X", "schedule": text}]).to_string()).unwrap();
+        let rows = parse_medications(
+            &json!([{"name": "X", "strength": null, "schedule": text}]).to_string(),
+        )
+        .unwrap();
         assert_eq!(rows[0].schedule.as_deref(), Some(schedule), "{text}");
     }
     for text in [
         "```json\n[]\n```",
         "{}",
         r#"[{"name":"X"}]"#,
-        r#"[{"name":"X","schedule":1}]"#,
-        r#"[{"name":"X","schedule":null,"extra":1}]"#,
-        r#"[{"name":"","schedule":null}]"#,
-        r#"[{"name":"X\nY","schedule":null}]"#,
+        r#"[{"name":"X","schedule":null}]"#,
+        r#"[{"name":"X","strength":null,"schedule":1}]"#,
+        r#"[{"name":"X","strength":null,"schedule":null,"extra":1}]"#,
+        r#"[{"name":"","strength":null,"schedule":null}]"#,
+        r#"[{"name":"X\nY","strength":null,"schedule":null}]"#,
     ] {
         assert!(parse_medications(text).is_err(), "{text}");
     }
-    let long = json!([{"name": "X", "schedule": "x".repeat(121)}]).to_string();
+    for strength in [json!("875 mg/125 mg"), json!("50 mikrogramů"), Value::Null] {
+        let rows = parse_medications(
+            &json!([{"name": "X", "strength": strength, "schedule": null}]).to_string(),
+        )
+        .unwrap();
+        assert_eq!(
+            serde_json::to_value(&rows[0]).unwrap()["strength"],
+            strength
+        );
+    }
+    for strength in [json!(""), json!(5), json!("5\nmg"), json!("x".repeat(121))] {
+        assert!(
+            parse_medications(
+                &json!([{"name": "X", "strength": strength, "schedule": null}]).to_string()
+            )
+            .is_err()
+        );
+    }
+    let long = json!([{"name": "X", "strength": null, "schedule": "x".repeat(121)}]).to_string();
     assert!(parse_medications(&long).is_err());
     assert_eq!(parse_medications("[]").unwrap(), Vec::new());
 }
