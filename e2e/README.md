@@ -2,11 +2,21 @@
 
 `storage.spec.mjs` logs into storage admin, counts every page, submits a unique
 synthetic patient draft by clicking **Odeslat seznam**, verifies the displayed
-server-issued PIN and exact structured list read back through that PIN, loads the same list
-by PIN in a separate doctor browser context, then reloads admin and requires
-**exactly one additional record**.
+server-issued PIN and **exactly one additional record** before retrieval. A separate
+doctor context retrieves the exact list once, deleting the stored row; admin then
+returns to its original inventory.
 
-`patient-doctor.spec.mjs` covers **Vyfotit** on mobile and **Z knihovny** on desktop with
+`storage-validity.spec.mjs` checks local-expiry-first validation without API calls
+for expired receipts, HEAD/renewal for available lists, retaining invalid local data after
+consumption, and network failures without stale PIN display. `patient-resume.spec.mjs`
+also verifies fresh photo upload after a real doctor's consuming GET.
+Save scenarios cover missing/expired uploads, consumption between HEAD and PUT,
+and network errors: current edits survive, POST is chosen only when necessary,
+and no fallback copy is made for uncertain writes.
+Additional lifecycle coverage includes editor entry after doctor consumption,
+expiry during photo recognition, and another tab replacing patient storage.
+
+`patient-doctor.spec.mjs` covers **Vyfotit** on mobile and **Z galerie** on desktop with
 service workers enabled: a patient uploads a tiny synthetic image, the app's mock
 recognizer creates three complete sample medicines, and the
 patient submits them to the real Rust storage API. A clean doctor browser context

@@ -1,5 +1,16 @@
 # Rakathon / PillGaze — kontext pro dalšího agenta
 
+### Aktualizace 17. 10. 2026 — jednotný čtyřmístný PIN storage
+
+- Větev `feat/storage-four-digit-pin`, worktree `/home/rhodes/rakathon-storage-four-digit-pin`: API POST generuje přesně čtyři ASCII číslice `0000`–`9999`; GET/PUT, pacientské receipts, lékařský formulář/query i kontrakt používají stejný formát. PIN je řetězec, počáteční nuly se zachovají; admin zobrazuje PIN vydaný serverem.
+- Generování používá kryptografickou náhodu bez modulo bias. Po kolizích projde zbývající prostor; unikátní DB klíč brání přepsání při souběhu. Kapacita je 10 000 obsazených PINů, při zaplnění POST vrací 503 a PUT stále funguje. Bez expirace a bez nové DB migrace.
+- Staré šestimístné PINy nové GET/PUT odmítají; původní DB řádky zůstávají v adminu, bez přečíslování či mazání. Pacient v1/v2 receipt migruje do rozepsaného seznamu pro nové uložení, zachová rozpracovaná data i původní localStorage klíče. Aktivní pacientský klíč je `pillgaze:patient:v3`, lékařský `pillgaze:doctor:v2` (starý v1 zůstává uložený).
+- Ověření offline/non-root: **82 aplikačních + 22 Rust + 11 Playwright testů**. Pokryty `0042`, neplatné/staré kódy bez zkracování query, poslední volný PIN při souběhu, plné úložiště, lokální migrace a pacient → admin → lékař na mobilu i desktopu.
+- Hostový `/home/rhodes/pillgaze-transfer/bin/check-storage.py` přijímá 4 číslice i dosavadní 6 znaků, aby fungoval před i po rollout; služba sama po změně vydává/přijímá pouze 4 číslice. Záloha probe a testovací skripty/logy jsou v `/home/rhodes/logs/storage-four-digit-pin/`.
+- **Nenasazeno; vyžaduje společný API/UI deploy.** Žádné produkční uploady, mazání, DNS/firewall/porty ani restart služeb. Pro rollback kódu vrátit příslušný commit a nasadit API/UI společně; data ani HMAC secret neměnit. Původní probe lze obnovit ze `check-storage.before.py`.
+- Testy běžely v tmux `rakathon-four-pin` / `rakathon-four-pin-final`; `tmux ls`, `tmux attach -t rakathon-four-pin-final`, přerušení Ctrl-C uvnitř. Session po dokončení skončí. Testy používají pouze dočasnou SQLite a samostatný build cache volume, nikoli runner credentials nebo živou DB.
+
+
 ### Aktualizace 17. 10. 2026 — odstranění Expo prototypu
 
 - Kořenový Expo prototyp (`App.tsx`, `index.ts`, `src/`), jeho demo testy,

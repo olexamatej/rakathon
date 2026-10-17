@@ -1,22 +1,30 @@
 # Blob storage API
 
-Rust/Axum + SQLite. Two public data endpoints, plus optional protected administration:
+Rust/Axum + SQLite. Public storage endpoints, plus optional protected administration:
 
 | Endpoint | Behavior |
 | --- | --- |
-| `POST /v1/transfers` | Store any valid JSON, preserving exact request bytes; return HTTP 201 with only `{"pin":"A7K2QM"}`. |
+| `POST /v1/transfers` | Store any valid JSON, preserving exact request bytes; return HTTP 201 with only `{"pin":"0042"}`. |
 | `GET /v1/transfers/{pin}` | Return the original JSON bytes, HTTP 200 and `Content-Type: application/json`; unknown or invalid PIN returns 404. |
+| `HEAD /v1/transfers/{pin}` | Check availability without consuming JSON; requires `X-Owner-Token`. |
+| `PUT /v1/transfers/{pin}` | Replace JSON under the same PIN; requires `X-Owner-Token`. |
+| `POST /v1/transfers/{pin}/renew` | Add 14 days to the existing deadline (or now if already past); requires `X-Owner-Token`, no body. |
 
 Through the VPS frontend proxy, prefix these paths with `/api`.
 POST requires `Content-Type: application/json`; the maximum body is 1 MiB
 (1,048,576 bytes), enforced by the API and SQLite.
 No medication schema, wrapper, or encryption envelope is required.
-New PINs use six uniformly random characters from `23456789ABCDEFGHJKMNPQRSTVWXYZ`,
-excluding ambiguous `0`, `1`, `I`, `L`, and `O` (and the previously excluded `U`).
-Previously issued PINs containing `0` or `1` remain valid for retrieval.
+PINs are exactly four ASCII digits, returned and accepted as strings (`0000`–`9999`).
+Leading zeros are significant. Generation uses unbiased cryptographic randomness.
+There are at most 10,000 simultaneously occupied four-digit PINs. After bounded
+random collision retries, allocation scans the remaining codes; concurrent uploads
+are resolved by the database unique key. Full storage returns HTTP 503 without
+modifying existing records. PUT still works when all PINs are occupied.
 Collisions never overwrite data;
-only keyed PIN digests are stored in SQLite. GET is repeatable and does not delete
-or consume the blob. There is no expiry, public DELETE, revocation, or idempotency key.
+keyed PIN digests identify SQLite rows (debug mode may also store the PIN).
+GET atomically deletes and returns the blob: only one concurrent retrieval succeeds.
+If the response is lost, the patient must upload again from scratch.
+There is no public DELETE, revocation, or idempotency key.
 Each successful POST creates a separate database row with a distinct PIN, even
 when the request bytes (including photos or lists) are identical. There is no
 content-based deduplication, including retries. Copies can be deleted independently.
@@ -24,9 +32,9 @@ content-based deduplication, including retries. Copies can be deleted independen
 ```sh
 curl http://127.0.0.1:3000/v1/transfers \
   -H 'Content-Type: application/json' --data-binary '{"items":["synthetic"]}'
-# {"pin":"A7K2QM"} (random)
-curl http://127.0.0.1:3000/v1/transfers/A7K2QM
-# {"items":["synthetic"]}
+# {"pin":"0042"} (random)
+curl http://127.0.0.1:3000/v1/transfers/0042
+# {"items":["synthetic"]}; a second GET returns 404
 ```
 
 ## Run and configuration
@@ -43,21 +51,67 @@ Keep the database and HMAC secret outside Git and images. Changing the HMAC
 secret makes existing PINs unusable. On this VPS, run builds/tests only in an
 isolated non-root sandbox, not as the Docker-enabled host user.
 
+Successful GETs return `X-Uploaded-At` (RFC 3339 UTC) from the stored upload
+timestamp. POST sets it, PUT updates it atomically with the payload. Existing
+rows retain their original upload time until updated. The existing `created_at`
+column tracks this most recent upload, so updated blobs move up in admin listings.
+POST/PUT also return `X-Owner-Token` (random 256-bit upload credential) and
+`X-Expires-At`. Migration 0005 adds ownership and separate expiry timestamps;
+existing rows get a display deadline of upload + 14 days and no ownership token.
+Patient receipts without a valid future local expiry are marked invalid on load.
+Renewal changes only expiry, preserving JSON and the real upload time.
+**Demo only:** validity is display-only. No age-based deletion job or automatic
+age rejection is implemented; cleanup still only deletes rate-limit counters.
+Patient HEAD checks cannot consume data, and stale tokens cannot edit or renew
+a PIN later allocated to another upload. Never log the token.
+Patient load checks local expiry before HEAD. Expired deadlines or missing server
+rows mark the local receipt expired and return to fresh photo upload. The invalid
+PIN/list stay locally; unsent edits are retained separately as `invalidatedDraft`.
+Neither is automatically restored or uploaded. The expired-copy screen displays
+upload/validity timestamps and offers explicit discard (with confirmation) or
+fresh POST of that saved snapshot. Failed reupload keeps the local copy.
+Network errors retain data for another check; expired lists cannot be restored.
+Saving an active patient draft validates availability first: PUT for an existing
+valid upload, POST with a fresh PIN otherwise. A PUT 404 race permits one POST;
+uncertain writes and service errors are not retried. The draft is preserved until
+the write succeeds. This differs intentionally from page-load expiration reset.
+
 Operational probes remain `GET /health/live` and `GET /health/ready`.
-The latter checks SQLite. Source rate limits are 30 POSTs and 20 GETs per minute;
+The latter checks SQLite. Source rate limits are 30 combined POST/PUT/renew writes,
+20 GETs and a separate 60 HEAD checks per minute;
 clients behind the current proxy share the socket-IP limit. HTTP 429 includes
 `Retry-After: 60`. The cleanup worker deletes only expired rate-limit counters.
 All responses carry `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
-Do not log request bodies or request URLs: GET URLs contain the secret PIN.
+In POC mode, every storage GET handler emits INFO events `storage_read_attempt`
+(before validation/rate limiting/database access) and `storage_read_result`
+(with the HTTP status, including 404, 429 and 503). Each carries an explicit UTC
+`timestamp`, `pin`, fixed placeholder `user="poc-user"`, and socket `source_ip`.
+The pair shares a process-local `read_id` for correlation during concurrent reads.
+The identity is not authenticated; behind a proxy the IP identifies the proxy.
+Valid PINs are logged in full; invalid input is escaped and capped at 128 characters.
+An attempt without a result means the operation did not finish (for example shutdown).
+These events use the existing process log stream; no database migration or log
+volume is added. `RUST_LOG` defaults to `info`; a stricter filter suppresses them.
+After deployment, inspect using `docker logs --since 10m pillgaze-transfer-api`.
+Do not log request bodies or full request URLs.
 Ensure gateways, analytics, and access logs do not record those URLs either.
 
 ## Boundaries and compatibility
 
 This is a synthetic-data prototype, not a clinically approved or production-safe
 patient data service. Encryption is not enforced; anyone with a PIN can retrieve
-the blob. Six-character PINs and indefinite retention are not a production
+the blob; replacing it also needs the upload-specific token. Four-digit PINs and indefinite retention are not a production
 security design. Storage grows indefinitely; backups, retention, authentication,
 and production monitoring need separate work.
+
+This changes the previous six-character contract. GET/PUT now reject those old
+PINs (404); their database rows remain available to the protected admin and are
+not deleted or renumbered. Deploy API and patient/doctor UI together. The patient
+migrates its old local receipt to an editable draft for a new POST, preserving any
+unfinished draft; original v1/v2 browser storage stays intact. New receipts use
+`pillgaze:patient:v3`; doctor history uses `pillgaze:doctor:v2`, leaving v1 intact.
+Deleting a record releases its PIN for future uploads; an old shared PIN must not
+be treated as a permanent patient identifier.
 
 The old encrypted upload, redeem, revoke, and browser demo routes are removed.
 Historical SQLite migrations are intentionally retained unchanged so existing

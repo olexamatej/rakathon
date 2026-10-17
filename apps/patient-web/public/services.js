@@ -1,4 +1,4 @@
-import { newId, buildTransferPayload } from './lists.js';
+import { newId, buildTransferPayload, isPin, isOwnerToken } from './lists.js';
 
 let regimens;
 
@@ -44,9 +44,9 @@ export async function recognizePhoto(file) {
     ...(row.schedule !== null ? { schedule: row.schedule } : {}) }));
 }
 
-export async function sendList(payload, existingPin) {
+export async function sendList(payload, existingPin, ownerToken) {
   if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) throw new Error('Seznam je prázdný.');
-  if (existingPin !== undefined && !/^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(existingPin)) {
+  if (existingPin !== undefined && !isPin(existingPin)) {
     throw new Error('Tento PIN nelze upravit v úložišti.');
   }
   const snapshot = buildTransferPayload(payload.items, payload.regimen ?? '');
@@ -55,7 +55,7 @@ export async function sendList(payload, existingPin) {
     // PUT replaces only an existing PIN; never fall back to creating a copy.
     response = await fetch(existingPin ? `/api/v1/transfers/${encodeURIComponent(existingPin)}` : '/api/v1/transfers', {
       method: existingPin ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(ownerToken ? { 'X-Owner-Token': ownerToken } : {}) },
       body: JSON.stringify(snapshot),
       cache: 'no-store',
       credentials: 'omit',
@@ -67,14 +67,79 @@ export async function sendList(payload, existingPin) {
   }
   if (response.status === 429) throw new Error('Příliš mnoho odeslání. Vyčkejte alespoň minutu před dalším pokusem.');
   if (response.status === 413) throw new Error('Seznam je příliš velký. Maximální velikost je 1 MiB.');
-  if (existingPin && response.status === 404) throw new Error('Seznam s tímto PINem již není v úložišti. Změny nebyly uloženy.');
+  if (existingPin && response.status === 404) throw Object.assign(new Error('Platnost seznamu vypršela. Nahrajte fotografie léků znovu.'), { missing: true });
   if (response.status !== (existingPin ? 200 : 201)) throw new Error('Úložiště nyní nemůže potvrdit odeslání seznamu.');
   let pin;
   try {
     ({ pin } = await response.json());
-    if ((existingPin && pin !== existingPin) || typeof pin !== 'string' || !/^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin)) throw new Error();
+    if ((existingPin && pin !== existingPin) || !isPin(pin)) throw new Error();
   } catch {
     throw new Error('Úložiště nevrátilo platný PIN. Seznam již mohl být uložen.');
   }
-  return { pin, sentAt: new Date().toISOString() };
+  return readReceipt(response, pin);
+}
+
+function readReceipt(response, pin) {
+  const ownerToken = response.headers.get('x-owner-token');
+  const sentAt = response.headers.get('x-uploaded-at');
+  const expiresAt = response.headers.get('x-expires-at');
+  // Legacy backend compatibility; it cannot verify ownership or validity.
+  if (!ownerToken && !sentAt && !expiresAt) return { pin, sentAt: new Date().toISOString() };
+  if (!isOwnerToken(ownerToken) || !Number.isFinite(Date.parse(sentAt)) || !Number.isFinite(Date.parse(expiresAt))) {
+    throw new Error('Úložiště nevrátilo platné údaje o platnosti.');
+  }
+  return { pin, ownerToken, sentAt, expiresAt };
+}
+
+export async function checkList(entry) {
+  if (!isOwnerToken(entry.ownerToken)) return null;
+  return validityRequest(entry, false);
+}
+
+// Shared by page load, saving and extension. Unknown availability throws;
+// only a known expired/missing upload returns null.
+export async function validateList(entry) {
+  if (!entry || entry.expired || !(Date.parse(entry.expiresAt) > Date.now())) return null;
+  const receipt = await checkList(entry);
+  // A slow HEAD may cross the deadline; compare again after it completes.
+  return receipt && Date.parse(receipt.expiresAt) > Date.now() ? receipt : null;
+}
+
+export async function renewPatientList(entry) {
+  return await validateList(entry) ? renewList(entry) : null;
+}
+
+export async function savePatientList(payload, entry) {
+  const available = await validateList(entry);
+  if (available) {
+    try {
+      return { receipt: await sendList(payload, available.pin, available.ownerToken), updatedExisting: true };
+    } catch (error) {
+      // The doctor may consume the upload between HEAD and PUT. Only a definite
+      // 404 permits one fresh POST; never retry uncertain writes or service errors.
+      if (!error.missing) throw error;
+    }
+  }
+  return { receipt: await sendList(payload), updatedExisting: false };
+}
+
+export async function renewList(entry) {
+  if (!isOwnerToken(entry.ownerToken)) throw new Error('Obnovte platnost seznamu novým uložením.');
+  return validityRequest(entry, true);
+}
+
+async function validityRequest(entry, renew) {
+  let response;
+  try {
+    response = await fetch(`/api/v1/transfers/${encodeURIComponent(entry.pin)}${renew ? '/renew' : ''}`, {
+      method: renew ? 'POST' : 'HEAD', headers: { 'X-Owner-Token': entry.ownerToken },
+      cache: 'no-store', credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(15000),
+    });
+  } catch { throw new Error('Platnost nelze ověřit. Zkontrolujte připojení.'); }
+  if (response.status === 404) return null;
+  if (response.status === 429) throw new Error('Příliš mnoho požadavků. Vyčkejte alespoň minutu.');
+  if (response.status !== 200) throw new Error('Platnost nyní nelze ověřit.');
+  const receipt = readReceipt(response, entry.pin);
+  if (receipt.ownerToken !== entry.ownerToken || !receipt.expiresAt) throw new Error('Platnost nyní nelze ověřit.');
+  return receipt;
 }

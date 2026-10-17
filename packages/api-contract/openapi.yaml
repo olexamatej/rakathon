@@ -1,12 +1,15 @@
 openapi: 3.1.0
 info:
   title: PillGaze Blob Storage API
-  version: 0.3.0
+  version: 0.5.0
   description: >-
-    Store opaque JSON and retrieve its exact bytes using a six-character PIN.
-    No expiry, consumption, revocation, or encryption enforcement. Synthetic data only.
+    Store opaque JSON and retrieve its exact bytes using a four-digit PIN.
+    Single-use GET retrieval. Fourteen-day validity is display-only for the demo:
+    no automatic age-based deletion or server-side age rejection. Synthetic data only.
     Optional password-protected admin lists metadata and deletes selected or all blobs.
-    Responses use Cache-Control: no-store. Never log payloads, PINs or admin credentials.
+    Responses use Cache-Control: no-store. POC storage reads log the requested PIN,
+    UTC timestamp, placeholder user poc-user, source IP and result status.
+    Never log payloads or admin credentials.
 paths:
   /v1/transfers:
     post:
@@ -15,7 +18,8 @@ paths:
       description: >-
         Every successful POST creates a separate stored blob with a distinct PIN,
         even for byte-identical payloads. No content deduplication or idempotency;
-        repeated submissions are independent copies.
+        repeated submissions are independent copies. At most 10000 four-digit PINs can
+        be occupied; exhausted capacity returns 503 without overwriting any blob.
       requestBody:
         required: true
         content:
@@ -23,7 +27,14 @@ paths:
             schema: {}
       responses:
         '201':
-          description: Stored; the response contains only the PIN.
+          description: Stored; JSON contains only the PIN; ownership and server timestamps are in headers.
+          headers:
+            X-Owner-Token:
+              $ref: '#/components/headers/OwnerToken'
+            X-Uploaded-At:
+              $ref: '#/components/headers/UploadedAt'
+            X-Expires-At:
+              $ref: '#/components/headers/ExpiresAt'
           content:
             application/json:
               schema:
@@ -42,14 +53,41 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
   /v1/transfers/{pin}:
+    head:
+      operationId: checkTransfer
+      summary: Check the patient's owned upload without retrieving or consuming its JSON
+      parameters:
+        - name: pin
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Pin'
+        - $ref: '#/components/parameters/OwnerToken'
+      responses:
+        '200':
+          description: Available; no body. Separate check limit of 60/minute.
+          headers:
+            X-Owner-Token:
+              $ref: '#/components/headers/OwnerToken'
+            X-Uploaded-At:
+              $ref: '#/components/headers/UploadedAt'
+            X-Expires-At:
+              $ref: '#/components/headers/ExpiresAt'
+        '404':
+          description: Missing PIN or missing/mismatched ownership token.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
     put:
       operationId: updateTransfer
       summary: Replace an existing blob under the same PIN
       description: >-
-        Possession of the PIN permits replacing its exact JSON bytes. Does not
+        The PIN and upload-specific X-Owner-Token permit replacing exact JSON bytes. Does not
         create a blob when the PIN is missing. Last successful write wins.
         Shares the POST source limit of 30 writes per minute. No automatic retries.
       parameters:
+        - $ref: '#/components/parameters/OwnerToken'
         - name: pin
           in: path
           required: true
@@ -62,7 +100,14 @@ paths:
             schema: {}
       responses:
         '200':
-          description: Replaced; returns the same PIN.
+          description: Replaced; returns the same PIN, upload time and a new 14-day validity deadline.
+          headers:
+            X-Owner-Token:
+              $ref: '#/components/headers/OwnerToken'
+            X-Uploaded-At:
+              $ref: '#/components/headers/UploadedAt'
+            X-Expires-At:
+              $ref: '#/components/headers/ExpiresAt'
           content:
             application/json:
               schema:
@@ -84,7 +129,7 @@ paths:
           $ref: '#/components/responses/Unavailable'
     get:
       operationId: getTransfer
-      summary: Retrieve the original JSON blob without modifying or consuming it
+      summary: Retrieve exact JSON once and atomically delete the stored blob
       parameters:
         - name: pin
           in: path
@@ -94,11 +139,53 @@ paths:
       responses:
         '200':
           description: Exact original request bytes, with application/json content type.
+          headers:
+            X-Uploaded-At:
+              description: UTC time of the most recent successful POST or PUT, recorded by storage.
+              schema:
+                type: string
+                format: date-time
           content:
             application/json:
               schema: {}
         '404':
           description: Unknown or invalid PIN.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/transfers/{pin}/renew:
+    post:
+      operationId: renewTransfer
+      summary: Extend displayed validity to 14 days from now without changing upload time or JSON
+      description: Shares the POST/PUT write limit. No body, no automatic retry or age-deletion job.
+      parameters:
+        - name: pin
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Pin'
+        - $ref: '#/components/parameters/OwnerToken'
+      responses:
+        '200':
+          description: Renewed; JSON contains the same PIN.
+          headers:
+            X-Owner-Token:
+              $ref: '#/components/headers/OwnerToken'
+            X-Uploaded-At:
+              $ref: '#/components/headers/UploadedAt'
+            X-Expires-At:
+              $ref: '#/components/headers/ExpiresAt'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [pin]
+                properties:
+                  pin:
+                    $ref: '#/components/schemas/Pin'
+        '404':
+          description: Missing PIN or missing/mismatched ownership token; nothing created.
         '429':
           $ref: '#/components/responses/RateLimited'
         '503':
@@ -174,7 +261,8 @@ paths:
                           minimum: 0
                           description: Exact JSON payload byte count, not database disk usage.
                         pin:
-                          $ref: '#/components/schemas/Pin'
+                          type: string
+                          description: Stored debug PIN, including historical six-character codes.
                         payload:
                           type: string
                           description: Exact stored JSON text, available only in debug mode.
@@ -237,6 +325,31 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
 components:
+  parameters:
+    OwnerToken:
+      name: X-Owner-Token
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-f0-9]{64}$'
+      description: Upload-specific patient credential; never log it or forward it to admin/engine routes.
+  headers:
+    OwnerToken:
+      description: Random 256-bit patient ownership token, stored locally with the receipt.
+      schema:
+        type: string
+        pattern: '^[a-f0-9]{64}$'
+    UploadedAt:
+      description: Server UTC time of the latest POST/PUT; renewal preserves this time.
+      schema:
+        type: string
+        format: date-time
+    ExpiresAt:
+      description: Display-only validity deadline; no age-based automatic deletion in the demo.
+      schema:
+        type: string
+        format: date-time
   securitySchemes:
     StorageAdminPassword:
       type: http
@@ -246,9 +359,12 @@ components:
     Pin:
       type: string
       description: >-
-        Six-character PIN. New PINs use 23456789ABCDEFGHJKMNPQRSTVWXYZ;
-        existing PINs containing 0 or 1 remain accepted for retrieval.
-      pattern: '^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$'
+        Exactly four ASCII digits (0000–9999), always a string. Preserve leading zeros.
+        Previous six-character PINs are no longer accepted by GET or PUT.
+      pattern: '^[0-9]{4}$'
+      minLength: 4
+      maxLength: 4
+      example: '0042'
   responses:
     BadRequest:
       description: Request is invalid.

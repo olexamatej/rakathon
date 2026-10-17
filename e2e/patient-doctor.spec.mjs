@@ -29,7 +29,7 @@ for (const source of ['mobile', 'desktop']) {
       }
       await page.goto('/pacient');
       const chooserPromise = page.waitForEvent('filechooser');
-      await page.getByRole('button', { name: source === 'mobile' ? 'Vyfotit' : 'Z knihovny', exact: true }).click();
+      await page.getByRole('button', { name: source === 'mobile' ? 'Vyfotit' : 'Z galerie', exact: true }).click();
       await (await chooserPromise).setFiles({
         name: `synthetic-${randomUUID()}.png`, mimeType: 'image/png',
         buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64'),
@@ -45,7 +45,7 @@ for (const source of ['mobile', 'desktop']) {
       const payload = upload.request().postDataJSON();
       expect(payload).toEqual({ version: 1, regimen: '', items: medicines });
       const { pin } = await upload.json();
-      expect(typeof pin === 'string' && /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
+      expect(typeof pin === 'string' && /^[0-9]{4}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
       await expect(page.locator('h1.pin')).toBeVisible();
       expect(await page.locator('h1.pin').textContent() === pin, 'Patient must display the server PIN').toBe(true);
 
@@ -69,6 +69,9 @@ for (const source of ['mobile', 'desktop']) {
         await doctor.locator('#pin-submit').click();
         const retrieval = await retrievalPromise;
         expect(retrieval.status(), 'Doctor must retrieve by PIN alone').toBe(200);
+        const uploadedAt = retrieval.headers()['x-uploaded-at'];
+        expect(Number.isFinite(Date.parse(uploadedAt))).toBe(true);
+        await expect(doctor.locator('.patient-record time')).toHaveAttribute('datetime', new Date(uploadedAt).toISOString());
         expect(await retrieval.json()).toEqual(payload);
         await expect(doctor.locator('#main tbody tr')).toHaveCount(medicines.length);
         for (const [index, item] of medicines.entries()) {

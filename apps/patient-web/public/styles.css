@@ -58,7 +58,9 @@ h2 { font-size: 18px; font-weight: 650; letter-spacing: -.3px; }
 #regimen-list li { padding: 10px; border-radius: 8px; font-size: 15px; cursor: pointer; overflow-wrap: anywhere; }
 #regimen-list li:hover, #regimen-list li[aria-selected="true"] { background: var(--tint); }
 .submission-regimen { font-size: 13px; padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--line); }
-.photo-section { margin: 16px 0 20px; }
+.photo-section { margin: 24px 0 32px; padding: 24px 0; }
+.photo-section--intro { padding: 40px 8px 48px; }
+.photo-section h2 { margin-bottom: 24px; line-height: 1.4; }
 .photo-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
 .section-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .primary, .secondary { min-height: 44px; border-radius: 12px; padding: 10px 14px; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid var(--brand); }
@@ -72,9 +74,8 @@ h2 { font-size: 18px; font-weight: 650; letter-spacing: -.3px; }
 .empty-list { text-align: center; padding: 24px 12px; border: 1px dashed var(--line); border-radius: 18px; margin-top: 12px; }
 .empty-list svg { display: block; width: 30px; height: 30px; margin: 0 auto 8px; color: #71839a; }
 .empty-list strong { font-size: 15px; font-weight: 600; }
-fieldset { padding: 14px; border: 1px solid var(--line); border-radius: 16px; margin: 0; min-width: 0; background: #fff; }
-.list-heading { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; margin: 0 0 10px; font-size: 17px; font-weight: 650; letter-spacing: -.3px; }
-.list-heading span { padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--tint-2); color: var(--brand); font-size: 12px; font-weight: 650; letter-spacing: 0; }
+fieldset { padding: 20px; border: 1px solid var(--line); border-radius: 16px; margin: 0; min-width: 0; background: #fff; }
+.list-heading { margin: 0 0 16px; font-size: 18px; font-weight: 650; letter-spacing: -.3px; }
 .medicine { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .medicine + .medicine { margin-top: 8px; }
 .medicine-info { flex: 1; min-width: 0; display: grid; gap: 2px; overflow-wrap: anywhere; }
@@ -97,20 +98,9 @@ input:disabled { opacity: .7; }
 .pin-caption { color: var(--muted); font-size: 15px; }
 .pin { font-size: clamp(36px, 10vw, 60px); letter-spacing: .16em; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .generated-at { color: var(--muted); font-size: 13px; }
+.expired-heading { display: flex; align-items: center; justify-content: center; gap: 10px; color: #a43832; }
+.expired-date { color: #a43832; }
 .current-submission .primary { min-height: 52px; margin-top: 8px; font-size: 16px; }
-.submission-history { border-top: 1px solid var(--line); padding-top: 20px; }
-.submission-history > p { margin-top: 6px; color: var(--muted); font-size: 12px; }
-.submission-history > ul { list-style: none; margin: 14px 0 0; padding: 0; }
-.submission-history > ul > li + li { margin-top: 8px; }
-.submission-history > .full { margin-top: 12px; }
-.submission-history details { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
-.submission-history summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 14px; cursor: pointer; }
-.submission-history summary code { color: var(--brand); font-size: 16px; font-weight: 700; letter-spacing: .12em; }
-.submission-history summary time { color: var(--muted); font-size: 12px; text-align: right; }
-.history-items { list-style: none; margin: 0; padding: 0 14px 12px; }
-.history-items li { display: grid; gap: 3px; padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
-.history-items strong { font-size: 13px; font-weight: 600; }
-.history-items span { color: var(--muted); font-size: 12px; }
 .notice { padding: 10px; margin-top: 12px; background: var(--tint); color: #365578; font-size: 13px; line-height: 1.6; border-radius: 10px; }
 .text-button { background: none; border: 0; padding: 8px 0; color: inherit; text-decoration: underline; }
 .message { font-size: 13px; margin-top: 12px; }
@@ -129,7 +119,6 @@ dialog p { font-size: 14px; margin: 12px 0; }
   .brand img { width: 32px; height: 32px; }
   .install-button { width: 36px; height: 36px; }
   .shell > main { padding-top: 18px; }
-  .photo-section { padding: 15px; }
 }
 @media (max-width: 350px) {
   .photo-actions { grid-template-columns: 1fr; }
@@ -139,7 +128,16 @@ dialog p { font-size: 14px; margin: 12px 0; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
-.photo-actions { display: grid; gap: 10px; }
-#camera-dialog { width: min(560px, calc(100% - 32px)); }
-#camera-video { display: block; width: 100%; border-radius: 12px; background: #000; aspect-ratio: 4 / 3; object-fit: cover; }
-.camera-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.photo-actions { display: grid; gap: 16px; }
+.photo-actions button { min-height: 56px; padding: 16px 20px; }
+#camera-dialog { width: calc(100vw - 16px); max-width: none; height: calc(100vh - 16px); height: calc(100dvh - 16px); max-height: none; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); background: #101722; border-radius: 16px; overflow: hidden; }
+#camera-dialog[open] { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 12px; }
+#camera-video { display: block; width: 100%; height: 100%; min-height: 0; border-radius: 12px; background: #000; object-fit: contain; }
+.camera-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.camera-actions button { min-height: 48px; }
+.saved-list { text-align: left; margin: 24px 0; }
+.current-submission > button { margin-top: 12px; }
+.validity-date { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
+.validity-help { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--brand); font-size: 13px; font-weight: 700; }
+.validity-help:hover { background: var(--tint-2); border-radius: 50%; }
+.validity-info { max-width: 440px; padding: 12px; background: var(--tint-2); border-radius: 12px; font-size: 14px; text-align: left; }

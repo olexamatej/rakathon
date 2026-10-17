@@ -13,7 +13,6 @@ const escape = value => String(value).replace(/[&<>"']/g, char => ({
 })[char]);
 const date = value => new Intl.DateTimeFormat('cs', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value));
 const time = value => new Intl.DateTimeFormat('cs', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
-const itemCount = count => `${count} ${count === 1 ? 'léčivo' : count > 1 && count < 5 ? 'léčiva' : 'léčiv'}`;
 const icons = {
   trash: '<path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
@@ -224,8 +223,13 @@ function cellInput(item, field, label, attributes = {}) {
 }
 
 function listView(list) {
-  return `<div class="list-head"><button type="button" class="icon-button close-list" data-action="close-list" aria-label="Zavřít aktuální seznam" title="Zavřít aktuální seznam">${icon('close')}</button><h1>Seznam léčiv</h1>
-      <p>PIN <code>${escape(list.pin)}</code> · ${list.sentAt ? 'odesláno' : 'načteno'} ${escape(date(list.sentAt || list.loadedAt))} v ${escape(time(list.sentAt || list.loadedAt))} · ${itemCount(list.items.length)}</p></div>
+  return `<div class="list-head"><div id="pin-entry"></div></div>
+    <section class="patient-record" aria-label="Seznam pacienta">
+      <div class="record-heading">
+        <strong class="record-pin">PIN ${escape(list.pin)}</strong>
+        <p class="upload-info">Nahráno pacientem ${list.sentAt ? `<time datetime="${escape(list.sentAt)}">${escape(date(list.sentAt))} v ${escape(time(list.sentAt))}</time>` : '· čas nahrání není dostupný'}</p>
+        <button type="button" class="icon-button close-list" data-action="close-list" aria-label="Zavřít aktuální seznam" title="Zavřít aktuální seznam">${icon('close')}</button>
+      </div>
     ${regimenRow(list)}
     ${list.items.length ? `<div class="table-wrap"><table class="med-table"><thead><tr>
         <th>Léčivo</th><th>Síla / dávkování</th><th>Kdy</th><th>Léčivé látky</th><th><span class="sr-only">Akce</span></th></tr></thead><tbody>
@@ -240,13 +244,17 @@ function listView(list) {
     <div class="table-actions"><button type="button" class="small-button" data-action="add-item">${icon('plus')} Přidat léčivo</button>
       <span class="copy-group"><button type="button" class="small-button" data-action="copy-lines" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat v tabulce</span></button>
       <button type="button" class="small-button" data-action="copy-inline" ${list.items.length ? '' : 'disabled'}>${icon('copy')} <span>Kopírovat do řádku</span></button></span></div>
+    </section>
     <div id="interactions-slot">${interactionsView(list)}</div>`;
 }
 
 function render() {
+  const pinForm = $('#pin-form');
   const list = currentList();
   $('#main').innerHTML = list ? listView(list)
-    : `<div class="doc-empty">${icon('list')}<strong>Zadejte PIN pacienta</strong>Seznam léčiv se zobrazí zde.</div>`;
+    : '<div class="list-head"><div id="pin-entry"></div></div>';
+  // Move the existing form to preserve its listeners, value and loading/error state.
+  $('#pin-entry').append(pinForm);
   document.title = `${list ? `PIN ${list.pin}` : 'Lékař'} · PillGaze`;
   document.querySelectorAll('.cell-input[data-field="name"]').forEach(input => medicineNames.bind(input));
   document.querySelectorAll('.regimen-input').forEach(input => regimenNames.bind(input));
@@ -340,7 +348,7 @@ function clearInteractions(list) {
 // --- PIN entry ---
 const pinInput = $('#pin');
 pinInput.addEventListener('input', () => {
-  pinInput.value = normalizePin(pinInput.value).slice(0, 6);
+  pinInput.value = normalizePin(pinInput.value);
   $('#pin-error').textContent = '';
   pinInput.removeAttribute('aria-invalid');
 });
@@ -350,7 +358,7 @@ $('#pin-form').addEventListener('submit', async event => {
   if (loading) return;
   const pin = normalizePin(pinInput.value);
   if (!isPin(pin)) {
-    $('#pin-error').textContent = 'PIN má 6 znaků (písmena A–Z a číslice 0–9).';
+    $('#pin-error').textContent = 'PIN musí mít přesně 4 číslice.';
     pinInput.setAttribute('aria-invalid', 'true');
     return;
   }
@@ -366,7 +374,7 @@ $('#pin-form').addEventListener('submit', async event => {
     applySubstances(list.items, await loadSuklSubstances());
     if (request !== pinRequest) return;
     state = nextState;
-    pinInput.value = '';
+    pinInput.value = pin;
     render();
   } catch (error) {
     if (request !== pinRequest) return;
@@ -386,7 +394,7 @@ $('#pin-form').addEventListener('submit', async event => {
 // Load it through the same form flow so errors are shown in the usual place.
 const sharedPin = new URLSearchParams(location.search).get('pin');
 if (sharedPin) {
-  pinInput.value = normalizePin(sharedPin).slice(0, 6);
+  pinInput.value = normalizePin(sharedPin);
   $('#pin-form').requestSubmit();
 }
 

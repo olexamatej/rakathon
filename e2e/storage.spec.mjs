@@ -41,7 +41,7 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
     submissions: [],
   };
   await page.goto('/pacient');
-  await page.evaluate(value => localStorage.setItem('pillgaze:patient:v2', JSON.stringify(value)), draft);
+  await page.evaluate(value => localStorage.setItem('pillgaze:patient:v3', JSON.stringify(value)), draft);
   await page.reload();
   const send = page.getByRole('button', { name: 'Uložit seznam' });
   await expect(send).toBeEnabled();
@@ -54,14 +54,16 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
   expect(payload.version).toBe(1);
   expect(payload.items).toEqual([{ name: draft.items[0].name, dosage: 'TEST', dosesPerPackage: '1' }]);
   const { pin } = await upload.json();
-  expect(typeof pin === 'string' && /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
+  expect(typeof pin === 'string' && /^[0-9]{4}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
   await expect(page.locator('h1.pin')).toBeVisible();
   expect(await page.locator('h1.pin').textContent() === pin, 'Displayed PIN must match server receipt').toBe(true);
 
-  // Confirm that the issued PIN reads back the exact structured list sent by the browser.
-  const stored = await context.request.get(`/api/v1/transfers/${pin}`, { maxRedirects: 0 });
-  expect(stored.status(), 'Issued PIN must retrieve the stored list').toBe(200);
-  expect(await stored.json()).toEqual(payload);
+  // Verify admin growth before the doctor's one-time retrieval deletes the row.
+  await adminAction(admin, () => admin.reload());
+  const after = await inventory(admin);
+  expect(after.length, 'Storage admin total must grow by exactly one').toBe(before.length + 1);
+  expect(after.filter(digest => !before.includes(digest)).length).toBe(1);
+  expect(before.every(digest => after.includes(digest))).toBe(true);
 
   // A separate browser context has no patient draft or history: retrieval must use the API.
   const doctorContext = await context.browser().newContext();
@@ -69,7 +71,10 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
     const doctor = await doctorContext.newPage();
     await doctor.goto('http://127.0.0.1:4180/lekar');
     await doctor.locator('#pin').fill(pin);
+    const retrievalPromise = doctor.waitForResponse(response => response.request().method() === 'GET'
+      && new URL(response.url()).pathname === `/api/v1/transfers/${pin}`);
     await doctor.locator('#pin-submit').click();
+    expect(await (await retrievalPromise).json()).toEqual(payload);
     await expect(doctor.locator('#main table')).toBeVisible();
     await expect(doctor.locator('#main [data-field="name"]')).toHaveValue(draft.items[0].name);
     await expect(doctor.locator('#main tbody tr')).toHaveCount(1);
@@ -83,11 +88,9 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
 
   // Reload tests persisted admin login too, and starts pagination at page one.
   await adminAction(admin, () => admin.reload());
-  const after = await inventory(admin);
-  expect(after.length, 'Storage admin total must grow by exactly one').toBe(before.length + 1);
-  expect(after.filter(digest => !before.includes(digest)).length, 'Exactly one new storage row must appear').toBe(1);
-  expect(before.every(digest => after.includes(digest)), 'Existing rows must remain present').toBe(true);
-  console.info(`Storage admin: ${before.length} → ${after.length} records; PIN and stored payload verified.`);
+  const consumed = await inventory(admin);
+  expect(consumed).toEqual(before);
+  console.info(`Storage admin: ${before.length} → ${after.length} → ${consumed.length}; one-time retrieval verified.`);
 });
 
 test('admin can cancel or confirm deleting all records across pages', async ({ page, context }) => {

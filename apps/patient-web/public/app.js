@@ -1,5 +1,5 @@
-import { createState, loadState, saveState, recordSubmission, updateSubmission, canSend, medicineSummary } from './lists.js';
-import { recognizePhoto, sendList, loadRegimens } from './services.js';
+import { STORAGE_KEY, createState, loadState, saveState, replaceSubmission, updateSubmission, invalidateSubmission, canSend, medicineSummary } from './lists.js';
+import { recognizePhoto, sendList, savePatientList, validateList, renewPatientList, loadRegimens } from './services.js';
 
 const app = document.querySelector('#app');
 const photos = [];
@@ -12,7 +12,12 @@ let storageWarning = '';
 let message = '';
 let regimenOpen = false;
 let installPrompt;
-let historyLimit = 10;
+let checking = false;
+let verifiedEntry;
+let lastCheck = 0;
+let editingSession = false;
+let validityInfoOpen = false;
+let localCopyInfoOpen = false;
 
 try {
   const loaded = loadState(localStorage);
@@ -24,13 +29,8 @@ try {
 }
 
 // A fresh visit (including a reload of the editor) always returns to the latest saved PIN.
-if (state.submissions.length) {
+if (state.submissions.length && (!state.submissions[0].expired || !state.items.length)) {
   history.replaceState(null, '', `/pacient?pin=${encodeURIComponent(state.submissions[0].id)}`);
-}
-
-function currentSubmission() {
-  const id = new URLSearchParams(location.search).get('list');
-  return state.submissions.find(entry => entry.id === id);
 }
 
 const escape = value => String(value).replace(/[&<>"']/g, char => ({
@@ -49,8 +49,7 @@ const icons = {
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</svg>`;
-const itemCount = count => `${count} ${count === 1 ? 'léčivo' : count > 1 && count < 5 ? 'léčiva' : 'léčiv'}`;
-const isBusy = () => loadFailed || processing || sending;
+const isBusy = () => loadFailed || processing || sending || checking;
 
 function persist() {
   if (loadFailed) return;
@@ -63,6 +62,7 @@ function persist() {
 }
 
 function navigate(query = '') {
+  if (isBusy()) return;
   history.pushState(null, '', `/pacient${query}`);
   message = '';
   render(true);
@@ -79,21 +79,25 @@ function photoStatus() {
     ${photos.filter(job => job.status === 'error').map(job => `<p class="notice" role="alert">${escape(job.error)}</p>`).join('')}`;
 }
 
-function editor() {
-  const busy = isBusy();
-  const photoInputBlocked = loadFailed || sending;
-  return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
-    <form id="list-form">
-    <section class="photo-section" aria-label="Nahrání fotografií">
+function photoUpload() {
+  const photoInputBlocked = loadFailed || sending || checking;
+  return `<section class="photo-section${state.items.length ? '' : ' photo-section--intro'}" aria-labelledby="photo-title">
+      <h2 id="photo-title">Nahrajte ${state.items.length ? 'další ' : ''}fotografie léků</h2>
       <div class="photo-actions">
-        <button type="button" class="secondary full" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Z knihovny</button>
+        <button type="button" class="secondary full" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Z galerie</button>
         <button type="button" class="primary full" data-action="camera" ${photoInputBlocked ? 'disabled' : ''}>${icon('camera')} Vyfotit</button>
       </div>
       ${photoStatus()}
-    </section>
+    </section>`;
+}
+
+function editor() {
+  const busy = isBusy();
+  return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
+    <form id="list-form">
     <section class="medicines" aria-labelledby="medicines-title">
-      ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
-        <legend class="list-heading">Léčiva v seznamu <span>${itemCount(state.items.length)}</span></legend>${state.items.map((item, index) => `
+      ${state.items.length ? `<fieldset aria-labelledby="list-title" ${busy ? 'disabled' : ''}>
+        <h2 id="list-title" class="list-heading">Seznam léčiv</h2>${state.items.map((item, index) => `
         <article class="medicine"><div class="medicine-info">
           <strong>${escape(item.name || 'Nečitelný název léčiva')}</strong>
           <span>${escape(medicineSummary(item))}</span></div>
@@ -101,6 +105,7 @@ function editor() {
         </article>`).join('')}</fieldset>`
       : ''}
     </section>
+    ${photoUpload()}
     ${state.items.length || state.regimen || regimenOpen ? `${state.regimen || regimenOpen ? `<section class="regimen-section"><label for="regimen" class="sr-only">Režim onkologické léčby (volitelné)</label>
       <div class="combo"><input id="regimen" name="regimen" value="${escape(state.regimen || '')}" maxlength="200" placeholder="Režim onkologické léčby (volitelné)" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="regimen-list" aria-autocomplete="list" ${busy ? 'disabled' : ''}>
       <button type="button" class="icon-button" data-action="remove-regimen" aria-label="Odebrat režim" ${busy ? 'disabled' : ''}>${icon('close')}</button>
@@ -120,28 +125,30 @@ function sendHint() {
 
 function render(focus = false) {
   const params = new URLSearchParams(location.search);
-  const requestedId = params.get('pin') || (!params.has('list') && !params.has('new') ? state.submissions[0]?.id : null);
-  const receipt = state.submissions.find(entry => entry.id === requestedId);
+  const receipt = !params.has('list') && !params.has('new') && (!state.submissions[0]?.expired || !state.items.length) ? state.submissions[0] : undefined;
   const formatDate = value => new Intl.DateTimeFormat('cs-CZ', {
     dateStyle: 'medium', timeStyle: 'short',
   }).format(new Date(value));
-  const visibleHistory = state.submissions.slice(0, historyLimit);
-  if (receipt && !visibleHistory.some(entry => entry.id === receipt.id)) visibleHistory.push(receipt);
-  const history = state.submissions.length ? `<section class="submission-history" aria-labelledby="history-title">
-    <h2 id="history-title">Historie uložených seznamů</h2>
-    <p>Platnost starších PINů aplikace neověřuje.</p>
-    <ul>${visibleHistory.map(entry => `<li><details ${entry.id === receipt?.id ? 'open' : ''}>
-      <summary><code>${escape(entry.pin)}</code><time datetime="${escape(entry.sentAt)}">${escape(formatDate(entry.sentAt))}</time></summary>
-      <ul class="history-items">${entry.items.map(item => `<li><strong>${escape(item.name || 'Nečitelný název léčiva')}</strong><span>${escape(medicineSummary(item))}</span></li>`).join('')}
-      ${entry.regimen ? `<li><strong>Režim onkologické léčby</strong><span>${escape(entry.regimen)}</span></li>` : ''}</ul>
-    </details></li>`).join('')}</ul>
-    ${state.submissions.length > visibleHistory.length ? '<button class="secondary full" data-action="more-history">Zobrazit starší záznamy</button>' : ''}</section>` : '';
   const content = receipt ? `<main id="main" class="pin-screen">
-    <section class="current-submission"><p class="pin-caption">PIN pro lékaře</p>
-    <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>
-    <p class="generated-at">Vygenerováno ${escape(formatDate(receipt.sentAt))}</p>
-    <button class="primary" data-action="open-list" data-id="${escape(receipt.id)}">Zpět k seznamu ${icon('arrow')}</button></section>
-    ${history}</main>`
+    <section class="current-submission">${receipt.expired ? '<h1 class="expired-heading">PIN vypršel!</h1>' : verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
+    <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>`
+      : `<h1>${checking ? 'Ověřuji platnost…' : 'Platnost není ověřena'}</h1>`}
+    <p class="validity-date${receipt.expired ? ' expired-date' : ''}" role="status">${receipt.expiresAt ? `${receipt.expired && Date.parse(receipt.expiresAt) <= Date.now() ? 'Platnost vypršela' : !receipt.expired && receipt.extendedExpiresAt === receipt.expiresAt ? 'Platnost prodloužena do' : 'Platnost do'} <time datetime="${escape(receipt.expiresAt)}">${escape(formatDate(receipt.expiresAt))}</time>` : 'Datum vypršení platnosti není dostupné.'}
+    ${receipt.expired ? `<button class="validity-help" data-action="local-copy-help" aria-label="Informace o lokální kopii" aria-expanded="${localCopyInfoOpen}" aria-controls="local-copy-info">?</button>` : receipt.expiresAt ? `<button class="validity-help" data-action="validity-help" aria-label="Informace o platnosti" aria-expanded="${validityInfoOpen}" aria-controls="validity-info">?</button>` : ''}</p>
+    ${receipt.expired ? `<button class="primary" data-action="reupload" ${isBusy() ? 'disabled' : ''}>${sending ? 'Nahrávám…' : 'Obnovit záznam a získat nový PIN'}</button>
+    <p class="validity-info generated-at" id="local-copy-info" ${localCopyInfoOpen ? '' : 'hidden'}>Lokální kopie pochází z nahrání <time datetime="${escape(receipt.sentAt)}">${escape(formatDate(receipt.sentAt))}</time>.</p>` : ''}
+    ${!receipt.expired ? `<button class="primary" data-action="renew" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
+    <p class="validity-info" id="validity-info" ${validityInfoOpen ? '' : 'hidden'}>Data jsou uchována pouze dokud nejsou zobrazena zdravotníkem, nebo do uvedeného data platnosti. Pokud je vaše plánovaná návštěva až po konci platnosti, musíte platnost před návštěvou prodloužit.</p>` : ''}
+    ${receipt.expired ? `<p class="notice">Původní PIN už nelze použít pro předání lékaři. Zde vidíte pouze lokální kopii uloženou v tomto zařízení, nikoli aktuálně sdílený seznam. Zkontrolujte, zda jsou léky stále aktuální. Seznam můžete zahodit, nebo jej znovu nahrát a získat nový PIN.</p>` : ''}
+    ${receipt.expired ? `<div class="saved-list"><h2>Uložený seznam léčiv:</h2>
+    ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
+    ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>` : ''}
+    ${receipt.expired ? `<button class="secondary" data-action="discard-expired" ${isBusy() ? 'disabled' : ''}>Zahodit seznam</button>` : `
+    ${verifiedEntry !== receipt && !checking ? `<button class="secondary" data-action="check-validity" ${loadFailed ? 'disabled' : ''}>Ověřit platnost</button>` : ''}
+    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>K seznamu ${icon('arrow')}</button>`}
+    ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
+    <p class="save-status" role="status">${saveStatus()}</p><p class="message" role="status">${escape(message)}</p></section>
+    </main>`
     : editor();
   const header = `<header><a class="brand" href="/pacient" data-action="home"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
     <button class="install-button" data-action="install" aria-label="Nainstalovat aplikaci">${icon('download')}</button></header>`;
@@ -152,7 +159,7 @@ function render(focus = false) {
       ${content}<p class="message" role="status" id="message">${escape(message)}</p></main></div>`;
   // File inputs live outside #app so pending recognition cannot replace an open chooser.
   for (const id of ['camera', 'gallery']) {
-    document.getElementById(id).disabled = loadFailed || sending || Boolean(receipt);
+    document.getElementById(id).disabled = loadFailed || sending || checking || Boolean(receipt);
   }
   document.title = `${receipt ? 'PIN' : 'Seznam'} · PillGaze`;
   if (focus) {
@@ -163,7 +170,7 @@ function render(focus = false) {
 }
 
 async function addPhotos(files) {
-  if (!files.length || loadFailed || sending) return;
+  if (!files.length || loadFailed || sending || checking) return;
   const jobs = files.map(file => ({ file, status: 'waiting' }));
   photos.push(...jobs);
   // One worker drains the queue, including photos added while recognition is pending.
@@ -174,7 +181,7 @@ async function addPhotos(files) {
   processing = true;
   render();
   let job;
-  while ((job = photos.find(photo => photo.status === 'waiting'))) {
+  while (!loadFailed && (job = photos.find(photo => photo.status === 'waiting'))) {
     job.status = 'processing';
     render();
     let url;
@@ -187,6 +194,7 @@ async function addPhotos(files) {
       await image.decode().catch(() => { throw new Error('Fotku nelze přečíst. Zkuste JPEG, PNG nebo WebP.'); });
       render();
       const result = await recognizePhoto(job.file);
+      if (loadFailed) break;
       const items = Array.isArray(result) ? result : result.items;
       const regimen = Array.isArray(result) ? '' : String(result.regimen || '').trim().slice(0, 200);
       state.items.push(...items);
@@ -369,19 +377,23 @@ app.addEventListener('submit', async event => {
   const items = structuredClone(state.items);
   const regimen = state.regimen || '';
   const origin = location.search;
-  const editing = currentSubmission();
+  const editing = state.submissions[0];
   sending = true;
   message = '';
   render();
   let entry;
   try {
     // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
-    const receipt = await sendList({ items, regimen }, editing?.pin);
-    entry = editing
+    const { receipt, updatedExisting } = await savePatientList({ items, regimen }, editing);
+    if (loadFailed) return;
+    entry = updatedExisting
       ? updateSubmission(state, editing.id, items, receipt, regimen)
-      : recordSubmission(state, items, receipt, regimen);
+      : replaceSubmission(state, items, receipt, regimen);
+    verifiedEntry = entry.ownerToken ? entry : undefined;
+    editingSession = false;
     persist();
   } catch (error) {
+    verifiedEntry = undefined;
     message = error.message || 'Odeslání se nezdařilo. Zkuste to znovu.';
   } finally {
     sending = false;
@@ -395,6 +407,70 @@ app.addEventListener('click', async event => {
   if (!button || button.disabled) return;
   event.preventDefault();
   switch (button.dataset.action) {
+    case 'local-copy-help':
+      localCopyInfoOpen = !localCopyInfoOpen;
+      render();
+      app.querySelector('[data-action="local-copy-help"]')?.focus({ preventScroll: true });
+      break;
+    case 'validity-help':
+      validityInfoOpen = !validityInfoOpen;
+      render();
+      app.querySelector('[data-action="validity-help"]')?.focus({ preventScroll: true });
+      break;
+    case 'reupload': {
+      const previous = state.submissions[0];
+      if (isBusy() || !previous?.expired) break;
+      sending = true;
+      message = '';
+      render();
+      try {
+        // Explicit choice: upload exactly the displayed local snapshot, never PUT.
+        const receipt = await sendList({ items: previous.items, regimen: previous.regimen || '' });
+        if (loadFailed || state.submissions[0] !== previous) break;
+        const entry = replaceSubmission(state, previous.items, receipt, previous.regimen || '');
+        state.items = structuredClone(entry.items);
+        state.regimen = entry.regimen || '';
+        verifiedEntry = entry;
+        editingSession = false;
+        persist();
+        history.replaceState(null, '', `/pacient?pin=${encodeURIComponent(entry.id)}`);
+        message = 'Seznam byl znovu nahrán. Pro lékaře použijte nový PIN.';
+      } catch (error) { message = error.message; }
+      finally { sending = false; render(); }
+      break;
+    }
+    case 'discard-expired':
+      if (isBusy() || !state.submissions[0]?.expired) break;
+      if (!window.confirm('Zahodit tento seznam a jeho lokální kopii? Tuto akci nelze vrátit.')) break;
+      state.submissions = [];
+      delete state.invalidatedDraft;
+      verifiedEntry = undefined;
+      persist();
+      navigate();
+      break;
+    case 'check-validity': await refreshValidity(true); break;
+    case 'renew': {
+      if (isBusy()) break;
+      const previous = state.submissions[0];
+      if (!previous) break;
+      sending = true;
+      message = '';
+      render();
+      try {
+        const receipt = await renewPatientList(previous);
+        if (loadFailed) break;
+        if (!receipt) {
+          handleUnavailableList();
+        } else {
+          const entry = updateSubmission(state, previous.id, previous.items, receipt, previous.regimen || '');
+          entry.extendedExpiresAt = receipt.expiresAt;
+          verifiedEntry = entry;
+        }
+        persist();
+      } catch (error) { verifiedEntry = undefined; message = error.message; }
+      finally { sending = false; render(); }
+      break;
+    }
     case 'home': navigate(); break;
     case 'camera': await openCamera(); break;
     case 'gallery': document.getElementById('gallery').click(); break;
@@ -426,17 +502,31 @@ app.addEventListener('click', async event => {
       if (isBusy()) break;
       const entry = state.submissions.find(entry => entry.id === button.dataset.id);
       if (!entry) break;
-      state.items = structuredClone(entry.items);
-      state.regimen = entry.regimen || '';
+      checking = true;
+      render();
+      try {
+        const receipt = await validateList(entry);
+        if (loadFailed) break;
+        if (!receipt) { handleUnavailableList(); break; }
+        Object.assign(entry, receipt);
+        verifiedEntry = entry;
+      } catch (error) {
+        verifiedEntry = undefined;
+        message = error.message;
+        break;
+      } finally { checking = false; render(); }
+      // Returning from the PIN screen must not replace edits or additional photos
+      // with the older submitted snapshot.
+      if (!editingSession) {
+        state.items = structuredClone(entry.items);
+        state.regimen = entry.regimen || '';
+      }
+      editingSession = true;
       regimenOpen = false;
       persist();
       navigate(`?list=${encodeURIComponent(entry.id)}`);
       break;
     }
-    case 'more-history':
-      historyLimit += 10;
-      render();
-      break;
     case 'install':
       if (installPrompt) {
         await installPrompt.prompt();
@@ -447,6 +537,66 @@ app.addEventListener('click', async event => {
 });
 
 window.addEventListener('popstate', () => { message = ''; render(true); });
+function invalidateCurrentList() {
+  invalidateSubmission(state);
+  photos.length = 0;
+  regimenOpen = false;
+  verifiedEntry = undefined;
+  editingSession = false;
+  persist();
+  history.replaceState(null, '', '/pacient');
+  message = 'Lokální kopii můžete zahodit nebo znovu nahrát pod novým PINem.';
+}
+
+function handleUnavailableList() {
+  if (!editingSession) return invalidateCurrentList();
+  invalidateSubmission(state, true);
+  verifiedEntry = undefined;
+  persist();
+  history.replaceState(null, '', `/pacient?list=${encodeURIComponent(state.submissions[0].id)}`);
+  message = 'Původní seznam již není platný. Uložte aktuální seznam pro získání nového PINu.';
+}
+
+async function refreshValidity(force = false) {
+  const entry = state.submissions[0];
+  if (!entry || entry.expired || loadFailed || checking || sending || processing) return;
+  // Do not let background checks discard an active edit. Save validates afresh.
+  if (!force && new URLSearchParams(location.search).has('list')) return;
+  if (!force && Date.now() - lastCheck < 60_000) return;
+  lastCheck = Date.now();
+  checking = true;
+  verifiedEntry = undefined;
+  message = '';
+  render();
+  try {
+    const receipt = await validateList(entry);
+    if (loadFailed || state.submissions[0] !== entry) return;
+    if (!receipt) handleUnavailableList();
+    else {
+      Object.assign(entry, receipt);
+      verifiedEntry = entry;
+    }
+    persist();
+  } catch (error) { message = error.message; }
+  finally { checking = false; render(); }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void refreshValidity();
+});
+window.addEventListener('focus', () => { void refreshValidity(); });
+window.addEventListener('online', () => { void refreshValidity(); });
+// Another tab can replace/delete the receipt. Never overwrite its newer state
+// with this tab's stale draft or a late request result; require an explicit reload.
+window.addEventListener('storage', event => {
+  if (event.storageArea !== localStorage || (event.key !== STORAGE_KEY && event.key !== null)) return;
+  loadFailed = true;
+  verifiedEntry = undefined;
+  storageWarning = 'Seznam byl změněn v jiné kartě. Obnovte stránku pro načtení aktuálních údajů.';
+  if (cameraDialog.open) cameraDialog.close();
+  render();
+});
+// Bounded, visible-tab-only checks; separate from the doctor's consuming GET budget.
+setInterval(() => { if (document.visibilityState === 'visible') void refreshValidity(); }, 60_000);
 window.addEventListener('beforeunload', event => {
   if (unsaved || processing || sending) event.preventDefault();
 });
@@ -466,3 +616,4 @@ if ('caches' in window) {
 }
 persist();
 render();
+void refreshValidity(true);

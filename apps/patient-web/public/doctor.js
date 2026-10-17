@@ -1,14 +1,12 @@
-import { newId } from './lists.js';
+import { newId, isPin } from './lists.js';
+export { isPin, normalizePin } from './lists.js';
 
-export const DOCTOR_STORAGE_KEY = 'pillgaze:doctor:v1';
+export const DOCTOR_STORAGE_KEY = 'pillgaze:doctor:v2';
 export const HISTORY_LIMIT = 50;
 
 const isDate = value => typeof value === 'string' && Number.isFinite(Date.parse(value));
 const isText = (value, limit) => typeof value === 'string' && value.length <= limit;
 const optionalText = (value, limit) => value === undefined || isText(value, limit);
-
-export const normalizePin = value => String(value).toUpperCase().replace(/[^A-Z0-9]/g, '');
-export const isPin = value => /^[A-Z0-9]{6}$/.test(value);
 
 // SÚKL product detail; an API-provided `suklUrl` always wins over this constructed address.
 export const suklLink = item => (/^https:\/\//.test(item.suklUrl || '') ? item.suklUrl : '')

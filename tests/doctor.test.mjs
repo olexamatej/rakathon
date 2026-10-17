@@ -13,25 +13,24 @@ const memory = () => {
 const item = (extra = {}) => ({ name: 'Ibalgin', dosage: '200 mg', dosesPerPackage: '12', ...extra });
 
 test('PIN input is normalised and validated like patient PINs', () => {
-  assert.equal(normalizePin(' abc-234 '), 'ABC234');
-  assert.ok(isPin('ABC234'));
-  assert.ok(isPin('0A1BC2'));
-  for (const bad of ['ABC23', 'ABC2345', 'ABC23!', 'abc234']) assert.ok(!isPin(bad), bad);
+  assert.equal(normalizePin(' 00-42 '), '0042');
+  assert.ok(isPin('1234'));
+  assert.ok(isPin('0102'));
+  for (const bad of ['ABC234', '123', '12345', '12a4', '１２３４', '1234\n', 1234, null]) assert.ok(!isPin(bad), bad);
 });
 
 test('history is stored locally, newest first, one entry per PIN, and capped', () => {
   const state = createDoctorState();
-  const first = addList(state, { pin: 'ABC234', items: [item()], regimen: 'FOLFOX' });
-  addList(state, { pin: 'DEF567', items: [item()] });
-  const again = addList(state, { pin: 'ABC234', items: [item(), item({ name: 'X' })] });
-  assert.deepEqual(state.lists.map(list => list.pin), ['ABC234', 'DEF567']);
+  const first = addList(state, { pin: '1234', items: [item()], regimen: 'FOLFOX' });
+  addList(state, { pin: '5678', items: [item()] });
+  const again = addList(state, { pin: '1234', items: [item(), item({ name: 'X' })] });
+  assert.deepEqual(state.lists.map(list => list.pin), ['1234', '5678']);
   assert.notEqual(first.id, again.id);
   const storage = memory();
   saveDoctorState(storage, state);
   assert.deepEqual(loadDoctorState(storage), state);
   const big = createDoctorState();
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  for (let i = 0; i < HISTORY_LIMIT + 5; i++) addList(big, { pin: alphabet[i % 32] + alphabet[Math.floor(i / 32)] + 'AAAA', items: [] });
+  for (let i = 0; i < HISTORY_LIMIT + 5; i++) addList(big, { pin: String(i).padStart(4, '0'), items: [] });
   assert.equal(big.lists.length, HISTORY_LIMIT);
 });
 
@@ -41,7 +40,7 @@ test('broken stored history is rejected instead of being overwritten', () => {
   assert.throws(() => loadDoctorState(storage));
   assert.equal(memory().getItem(DOCTOR_STORAGE_KEY), null);
   assert.throws(() => saveDoctorState(storage, { lists: [{ id: 'x' }] }));
-  assert.throws(() => addList(createDoctorState(), { pin: 'ABC234', items: [{ name: 'x'.repeat(121), dosage: 'a', dosesPerPackage: '1' }] }));
+  assert.throws(() => addList(createDoctorState(), { pin: '1234', items: [{ name: 'x'.repeat(121), dosage: 'a', dosesPerPackage: '1' }] }));
 });
 
 test('item edits are validated; SÚKL code and link are optional', () => {
@@ -193,4 +192,17 @@ test('web research polls the engine and keeps only valid HTTPS result pages', as
   } finally {
     globalThis.fetch = original;
   }
+});
+
+
+test('legacy doctor history is preserved separately and does not block four-digit records', () => {
+  const storage = memory();
+  const original = JSON.stringify({ lists: [{ pin: 'ABC234' }] });
+  storage.setItem('pillgaze:doctor:v1', original);
+  const state = loadDoctorState(storage);
+  assert.deepEqual(state, createDoctorState());
+  addList(state, { pin: '0042', items: [item()] });
+  saveDoctorState(storage, state);
+  assert.equal(storage.getItem('pillgaze:doctor:v1'), original);
+  assert.equal(loadDoctorState(storage).lists[0].pin, '0042');
 });

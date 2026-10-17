@@ -57,6 +57,7 @@ function backendOrigin(value) {
 async function proxyBackend(req, res, origin, path) {
   let methods;
   if (path === '/api/v1/transfers') methods = ['POST'];
+  else if (/^\/api\/v1\/transfers\/[0-9]{4}\/renew$/.test(path)) methods = ['POST'];
   else if (/^\/api\/v1\/transfers\/[A-Za-z0-9]+$/.test(path)) methods = ['GET', 'HEAD', 'PUT'];
   else if (/^\/api\/v1\/admin\/blobs(?:\/[a-f0-9]{64})?$/.test(path)) methods = ['GET', 'HEAD', 'DELETE'];
   else if (['/api/health/live', '/api/health/ready'].includes(path)) methods = ['GET', 'HEAD'];
@@ -78,6 +79,7 @@ async function proxyBackend(req, res, origin, path) {
     }
     const headers = {};
     if (req.headers['content-type']) headers['Content-Type'] = req.headers['content-type'];
+    if (path.startsWith('/api/v1/transfers/') && req.headers['x-owner-token']) headers['X-Owner-Token'] = req.headers['x-owner-token'];
     // Only storage admin needs user credentials. Never forward cookies or proxy headers.
     if (path.startsWith('/api/v1/admin/') && req.headers.authorization) headers.Authorization = req.headers.authorization;
     const query = new URL(req.url, 'http://localhost').search;
@@ -87,7 +89,7 @@ async function proxyBackend(req, res, origin, path) {
       redirect: 'error', signal: AbortSignal.timeout(path === '/api/transcribe' ? 130_000 : 35_000),
     });
     const responseHeaders = { ...securityHeaders, 'Cache-Control': 'no-store' };
-    for (const name of ['content-type', 'retry-after', 'content-language', 'allow']) {
+    for (const name of ['content-type', 'retry-after', 'content-language', 'allow', 'x-uploaded-at', 'x-owner-token', 'x-expires-at']) {
       if (response.headers.has(name)) responseHeaders[name] = response.headers.get(name);
     }
     const body = Buffer.from(await response.arrayBuffer());
