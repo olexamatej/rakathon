@@ -415,9 +415,14 @@ window.addEventListener('beforeinstallprompt', event => {
   installPrompt = event;
 });
 if ('serviceWorker' in navigator && window.isSecureContext) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {
-    console.warn('Offline režim není dostupný. Aplikaci můžete dál používat online.');
-  });
+  navigator.serviceWorker.getRegistrations().then(registrations =>
+    Promise.all(registrations.map(registration => registration.unregister()))
+  ).catch(() => {});
+}
+if ('caches' in window) {
+  caches.keys().then(keys => Promise.all(keys
+    .filter(key => key.startsWith('pillgaze-patient-'))
+    .map(key => caches.delete(key)))).catch(() => {});
 }
 persist();
 render();
