@@ -6,7 +6,7 @@ import { createAppServer } from '../apps/patient-web/server.mjs';
 
 // Synthetic PNG signature, never a patient photograph. The interaction engine is stubbed.
 const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-const rows = [{ name: 'Concor 5 mg', schedule: '1-0-0' }, { name: null, schedule: null }];
+const rows = [{ name: 'Concor', strength: '5 mg', schedule: '1-0-0' }, { name: null, strength: null, schedule: null }];
 
 async function withEngine(t, handler) {
   const upstream = createServer(handler);

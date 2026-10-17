@@ -77,7 +77,7 @@ it does not make a model call or verify Codex authentication.
 | `GEMINI_API_KEY` | *(none)* | Photo transcription provider key; `GOOGLE_API_KEY` is accepted as a fallback |
 | `GEMINI_API_BASE` | Google endpoint | Gemini-compatible base URL, e.g. a local CLIProxyAPI proxy |
 | `GEMINI_MODEL` | `gemini-3.6-flash` | Photo transcription model |
-| `GEMINI_TIMEOUT_SECONDS` | `120` | Deadline for one transcription provider call |
+| `GEMINI_TIMEOUT_SECONDS` | `120` | Total deadline for photo upload, reading and matching |
 | `SUKL_CATALOGUE_PATH` | `../data/sukl/medications.json` | SÚKL names used only for photo name spelling; a missing file disables that hint |
 | `RUST_LOG` | `info` | Server logging filter |
 
@@ -192,7 +192,7 @@ Web-search settings follow the official
 ## Photo transcription
 
 `POST /transcribe` accepts raw JPEG, PNG or WebP bytes (not multipart, up to
-20 MiB) and synchronously returns `[{name, schedule}]` rows; each field is a
+20 MiB) and synchronously returns `[{name, strength, schedule}]` rows; each field is a
 string or null. It is a direct request/response endpoint: no queue, polling or
 deduplication. It requires `GEMINI_API_KEY` or `GOOGLE_API_KEY`; without one it
 returns 503. Provider output is schema-constrained and validated by Rust;
@@ -203,12 +203,18 @@ curl --data-binary @photo.jpg -H 'Content-Type: image/jpeg' \
   http://127.0.0.1:3000/transcribe
 ```
 
-Visible strength stays inside `name`. Fractions and written instructions are
-preserved; only numeric schedule separators are normalized. A handwritten list
-takes precedence over a printed list. With `SUKL_CATALOGUE_PATH` present the
-prompt includes official SÚKL names, so a clearly matching visible name may use
-the catalogue spelling; strengths, forms, dosing and unreadable names are never
-taken or filled from the catalogue.
+The first Gemini call reads the image verbatim into `{text, schedule}` rows,
+without the catalogue. A second, text-only call receives those rows and the
+SÚKL name/strength pairs from `SUKL_CATALOGUE_PATH`, matches clear names and
+separates the name from its strength. Missing units may be completed only for an
+unambiguous catalogue strength (`Paralen 500` → `PARALEN`, `500 mg`); missing
+strengths and unreadable names are never filled. Unknown/ambiguous matches keep
+the read spelling. There are no medicine-specific regex repairs. Rust validates
+both calls, enforces the row count and copies dosing directly from the first
+call. An empty transcription skips matching. One `GEMINI_TIMEOUT_SECONDS`
+deadline covers upload and both calls; file cleanup has its own 5-second limit.
+Fractions and free-text dosing are preserved; only numeric schedule separators
+are normalized. A handwritten list takes precedence over a printed list.
 
 With the default Google endpoint, photos above 14 MiB use a resumable Google
 Files upload that is deleted after generation, including failed generation. With

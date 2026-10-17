@@ -347,18 +347,21 @@ paths:
     post:
       operationId: transcribePhoto
       tags: [Transcription]
-      summary: Transcribe a medication photo into name and schedule rows
+      summary: Transcribe a medication photo into name, strength and schedule rows
       description: |
         Accepts raw image bytes (not multipart) with a JPEG, PNG, or WebP
         signature; the raw limit is 20 MiB. The photo is sent to a
         Gemini-compatible endpoint selected by GEMINI_API_BASE (including a
         local proxy backed by an Antigravity subscription) and is never stored
-        locally. The response keeps visible strength in name, preserves written
-        schedules (only numeric separators are normalized), and uses null for
-        absent or unreadable fields. When the SÚKL catalogue is available
-        (SUKL_CATALOGUE_PATH), its official names are appended to the
-        instruction: a clearly matching visible name may use the catalogue
-        spelling. Strengths, forms and dosing never come from the catalogue, and
+        locally. The first model call reads verbatim medication text and patient
+        dosing, without a catalogue. A second, text-only call matches that text
+        against SÚKL name/strength pairs (SUKL_CATALOGUE_PATH), correcting clear
+        names and separating strength. Missing units may be completed only for
+        an unambiguous catalogue strength. The response preserves dosing from
+        the first call (only numeric separators are normalized) and uses null
+        for absent or unreadable fields. Empty readings skip the matching call.
+        Unknown or ambiguous matches keep the read spelling. Missing strength
+        values, forms and dosing never come from the catalogue, and
         an unreadable name is never filled from it. Photos above 14 MiB sent to
         the default Google endpoint use temporary Google Files and are deleted
         afterwards; custom endpoints receive all photos inline. Malformed,
@@ -386,8 +389,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/TranscriptionRows'
               example:
-                - {name: "CONCOR 5 mg", schedule: "1-0-0"}
-                - {name: null, schedule: null}
+                - {name: "CONCOR", strength: "5 mg", schedule: "1-0-0"}
+                - {name: null, strength: null, schedule: null}
         '400':
           description: Empty image.
           content:
@@ -464,14 +467,20 @@ components:
     TranscribedRow:
       type: object
       additionalProperties: false
-      required: [name, schedule]
+      required: [name, strength, schedule]
       properties:
         name:
           type: [string, 'null']
           minLength: 1
           maxLength: 120
           pattern: '\S'
-          description: Visible medicine name including strength; null when absent or unreadable.
+          description: Visible medicine name and qualifiers without strength; null when absent or unreadable.
+        strength:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 120
+          pattern: '\S'
+          description: Visible strength, separate from name; units completed only for an unambiguous catalogue match. Null when absent or unreadable.
         schedule:
           type: [string, 'null']
           minLength: 1

@@ -7,8 +7,9 @@ by PIN in a separate doctor browser context, then reloads admin and requires
 **exactly one additional record**.
 
 `patient-doctor.spec.mjs` covers both mobile **Vyfotit** and **Z galerie** with
-service workers enabled: a patient uploads a tiny synthetic image, the app's mock
-recognizer creates three complete sample medicines, and the
+service workers enabled: a patient uploads a tiny synthetic image, a stubbed
+transcription endpoint returns separate names and strengths (plus a null row
+that must be hidden), and the
 patient submits them to the real Rust storage API. A clean doctor browser context
 uses the server-issued PIN and verifies the same medicine names, dosages, and
 schedule from storage. Admin diagnostics must show the exact same PIN and JSON.

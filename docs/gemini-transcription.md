@@ -3,11 +3,10 @@
 The patient PWA's photo/gallery flow posts to `POST /api/transcribe` on the
 patient Node server, which proxies the raw photo to `POST /transcribe` on the
 Rust interaction engine (`interaction-engine/`); the engine calls Gemini
-**3.6 Flash** and returns strict minimal rows. The patient PWA currently
-explicitly selects `{ mode: 'demo' }` to provide three complete synthetic
-medicines for the PIN handoff demonstration; that mode makes no request at all.
-Calling `recognizePhoto(file)` without the demo option retains real transcription
-and never replaces errors with mock results.
+**3.6 Flash** and returns separate name, strength and schedule fields. The
+patient PWA uses real transcription for camera and gallery uploads and never
+replaces errors with mock results. Recognition is mocked only at the HTTP
+boundary in tests.
 
 ## Run
 
@@ -80,33 +79,43 @@ image/jpeg`, `image/png` or `image/webp`. Maximum raw size: 20 MiB. The engine
 checks the file signature. HEIC must be converted to one of these formats first.
 
 ```json
-[{"name":"Concor 5 mg","schedule":"1-0-0"},{"name":"Example 20 mg","schedule":null}]
+[{"name":"CONCOR","strength":"5 mg","schedule":"1-0-0"},{"name":"PARALEN","strength":"500 mg","schedule":null}]
 ```
 
-The response is an array with exactly `name` and `schedule` per row. Either field
+The response is an array with exactly `name`, `strength` and `schedule` per row. Each field
 can be `null`; strings are at most 120 characters, and there are at most 200 rows.
-Visible strength stays in `name`. Fractions and written instructions are preserved;
+Visible strength is separate from `name`. Fractions and written instructions are preserved;
 only numeric schedule separators are normalized (`1/2 – 0 – 0` → `1/2-0-0`).
-A handwritten list takes precedence over a printed list in the same photo.
-When the local SÚKL catalogue is available, the engine appends its official
-medicine names to the instruction: a clearly matching visible name may be written
-with the catalogue spelling (visible strength stays, e.g. `CONCOR 5 mg`).
-Strengths, forms and dosing are never taken from the catalogue, an unreadable
-name is never filled from it, and no values are invented. The catalogue is read
-from `SUKL_CATALOGUE_PATH` (`npm run engine` defaults to
-`data/sukl/medications.json`); a missing catalogue only skips name correction.
-No medicines gives `[]`.
+The engine makes two sequential model calls:
 
-The existing UI adds local IDs, maps null names to empty editable names, keeps
-unknown dosage/package fields empty, and omits null schedules. An unreadable name
+1. **Read:** the image alone produces verbatim `{text, schedule}` rows. This call
+   has no catalogue and does not correct, split or complete medicine names.
+2. **Match:** the read rows and deduplicated SÚKL name/strength pairs are sent as
+   text, without the image. The model matches clear names, separates name/strength,
+   and may complete units when the read numbers identify one catalogue strength
+   (`Paralen 500` → `PARALEN`, `500 mg`). Unknown or ambiguous matches keep the read
+   spelling and strength. Missing strengths and unreadable names are never filled.
+
+Rust checks both responses, requires the same row count, and copies dosing from
+step 1 directly; the matching step cannot rewrite it. An empty first result skips
+step 2. A handwritten list takes precedence over printed text. Identity numbers
+such as vitamin D3 remain part of the name. There are no medicine-specific regex
+repairs. The catalogue is read from `SUKL_CATALOGUE_PATH` (`npm run engine` defaults
+to `data/sukl/medications.json`); without it the second call still separates fields
+but cannot use catalogue spelling or complete units. No medicines gives `[]`.
+
+The UI adds local IDs, maps `strength` to its `dosage` field, keeps unknown
+package sizes empty and omits null schedules. Literal `"null"` strings are also
+treated as missing; rows with all fields missing are omitted. An unreadable name
 blocks submission; remove that row and take a clearer photograph. Empty dosage/package fields are valid in
 patient/doctor handoff. This avoids inventing package sizes merely to pass form
 validation. Storage retains its existing structured payload shape.
 
 Malformed JSON, additional fields, truncated generation and provider failures
 return an error rather than partial or demo data. Responses use `no-store`.
-Engine generation/upload timeout is 120 seconds (`GEMINI_TIMEOUT_SECONDS`);
-browser timeout is 135 seconds.
+One 120-second deadline (`GEMINI_TIMEOUT_SECONDS`) covers upload and both model
+calls, followed by at most 5 seconds for file cleanup. The patient proxy allows
+130 seconds and the browser 135 seconds.
 With the default Google endpoint up to 14 MiB is sent inline; larger images use
 resumable Google Files upload and a deletion attempt after generation, including
 failed generation. With a custom `GEMINI_API_BASE` (local proxy) images go inline
@@ -137,7 +146,7 @@ quota before retrying.
 
 `npm test` covers the patient proxy and its request checks with a stub engine over
 loopback. `cargo test` in `interaction-engine/` covers request shape, the
-catalogue prompt, strict output, provider-failure mapping and missing
+two-call sequencing, text-only matching, strict output, provider-failure mapping and missing
 configuration with a stub Gemini server. Browser E2E stubs only transcription,
 keeping the real storage flow. No Google credentials or real patient photographs
 are needed for automated tests.

@@ -136,7 +136,7 @@ async function recognizeImage(req, res) {
       chunks.push(chunk);
     }
     const response = await fetch(`${engineUrl()}/transcribe`, {
-      method: 'POST', redirect: 'error', signal: AbortSignal.timeout(120_000),
+      method: 'POST', redirect: 'error', signal: AbortSignal.timeout(130_000),
       headers: { 'Content-Type': mimeType }, body: Buffer.concat(chunks),
     });
     const headers = { ...securityHeaders, 'Cache-Control': 'no-store' };

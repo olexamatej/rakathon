@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createState, newId, loadState, saveState, recordSubmission, canSend, toText, STORAGE_KEY } from '../apps/patient-web/public/lists.js';
+import { createState, newId, loadState, saveState, recordSubmission, canSend, toText, medicineSummary, STORAGE_KEY } from '../apps/patient-web/public/lists.js';
 import { recognizePhoto, sendList } from '../apps/patient-web/public/services.js';
 
 function memoryStorage() {
@@ -147,11 +147,12 @@ test('a photo uses the transcription endpoint and preserves unknown fields', asy
     assert.equal(options.body, photo);
     assert.equal(options.headers['Content-Type'], 'image/png');
     assert.equal(options.cache, 'no-store');
-    return Response.json([{ name: 'Concor 5 mg', schedule: '1-0-0' }, { name: 'X', schedule: null }]);
+    return Response.json([{ name: 'Concor', strength: '5 mg', schedule: '1-0-0' }, { name: 'X', strength: null, schedule: null }]);
   });
   const items = await recognizePhoto(photo);
   assert.equal(items[0].schedule, '1-0-0');
-  assert.equal(items[0].dosage, '');
+  assert.equal(items[0].name, 'Concor');
+  assert.equal(items[0].dosage, '5 mg');
   assert.equal(items[0].dosesPerPackage, '');
   assert.equal(items[1].schedule, undefined);
   assert.equal(items.length, 2);
@@ -159,6 +160,38 @@ test('a photo uses the transcription endpoint and preserves unknown fields', asy
   assert.notEqual(items[0].id, items[1].id);
   await assert.rejects(recognizePhoto(new File(['text'], 'test.txt', { type: 'text/plain' })));
   await assert.rejects(sendList(''));
+});
+
+test('photo strengths stay separate through the summary and patient-doctor handoff', async t => {
+  const rows = [
+    { name: 'PARALEN', strength: '500 mg', schedule: null },
+    { name: 'IBALGIN', strength: '400 mg', schedule: '1-0-1' },
+    { name: 'LETROX', strength: '50 mcg', schedule: null },
+    { name: 'NEUROL', strength: '0,5 mg', schedule: null },
+    { name: 'LIPERTANCE', strength: '10 mg/5 mg/5 mg', schedule: null },
+    { name: 'VITAMIN D3 AXONIA', strength: null, schedule: ' null ' },
+    { name: 'null', strength: 'NULL', schedule: null },
+    { name: null, strength: null, schedule: null },
+  ];
+  t.mock.method(globalThis, 'fetch', async () => Response.json(rows));
+  const items = await recognizePhoto(new File(['fixture'], 'photo.png', { type: 'image/png' }));
+  assert.equal(items.length, 6);
+  assert.equal(medicineSummary(items[0]), '500 mg');
+  assert.equal(medicineSummary(items[1]), '400 mg · 1-0-1');
+  assert.equal(medicineSummary(items[5]), '');
+  assert.equal(items[5].schedule, undefined);
+  assert.ok(!JSON.stringify(items).toLowerCase().includes('null'));
+  assert.equal(toText(items).split('\n')[1], 'PARALEN\t500 mg\t\t');
+});
+
+test('legacy photo responses keep missing strengths empty and unreadable rows block sending', async t => {
+  t.mock.method(globalThis, 'fetch', async () => Response.json([
+    { name: 'X', schedule: null }, { name: null, strength: '5 mg', schedule: '1-0-0' },
+  ]));
+  const items = await recognizePhoto(new File(['fixture'], 'photo.png', { type: 'image/png' }));
+  assert.equal(items[0].dosage, '');
+  assert.equal(items[1].name, '');
+  assert.equal(canSend(items), false);
 });
 
 test('optional oncology regimen is stored, validated and handed off', () => {
@@ -190,7 +223,7 @@ test('recognition errors and invalid outputs never produce example medicines', a
   }
   t.mock.method(globalThis, 'fetch', async () => Response.json([{ name: null, schedule: null }]));
   const items = await recognizePhoto(photo);
-  assert.equal(items[0].name, '');
+  assert.deepEqual(items, []);
   assert.equal(canSend(items), false);
 });
 
