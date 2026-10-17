@@ -158,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(config.cors_origins.clone()))
-        .allow_methods([Method::GET, Method::POST])
+        .allow_methods([Method::GET, Method::POST, Method::PUT])
         .allow_headers([header::CONTENT_TYPE]);
 
     let app = storage_router(state)
@@ -179,7 +179,7 @@ fn storage_router(state: AppState) -> Router {
         .route("/v1/admin/blobs", get(admin::list_blobs).delete(admin::delete_all_blobs))
         .route("/v1/admin/blobs/{pin_digest}", delete(admin::delete_blob))
         .route("/v1/transfers", post(create_blob))
-        .route("/v1/transfers/{pin}", get(get_blob))
+        .route("/v1/transfers/{pin}", get(get_blob).put(update_blob))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .layer(middleware::from_fn(response_security_headers))
         .with_state(state)
@@ -295,6 +295,38 @@ async fn create_blob(
     Err(ApiError::Unavailable)
 }
 
+async fn update_blob(
+    State(state): State<AppState>,
+    ConnectInfo(address): ConnectInfo<SocketAddr>,
+    Path(pin): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<CreateBlobResponse>, ApiError> {
+    let now = Utc::now().timestamp();
+    // Share the write budget with POST, including invalid update attempts.
+    enforce_source_limit(&state, address.ip(), b"rate:create:source", 30, now).await?;
+    if !crypto::valid_pin(&pin) {
+        return Err(ApiError::NotFound);
+    }
+    let is_json = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(';').next())
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("application/json"));
+    if !is_json || serde_json::from_slice::<serde_json::Value>(&body).is_err() {
+        return Err(ApiError::BadRequest);
+    }
+    let digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
+    let updated = state.store.update_blob(&digest, &body).await.map_err(|_| {
+        error!("blob transfer update failed");
+        ApiError::Unavailable
+    })?;
+    if !updated {
+        return Err(ApiError::NotFound);
+    }
+    Ok(Json(CreateBlobResponse { pin }))
+}
+
 async fn get_blob(
     State(state): State<AppState>,
     ConnectInfo(address): ConnectInfo<SocketAddr>,
@@ -388,6 +420,46 @@ mod blob_tests {
         let mut headers = HeaderMap::new();
         headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
         headers
+    }
+
+    #[tokio::test]
+    async fn put_replaces_only_existing_blob_preserves_pin_and_rejects_bad_requests() {
+        let state = state().await;
+        let address = "127.0.0.1:1234".parse::<SocketAddr>().unwrap();
+        let (_, Json(receipt)) = create_blob(State(state.clone()), ConnectInfo(address),
+            json_headers(), Bytes::from_static(b"{\"old\":true}")).await.unwrap_or_else(|_| panic!("create failed"));
+        let app = storage_router(state.clone());
+        let payload = b" { \"edited\": [true, null] }\n";
+        for (pin, body, content_type, expected) in [
+            (receipt.pin.as_str(), payload.as_slice(), "application/json", StatusCode::OK),
+            (receipt.pin.as_str(), b"not json".as_slice(), "application/json", StatusCode::BAD_REQUEST),
+            (receipt.pin.as_str(), b"{}".as_slice(), "text/plain", StatusCode::BAD_REQUEST),
+            ("ABC234", b"{}".as_slice(), "application/json", StatusCode::NOT_FOUND),
+            ("invalid", b"{}".as_slice(), "application/json", StatusCode::NOT_FOUND),
+        ] {
+            // Ensure the deterministic missing PIN cannot collide with the generated PIN.
+            if pin == "ABC234" && receipt.pin == pin { continue; }
+            let mut request = Request::builder().method("PUT").uri(format!("/v1/transfers/{pin}"))
+                .header(header::CONTENT_TYPE, content_type)
+                .body(axum::body::Body::from(body.to_vec())).unwrap();
+            request.extensions_mut().insert(ConnectInfo(address));
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), expected);
+            assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+            if expected == StatusCode::OK {
+                let bytes = axum::body::to_bytes(response.into_body(), MAX_BODY_BYTES).await.unwrap();
+                assert_eq!(serde_json::from_slice::<serde_json::Value>(&bytes).unwrap(), serde_json::json!({"pin": receipt.pin}));
+            }
+        }
+        let digest = crypto::digest(&state.pepper, b"blob-pin:v1", receipt.pin.as_bytes());
+        assert_eq!(state.store.get_blob(&digest).await.unwrap().unwrap(), payload);
+        assert_eq!(state.store.list_blobs(0, false).await.unwrap().len(), 1);
+        let mut request = Request::builder().method("PUT").uri(format!("/v1/transfers/{}", receipt.pin))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(axum::body::Body::from(vec![b' '; MAX_BODY_BYTES + 1])).unwrap();
+        request.extensions_mut().insert(ConnectInfo(address));
+        assert_eq!(app.oneshot(request).await.unwrap().status(), StatusCode::PAYLOAD_TOO_LARGE);
+        assert_eq!(state.store.get_blob(&digest).await.unwrap().unwrap(), payload);
     }
 
     #[tokio::test]

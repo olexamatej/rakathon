@@ -20,6 +20,9 @@
   with only `{"pin":"A7K2QM"}`. No payload fields are interpreted.
 - `GET /v1/transfers/{pin}`: return those same bytes as `application/json`;
   return 404 for unknown or invalid PINs. Repeated GETs do not consume the blob.
+- `PUT /v1/transfers/{pin}`: replace an existing JSON blob, return HTTP 200
+  with the same PIN. Unknown PINs return 404 without creating a blob. The PIN
+  authorizes both reading and editing; concurrent writes use last write wins.
 - Operational probes: `GET /health/live` and `GET /health/ready`.
 
 Use `/api` before these paths through the frontend proxy. POST requires
@@ -34,7 +37,9 @@ without photographs or local IDs. The doctor also accepts legacy `{ "text": "…
 tab-separated payloads. Patient and doctor share validation for this format. Unknown strength/package fields may be empty; demo photos always include complete PARALEN, IBALGIN and LETROX items.
 It records a local snapshot and displays the returned PIN only after a valid 201
 response. The receipt timestamp is client-side; storage returns only the PIN.
-No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
+The patient reopens the latest saved PIN on every page load. Its edit button
+restores that snapshot; saving uses PUT and replaces the local history entry
+only after the server confirms the same PIN. No automatic retry or offline upload queue is used. The local Node server handles `/api/transcribe` and interaction proxy endpoints;
 storage uploads under `/api/v1/` use the same-origin VPS proxy in deployment.
 For local UI development, `npm run web:remote` (or `WEB_BACKEND_URL` set to a
 deployed HTTP(S) origin) proxies the allowlisted `/api/` endpoints to that origin,
@@ -85,7 +90,7 @@ a PIN can read the blob. Use only synthetic data: a short PIN with indefinite
 retention is not a production patient-data security design. No OCR, interaction
 checks, accounts, or clinical validation belong to this storage service.
 
-Limit requests by socket IP (30 POSTs, 20 GETs per minute); clients behind the
+Limit requests by socket IP (30 combined POST/PUT writes, 20 GETs per minute); clients behind the
 current proxy share limits. Return `Retry-After: 60` on 429. Cleanup deletes only
 expired rate-limit counters, not blobs. Storage grows without automatic expiry;
 retention, backups, production authentication, and monitoring need separate work.

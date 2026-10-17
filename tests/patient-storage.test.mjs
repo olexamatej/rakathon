@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { recognizePhoto, sendList } from '../apps/patient-web/public/services.js';
-import { createState, recordSubmission, saveState, loadState } from '../apps/patient-web/public/lists.js';
+import { createState, recordSubmission, updateSubmission, saveState, loadState } from '../apps/patient-web/public/lists.js';
 import { parsePatientList } from '../apps/patient-web/public/doctor-services.js';
 import { addList, createDoctorState } from '../apps/patient-web/public/doctor.js';
 
@@ -140,5 +140,44 @@ test('only a valid six-character Crockford storage PIN is accepted', async t => 
       await assert.rejects(sendList(validPayload), /nevrátilo platný PIN/);
       assert.equal(fetch.mock.callCount(), 1);
     });
+  }
+});
+
+
+test('editing replaces the same server PIN and local snapshot without adding history', async t => {
+  const state = createState();
+  state.items = [{ id: 'local-id', ...validPayload.items[0] }];
+  const original = recordSubmission(state, state.items, { pin: 'ABC234', sentAt: '2026-10-16T12:00:00Z' }, 'old');
+  state.items[0].name = 'Upravené léčivo';
+  const fetch = t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, '/api/v1/transfers/ABC234');
+    assert.equal(options.method, 'PUT');
+    assert.deepEqual(JSON.parse(options.body), { version: 1, regimen: 'new', items: [{ ...validPayload.items[0], name: 'Upravené léčivo' }] });
+    return Response.json({ pin: 'ABC234' });
+  });
+  const receipt = await sendList({ items: state.items, regimen: 'new' }, original.pin);
+  const saved = updateSubmission(state, original.id, state.items, receipt, 'new');
+  assert.equal(fetch.mock.callCount(), 1);
+  assert.equal(saved.id, original.id);
+  assert.equal(saved.pin, original.pin);
+  assert.equal(state.submissions.length, 1);
+  assert.equal(saved.items[0].name, 'Upravené léčivo');
+  assert.equal(saved.regimen, 'new');
+  assert.equal(original.items[0].name, validPayload.items[0].name);
+  let serialized;
+  const storage = { setItem: (_, value) => { serialized = value; }, getItem: () => serialized };
+  saveState(storage, state);
+  assert.deepEqual(loadState(storage).state.submissions, [saved]);
+});
+
+test('failed updates never fall back to POST or change saved history', async t => {
+  for (const [status, body] of [[404, {}], [503, {}], [200, { pin: 'DEF567' }]]) {
+    const fetch = t.mock.method(globalThis, 'fetch', async (_, options) => {
+      assert.equal(options.method, 'PUT');
+      return Response.json(body, { status });
+    });
+    await assert.rejects(sendList(validPayload, 'ABC234'));
+    assert.equal(fetch.mock.callCount(), 1);
+    fetch.mock.restore();
   }
 });

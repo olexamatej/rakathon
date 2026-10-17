@@ -57,7 +57,7 @@ function backendOrigin(value) {
 async function proxyBackend(req, res, origin, path) {
   let methods;
   if (path === '/api/v1/transfers') methods = ['POST'];
-  else if (/^\/api\/v1\/transfers\/[A-Za-z0-9]+$/.test(path)) methods = ['GET', 'HEAD'];
+  else if (/^\/api\/v1\/transfers\/[A-Za-z0-9]+$/.test(path)) methods = ['GET', 'HEAD', 'PUT'];
   else if (/^\/api\/v1\/admin\/blobs(?:\/[a-f0-9]{64})?$/.test(path)) methods = ['GET', 'HEAD', 'DELETE'];
   else if (['/api/health/live', '/api/health/ready'].includes(path)) methods = ['GET', 'HEAD'];
   else if (['/api/transcribe', '/api/interaction-checks', '/api/interaction-research'].includes(path)) methods = ['POST'];

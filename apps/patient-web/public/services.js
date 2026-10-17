@@ -44,14 +44,17 @@ export async function recognizePhoto(file) {
     ...(row.schedule !== null ? { schedule: row.schedule } : {}) }));
 }
 
-export async function sendList(payload) {
+export async function sendList(payload, existingPin) {
   if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) throw new Error('Seznam je prázdný.');
+  if (existingPin !== undefined && !/^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(existingPin)) {
+    throw new Error('Tento PIN nelze upravit v úložišti.');
+  }
   const snapshot = buildTransferPayload(payload.items, payload.regimen ?? '');
   let response;
   try {
-    // Each POST creates a blob: never retry automatically or invent a local PIN.
-    response = await fetch('/api/v1/transfers', {
-      method: 'POST',
+    // PUT replaces only an existing PIN; never fall back to creating a copy.
+    response = await fetch(existingPin ? `/api/v1/transfers/${encodeURIComponent(existingPin)}` : '/api/v1/transfers', {
+      method: existingPin ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(snapshot),
       cache: 'no-store',
@@ -60,15 +63,16 @@ export async function sendList(payload) {
       signal: AbortSignal.timeout(15000),
     });
   } catch {
-    throw new Error('Nepodařilo se potvrdit odeslání. Zkontrolujte připojení. Opakované odeslání může vytvořit další kopii seznamu.');
+    throw new Error(existingPin ? 'Nepodařilo se potvrdit uložení. Zkontrolujte připojení a zkuste uložit znovu.' : 'Nepodařilo se potvrdit odeslání. Zkontrolujte připojení. Opakované odeslání může vytvořit další kopii seznamu.');
   }
   if (response.status === 429) throw new Error('Příliš mnoho odeslání. Vyčkejte alespoň minutu před dalším pokusem.');
   if (response.status === 413) throw new Error('Seznam je příliš velký. Maximální velikost je 1 MiB.');
-  if (response.status !== 201) throw new Error('Úložiště nyní nemůže potvrdit odeslání seznamu.');
+  if (existingPin && response.status === 404) throw new Error('Seznam s tímto PINem již není v úložišti. Změny nebyly uloženy.');
+  if (response.status !== (existingPin ? 200 : 201)) throw new Error('Úložiště nyní nemůže potvrdit odeslání seznamu.');
   let pin;
   try {
     ({ pin } = await response.json());
-    if (typeof pin !== 'string' || !/^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin)) throw new Error();
+    if ((existingPin && pin !== existingPin) || typeof pin !== 'string' || !/^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin)) throw new Error();
   } catch {
     throw new Error('Úložiště nevrátilo platný PIN. Seznam již mohl být uložen.');
   }

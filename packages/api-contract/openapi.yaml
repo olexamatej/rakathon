@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: PillGaze Blob Storage API
-  version: 0.2.0
+  version: 0.3.0
   description: >-
     Store opaque JSON and retrieve its exact bytes using a six-character PIN.
     No expiry, consumption, revocation, or encryption enforcement. Synthetic data only.
@@ -42,6 +42,46 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
   /v1/transfers/{pin}:
+    put:
+      operationId: updateTransfer
+      summary: Replace an existing blob under the same PIN
+      description: >-
+        Possession of the PIN permits replacing its exact JSON bytes. Does not
+        create a blob when the PIN is missing. Last successful write wins.
+        Shares the POST source limit of 30 writes per minute. No automatic retries.
+      parameters:
+        - name: pin
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Pin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {}
+      responses:
+        '200':
+          description: Replaced; returns the same PIN.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [pin]
+                properties:
+                  pin:
+                    $ref: '#/components/schemas/Pin'
+        '400':
+          description: Invalid JSON or missing application/json content type.
+        '404':
+          description: Unknown or invalid PIN; nothing created.
+        '413':
+          description: Request exceeds 1048576 bytes (1 MiB).
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
     get:
       operationId: getTransfer
       summary: Retrieve the original JSON blob without modifying or consuming it

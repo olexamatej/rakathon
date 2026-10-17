@@ -105,3 +105,26 @@ test('backend configuration accepts only a fixed HTTP(S) origin', () => {
     assert.throws(() => createAppServer({ backendUrl }));
   }
 });
+
+
+test('remote proxy allows PUT only for an existing transfer path and preserves JSON bytes', async t => {
+  const payload = ' {"edited": true}\n';
+  let calls = 0;
+  const backendUrl = await listen(t, createServer(async (req, res) => {
+    calls++;
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    assert.equal(req.method, 'PUT');
+    assert.equal(req.url, '/api/v1/transfers/ABC234');
+    assert.equal(Buffer.concat(chunks).toString(), payload);
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"pin":"ABC234"}');
+  }));
+  const base = await listen(t, createAppServer({ backendUrl }));
+  const response = await fetch(base + '/api/v1/transfers/ABC234', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: payload,
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { pin: 'ABC234' });
+  assert.equal((await fetch(base + '/api/v1/transfers', { method: 'PUT', body: '{}' })).status, 405);
+  assert.equal(calls, 1);
+});

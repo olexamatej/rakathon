@@ -77,6 +77,18 @@ export function recordSubmission(state, items, receipt, regimen = '') {
   return entry;
 }
 
+// Replace the local snapshot only after the server confirms the same PIN was saved.
+export function updateSubmission(state, id, items, receipt, regimen = '') {
+  const previous = state.submissions.find(entry => entry.id === id);
+  const entry = { id, pin: receipt?.pin, sentAt: receipt?.sentAt, items: structuredClone(items) };
+  if (regimen.trim()) entry.regimen = regimen.trim();
+  if (!previous || previous.pin !== entry.pin || !isSubmission(entry)) {
+    throw new Error('Neplatná odpověď při uložení seznamu.');
+  }
+  state.submissions = [entry, ...state.submissions.filter(saved => saved.id !== id)];
+  return entry;
+}
+
 // Photo transcription provides name, visible strength (stored as dosage) and optional schedule.
 // Missing strength/package information remains empty, never guessed to satisfy validation.
 export function canSend(items) {

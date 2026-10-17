@@ -1,4 +1,4 @@
-import { createState, loadState, saveState, recordSubmission, canSend, medicineSummary } from './lists.js';
+import { createState, loadState, saveState, recordSubmission, updateSubmission, canSend, medicineSummary } from './lists.js';
 import { recognizePhoto, sendList, loadRegimens } from './services.js';
 
 const app = document.querySelector('#app');
@@ -21,6 +21,16 @@ try {
 } catch {
   loadFailed = true;
   storageWarning = 'Uložený seznam nelze načíst. Původní data zůstala zachovaná. Zkuste stránku obnovit.';
+}
+
+// A fresh visit (including a reload of the editor) always returns to the latest saved PIN.
+if (state.submissions.length) {
+  history.replaceState(null, '', `/pacient?pin=${encodeURIComponent(state.submissions[0].id)}`);
+}
+
+function editingSubmission() {
+  const id = new URLSearchParams(location.search).get('edit');
+  return state.submissions.find(entry => entry.id === id);
 }
 
 const escape = value => String(value).replace(/[&<>"']/g, char => ({
@@ -81,8 +91,12 @@ function editor() {
       ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
         <legend class="list-heading">Léčiva v seznamu <span>${itemCount(state.items.length)}</span></legend>${state.items.map((item, index) => `
         <article class="medicine"><div class="medicine-info">
-          <strong>${escape(item.name || 'Nečitelný název léčiva')}</strong>
-          <span>${escape(medicineSummary(item))}</span></div>
+          ${editingSubmission() ? `
+          <label>Název léčiva<input data-id="${escape(item.id)}" data-field="name" value="${escape(item.name)}" maxlength="120" required></label>
+          <label>Síla / dávkování<input data-id="${escape(item.id)}" data-field="dosage" value="${escape(item.dosage)}" maxlength="120"></label>
+          <label>Kdy užívat<input data-id="${escape(item.id)}" data-field="schedule" value="${escape(item.schedule || '')}" maxlength="120"></label>
+          <label>Počet dávek v balení<input data-id="${escape(item.id)}" data-field="dosesPerPackage" value="${escape(item.dosesPerPackage)}" maxlength="6" inputmode="numeric" pattern="[1-9][0-9]{0,5}"></label>`
+          : `<strong>${escape(item.name || 'Nečitelný název léčiva')}</strong><span>${escape(medicineSummary(item))}</span>`}</div>
           <button type="button" class="icon-button" data-action="remove" data-id="${escape(item.id)}" aria-label="Odstranit léčivo ${escape(item.name)}">${icon('trash')}</button>
         </article>`).join('')}</fieldset>`
       : `<div class="empty-list">${icon('list')}<strong>Seznam je prázdný</strong></div>`}
@@ -112,7 +126,7 @@ function sendHint() {
 
 function render(focus = false) {
   const params = new URLSearchParams(location.search);
-  const requestedId = params.get('pin') || (!params.has('new') ? state.submissions[0]?.id : null);
+  const requestedId = params.get('pin') || (!params.has('edit') && !params.has('new') ? state.submissions[0]?.id : null);
   const receipt = state.submissions.find(entry => entry.id === requestedId);
   if (receipt && !processing) {
     photos.splice(0).forEach(job => { if (job.url) URL.revokeObjectURL(job.url); });
@@ -135,7 +149,7 @@ function render(focus = false) {
     <section class="current-submission"><p class="pin-caption">PIN pro lékaře</p>
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>
     <p class="generated-at">Vygenerováno ${escape(formatDate(receipt.sentAt))}</p>
-    <button class="primary" data-action="next-list">Uložit další seznam ${icon('arrow')}</button></section>
+    <button class="primary" data-action="edit-list" data-id="${escape(receipt.id)}">Upravit seznam ${icon('arrow')}</button></section>
     ${history}</main>`
     : editor();
   const header = `<header><a class="brand" href="/pacient" data-action="home"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
@@ -301,7 +315,18 @@ function pickSuggestion(name) {
 }
 
 app.addEventListener('input', event => {
-  if (event.target.id !== 'regimen' || isBusy()) return;
+  if (isBusy()) return;
+  if (event.target.dataset.field) {
+    const item = state.items.find(item => item.id === event.target.dataset.id);
+    if (!item) return;
+    item[event.target.dataset.field] = event.target.value;
+    persist();
+    document.querySelector('#save-status').innerHTML = saveStatus();
+    document.querySelector('#send').disabled = !canSend(state.items);
+    document.querySelector('#send-hint').textContent = sendHint();
+    return;
+  }
+  if (event.target.id !== 'regimen') return;
   setRegimen(event.target.value);
   void showSuggestions();
 });
@@ -352,14 +377,17 @@ app.addEventListener('submit', async event => {
   const items = structuredClone(state.items);
   const regimen = state.regimen || '';
   const origin = location.search;
+  const editing = editingSubmission();
   sending = true;
   message = '';
   render();
   let entry;
   try {
     // Persist only the fields the doctor consumes; never upload local IDs or photo metadata.
-    const receipt = await sendList({ items, regimen });
-    entry = recordSubmission(state, items, receipt, regimen);
+    const receipt = await sendList({ items, regimen }, editing?.pin);
+    entry = editing
+      ? updateSubmission(state, editing.id, items, receipt, regimen)
+      : recordSubmission(state, items, receipt, regimen);
     persist();
   } catch (error) {
     message = error.message || 'Odeslání se nezdařilo. Zkuste to znovu.';
@@ -402,14 +430,17 @@ app.addEventListener('click', async event => {
       persist();
       render();
       break;
-    case 'next-list':
+    case 'edit-list': {
       if (isBusy()) break;
-      state.items = [];
-      state.regimen = '';
+      const entry = state.submissions.find(entry => entry.id === button.dataset.id);
+      if (!entry) break;
+      state.items = structuredClone(entry.items);
+      state.regimen = entry.regimen || '';
       regimenOpen = false;
       persist();
-      navigate('?new=1');
+      navigate(`?edit=${encodeURIComponent(entry.id)}`);
       break;
+    }
     case 'more-history':
       historyLimit += 10;
       render();

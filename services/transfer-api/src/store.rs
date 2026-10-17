@@ -81,6 +81,15 @@ impl TransferStore {
         Ok(result.rows_affected() == 1)
     }
 
+    pub async fn update_blob(&self, pin_digest: &[u8; 32], payload: &[u8]) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query("UPDATE blob_transfers SET payload = ? WHERE pin_digest = ?")
+            .bind(payload)
+            .bind(pin_digest.as_slice())
+            .execute(&self.pool)
+            .await?;
+        Ok(result.rows_affected() == 1)
+    }
+
     pub async fn get_blob(&self, pin_digest: &[u8; 32]) -> Result<Option<Vec<u8>>, sqlx::Error> {
         sqlx::query_scalar("SELECT payload FROM blob_transfers WHERE pin_digest = ?")
             .bind(pin_digest.as_slice())
