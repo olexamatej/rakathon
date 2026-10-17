@@ -92,21 +92,6 @@ input:disabled { opacity: .7; }
 .send-panel { margin-top: 16px; }
 .send-panel p { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; }
 .send-panel p:empty { display: none; }
-.history-list { display: grid; gap: 8px; margin: 16px 0; }
-.submission { border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; background: #fff; }
-.submission summary { display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer; list-style: none; font-size: 13px; }
-.submission summary::-webkit-details-marker { display: none; }
-.submission summary::after { content: '+'; font-size: 20px; }
-.submission[open] summary::after { content: '−'; }
-.submission summary > span { flex: 1; min-width: 0; }
-.submission small { display: block; color: var(--muted); margin-top: 4px; }
-.submission code { font-size: 14px; letter-spacing: .1em; }
-.submission ul { list-style: none; padding: 12px 0 0; margin: 8px 0 0; border-top: 1px solid var(--line); }
-.submission li { display: grid; gap: 4px; font-size: 13px; overflow-wrap: anywhere; }
-.submission li + li { margin-top: 12px; }
-.submission li span { color: var(--muted); font-size: 12px; }
-.empty-history { text-align: center; padding: 28px 12px; }
-.empty-history svg { width: 40px; height: 40px; color: #7c917b; margin-bottom: 12px; }
 .pin-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; text-align: center; padding: 20px 12px max(20px, env(safe-area-inset-bottom)); }
 .pin { font-size: clamp(36px, 10vw, 60px); letter-spacing: .16em; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .pin-actions { display: grid; gap: 10px; width: min(320px, 100%); }
