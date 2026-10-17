@@ -17,7 +17,8 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 
 const PNG: &[u8] = &[137, 80, 78, 71, 13, 10, 26, 10];
-const ROWS: &str = r#"[{"name":" CONCOR ","strength":"5 mg","schedule":"1/2 – 0 – 0"},{"name":null,"strength":null,"schedule":null}]"#;
+const ROWS: &str =
+    r#"[{"name":" CONCOR 5 mg ","schedule":"1/2 – 0 – 0"},{"name":null,"schedule":null}]"#;
 
 #[derive(Default)]
 struct Captured {
@@ -28,23 +29,13 @@ struct Captured {
 }
 
 async fn stub(reply: Value, status: StatusCode) -> (String, Arc<Mutex<Vec<Captured>>>) {
-    stub_sequence(vec![(reply, status)]).await
-}
-
-async fn stub_sequence(replies: Vec<(Value, StatusCode)>) -> (String, Arc<Mutex<Vec<Captured>>>) {
     let requests = Arc::new(Mutex::new(Vec::new()));
     let sink = requests.clone();
-    let replies = Arc::new(replies);
     let router = Router::new().fallback(move |uri: Uri, headers: HeaderMap, body: Bytes| {
         let sink = sink.clone();
-        let replies = replies.clone();
+        let reply = reply.clone();
         async move {
-            let mut captured = sink.lock().unwrap();
-            let reply = replies
-                .get(captured.len())
-                .cloned()
-                .unwrap_or((json!({}), StatusCode::INTERNAL_SERVER_ERROR));
-            captured.push(Captured {
+            sink.lock().unwrap().push(Captured {
                 path: uri.path().to_string(),
                 api_key: headers
                     .get("x-goog-api-key")
@@ -56,7 +47,7 @@ async fn stub_sequence(replies: Vec<(Value, StatusCode)>) -> (String, Arc<Mutex<
                     .map(str::to_string),
                 body: serde_json::from_slice(&body).unwrap_or(Value::Null),
             });
-            (reply.1, axum::Json(reply.0))
+            (status, axum::Json(reply))
         }
     });
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -90,6 +81,13 @@ fn config(base: String, catalogue: Option<PathBuf>) -> Config {
         sukl_catalogue: catalogue
             .unwrap_or_else(|| PathBuf::from("/does/not/exist/medications.json")),
     }
+}
+
+fn catalogue_file(names: &[&str]) -> PathBuf {
+    let path = tempfile::tempdir().unwrap().keep().join("medications.json");
+    let records: Vec<Value> = names.iter().map(|name| json!({"name": name})).collect();
+    std::fs::write(&path, serde_json::to_vec(&records).unwrap()).unwrap();
+    path
 }
 
 async fn post_image(
@@ -134,237 +132,58 @@ fn assert_matches_openapi(value: &Value, name: &str) {
 }
 
 #[tokio::test]
-async fn reads_image_before_matching_text_and_keeps_dosing_from_the_first_call() {
-    let raw = json!([
-        {"text":" paralen 500 ", "schedule":null},
-        {"text":"Concord 5 mg", "schedule":"1/2 – 0 – 0"},
-        {"text":"Letrox 50", "schedule":"V pondělí večer 1 tableta"},
-        {"text":"Lipertance 10/5/5", "schedule":null},
-        {"text":null, "schedule":null}
-    ]);
-    let matched = json!([
-        {"name":"PARALEN", "strength":"500 mg"},
-        {"name":"CONCOR", "strength":"5 mg"},
-        {"name":"LETROX", "strength":"50 mcg"},
-        {"name":"LIPERTANCE", "strength":"10 mg/5 mg/5 mg"},
-        {"name":null, "strength":null}
-    ]);
-    let (base, requests) = stub_sequence(vec![
-        (canned(&raw.to_string(), "STOP"), StatusCode::OK),
-        (canned(&matched.to_string(), "STOP"), StatusCode::OK),
-    ])
-    .await;
-    let catalogue = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../data/sukl/medications.json");
-    let router = app(AppState::new(config(base, Some(catalogue))).unwrap());
+async fn transcribes_with_catalogue_and_keeps_the_key_in_headers() {
+    let (base, requests) = stub(canned(ROWS, "STOP"), StatusCode::OK).await;
+    let router = app(AppState::new(config(
+        base.clone(),
+        Some(catalogue_file(&["CONCOR", "ANOPYRIN"])),
+    ))
+    .unwrap());
     let (status, headers, body) = post_image(router, "image/png", PNG.to_vec()).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(headers.get("cache-control").unwrap(), "no-store");
     let rows: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(
         rows,
-        json!([
-            {"name":"PARALEN", "strength":"500 mg", "schedule":null},
-            {"name":"CONCOR", "strength":"5 mg", "schedule":"1/2-0-0"},
-            {"name":"LETROX", "strength":"50 mcg", "schedule":"V pondělí večer 1 tableta"},
-            {"name":"LIPERTANCE", "strength":"10 mg/5 mg/5 mg", "schedule":null},
-            {"name":null, "strength":null, "schedule":null}
-        ])
+        json!([{"name": "CONCOR 5 mg", "schedule": "1/2-0-0"}, {"name": null, "schedule": null}])
     );
     assert_matches_openapi(&rows, "TranscriptionRows");
 
     let captured = requests.lock().unwrap();
-    assert_eq!(captured.len(), 2);
-    for request in captured.iter() {
-        assert_eq!(request.path, "/v1beta/models/test-model:generateContent");
-        assert_eq!(request.api_key.as_deref(), Some("proxy-key"));
-        assert_eq!(request.content_type.as_deref(), Some("application/json"));
-        assert_eq!(
-            request.body["generationConfig"]["responseMimeType"],
-            "application/json"
-        );
-        assert_eq!(request.body["generationConfig"]["maxOutputTokens"], 8192);
-    }
-    let reading = &captured[0].body;
+    assert_eq!(captured.len(), 1);
+    let request = &captured[0];
+    assert_eq!(request.path, "/v1beta/models/test-model:generateContent");
+    assert_eq!(request.api_key.as_deref(), Some("proxy-key"));
+    assert_eq!(request.content_type.as_deref(), Some("application/json"));
     assert_eq!(
-        reading["contents"][0]["parts"][0]["inline_data"],
-        json!({"mime_type":"image/png", "data":"iVBORw0KGgo="})
-    );
-    assert!(!reading.to_string().contains("PARALEN"));
-    assert_eq!(
-        reading["generationConfig"]["responseJsonSchema"]["items"]["required"],
-        json!(["text", "schedule"])
-    );
-
-    let matching = &captured[1].body;
-    let parts = matching["contents"][0]["parts"].as_array().unwrap();
-    assert_eq!(parts.len(), 1);
-    assert_eq!(parts[0].as_object().unwrap().len(), 1);
-    let input: Value = serde_json::from_str(parts[0]["text"].as_str().unwrap()).unwrap();
-    assert_eq!(input["transcription"][0]["text"], "paralen 500");
-    assert_eq!(input["transcription"][1]["text"], "Concord 5 mg");
-    assert!(
-        input["transcription"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .all(|row| row.get("schedule").is_none())
-    );
-    assert!(
-        input["catalogue"]
-            .as_array()
-            .unwrap()
-            .contains(&json!({"name":"PARALEN", "strength":"500MG"}))
-    );
-    assert!(
-        input["catalogue"]
-            .as_array()
-            .unwrap()
-            .contains(&json!({"name":"LIPERTANCE", "strength":"10MG/5MG/5MG"}))
+        request.body["contents"][0]["parts"][0]["inline_data"]["mime_type"],
+        "image/png"
     );
     assert_eq!(
-        matching["generationConfig"]["responseJsonSchema"]["items"]["required"],
-        json!(["name", "strength"])
+        request.body["contents"][0]["parts"][0]["inline_data"]["data"],
+        "iVBORw0KGgo="
     );
+    assert_eq!(
+        request.body["generationConfig"]["responseMimeType"],
+        "application/json"
+    );
+    assert_eq!(request.body["generationConfig"]["maxOutputTokens"], 8192);
+    let prompt = request.body["systemInstruction"]["parts"][0]["text"]
+        .as_str()
+        .unwrap();
+    assert!(prompt.contains("<katalog>\nANOPYRIN\nCONCOR\n</katalog>"));
+    assert!(prompt.contains("write that catalogue name exactly as listed"));
+    assert!(prompt.contains("never take strengths, forms or dosing from the catalogue"));
 }
 
 #[tokio::test]
-async fn empty_transcription_skips_matching() {
+async fn no_catalogue_block_when_the_catalogue_is_unavailable() {
     let (base, requests) = stub(canned("[]", "STOP"), StatusCode::OK).await;
     let router = app(AppState::new(config(base, None)).unwrap());
-    let (status, _, body) = post_image(router, "image/png", PNG.to_vec()).await;
+    let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(serde_json::from_slice::<Value>(&body).unwrap(), json!([]));
-    assert_eq!(requests.lock().unwrap().len(), 1);
-}
-
-#[tokio::test]
-async fn missing_catalogue_still_separates_fields_without_correcting_names() {
-    let (base, requests) = stub_sequence(vec![
-        (
-            canned(r#"[{"text":"Unknown 20 mg","schedule":null}]"#, "STOP"),
-            StatusCode::OK,
-        ),
-        (
-            canned(r#"[{"name":"Unknown","strength":"20 mg"}]"#, "STOP"),
-            StatusCode::OK,
-        ),
-    ])
-    .await;
-    let router = app(AppState::new(config(base, None)).unwrap());
-    let (status, _, body) = post_image(router, "image/png", PNG.to_vec()).await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(
-        serde_json::from_slice::<Value>(&body).unwrap(),
-        json!([{"name":"Unknown", "strength":"20 mg", "schedule":null}])
-    );
-    let captured = requests.lock().unwrap();
-    let input: Value = serde_json::from_str(
-        captured[1].body["contents"][0]["parts"][0]["text"]
-            .as_str()
-            .unwrap(),
-    )
-    .unwrap();
-    assert_eq!(input["catalogue"], json!([]));
-}
-
-#[tokio::test]
-async fn invalid_or_failed_matching_never_returns_partial_readings() {
-    let raw = r#"[{"text":"Paralen 500","schedule":null},{"text":null,"schedule":"1-0-0"}]"#;
-    for (reply, provider_status, expected) in [
-        (
-            canned("[]", "STOP"),
-            StatusCode::OK,
-            StatusCode::BAD_GATEWAY,
-        ),
-        (
-            canned(
-                r#"[{"name":"PARALEN","strength":"500 mg"},{"name":"X","strength":null}]"#,
-                "STOP",
-            ),
-            StatusCode::OK,
-            StatusCode::BAD_GATEWAY,
-        ),
-        (
-            canned(
-                r#"[{"name":"PARALEN","strength":"500 mg","schedule":null}]"#,
-                "STOP",
-            ),
-            StatusCode::OK,
-            StatusCode::BAD_GATEWAY,
-        ),
-        (
-            canned("not json", "STOP"),
-            StatusCode::OK,
-            StatusCode::BAD_GATEWAY,
-        ),
-        (
-            canned("[]", "MAX_TOKENS"),
-            StatusCode::OK,
-            StatusCode::BAD_GATEWAY,
-        ),
-        (
-            json!({}),
-            StatusCode::TOO_MANY_REQUESTS,
-            StatusCode::TOO_MANY_REQUESTS,
-        ),
-        (
-            json!({}),
-            StatusCode::INTERNAL_SERVER_ERROR,
-            StatusCode::BAD_GATEWAY,
-        ),
-    ] {
-        let (base, requests) = stub_sequence(vec![
-            (canned(raw, "STOP"), StatusCode::OK),
-            (reply, provider_status),
-        ])
-        .await;
-        let router = app(AppState::new(config(base, None)).unwrap());
-        let (status, _, _) = post_image(router, "image/png", PNG.to_vec()).await;
-        assert_eq!(status, expected);
-        assert_eq!(requests.lock().unwrap().len(), 2);
-    }
-}
-
-#[tokio::test]
-async fn both_model_calls_share_one_deadline() {
-    let router = Router::new().fallback(|body: Bytes| async move {
-        let request: Value = serde_json::from_slice(&body).unwrap();
-        let fields = &request["generationConfig"]["responseJsonSchema"]["items"]["required"];
-        let text = if fields == &json!(["text", "schedule"]) {
-            r#"[{"text":"Paralen 500","schedule":null}]"#
-        } else {
-            r#"[{"name":"PARALEN","strength":"500 mg"}]"#
-        };
-        // Each call individually fits the deadline; together they exceed it.
-        tokio::time::sleep(Duration::from_millis(150)).await;
-        axum::Json(canned(text, "STOP"))
-    });
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut config = config(format!("http://{address}/v1beta"), None);
-    config.gemini_timeout = Duration::from_millis(250);
-    let router = app(AppState::new(config).unwrap());
-    let (status, _, body) = post_image(router, "image/png", PNG.to_vec()).await;
-    assert_eq!(status, StatusCode::GATEWAY_TIMEOUT);
-    assert_eq!(
-        serde_json::from_slice::<Value>(&body).unwrap()["status"],
-        504
-    );
-}
-
-#[test]
-fn literal_null_fields_are_missing_in_all_columns() {
-    let rows =
-        parse_medications(r#"[{"name":"null","strength":" NULL ","schedule":"Null"}]"#).unwrap();
-    assert_eq!(
-        rows,
-        vec![Row {
-            name: None,
-            strength: None,
-            schedule: None
-        }]
-    );
+    let prompt = requests.lock().unwrap()[0].body["systemInstruction"]["parts"][0]["text"].clone();
+    assert!(!prompt.as_str().unwrap().contains("<katalog>"));
 }
 
 #[tokio::test]
@@ -441,7 +260,7 @@ async fn maps_provider_failures_to_problem_statuses() {
             StatusCode::BAD_GATEWAY,
         ),
         (
-            canned(r#"[{"text":"X","schedule":null,"extra":1}]"#, "STOP"),
+            canned(r#"[{"name":"X","schedule":null,"extra":1}]"#, "STOP"),
             StatusCode::OK,
             StatusCode::BAD_GATEWAY,
         ),
@@ -474,13 +293,11 @@ fn parsing_normalizes_only_schedule_typography_and_rejects_incomplete_rows() {
         parse_medications(ROWS).unwrap(),
         vec![
             Row {
-                name: Some("CONCOR".into()),
-                strength: Some("5 mg".into()),
+                name: Some("CONCOR 5 mg".into()),
                 schedule: Some("1/2-0-0".into())
             },
             Row {
                 name: None,
-                strength: None,
                 schedule: None
             }
         ]
@@ -491,24 +308,22 @@ fn parsing_normalizes_only_schedule_typography_and_rejects_incomplete_rows() {
         ("V pondělí večer 1 tableta", "V pondělí večer 1 tableta"),
         ("1-2-3-4-5", "1-2-3-4-5"),
     ] {
-        let rows = parse_medications(
-            &json!([{"name": "X", "strength": null, "schedule": text}]).to_string(),
-        )
-        .unwrap();
+        let rows =
+            parse_medications(&json!([{"name": "X", "schedule": text}]).to_string()).unwrap();
         assert_eq!(rows[0].schedule.as_deref(), Some(schedule), "{text}");
     }
     for text in [
         "```json\n[]\n```",
         "{}",
         r#"[{"name":"X"}]"#,
-        r#"[{"name":"X","strength":null,"schedule":1}]"#,
-        r#"[{"name":"X","strength":null,"schedule":null,"extra":1}]"#,
-        r#"[{"name":"","strength":null,"schedule":null}]"#,
-        r#"[{"name":"X\nY","strength":null,"schedule":null}]"#,
+        r#"[{"name":"X","schedule":1}]"#,
+        r#"[{"name":"X","schedule":null,"extra":1}]"#,
+        r#"[{"name":"","schedule":null}]"#,
+        r#"[{"name":"X\nY","schedule":null}]"#,
     ] {
         assert!(parse_medications(text).is_err(), "{text}");
     }
-    let long = json!([{"name": "X", "strength": null, "schedule": "x".repeat(121)}]).to_string();
+    let long = json!([{"name": "X", "schedule": "x".repeat(121)}]).to_string();
     assert!(parse_medications(&long).is_err());
     assert_eq!(parse_medications("[]").unwrap(), Vec::new());
 }

@@ -31,24 +31,19 @@ paths:
                 items:
                   type: object
                   additionalProperties: false
-                  required: [name, strength, schedule]
+                  required: [name, schedule]
                   properties:
                     name:
                       type: [string, 'null']
                       minLength: 1
                       maxLength: 120
-                      description: Visible medicine name and qualifiers without strength; null if unreadable
-                    strength:
-                      type: [string, 'null']
-                      minLength: 1
-                      maxLength: 120
-                      description: Visible strength; units completed only for an unambiguous catalogue match. Null if absent or unreadable.
+                      description: Visible medicine name including strength; null if unreadable
                     schedule:
                       type: [string, 'null']
                       minLength: 1
                       maxLength: 120
                       description: Written patient schedule; null if absent or unreadable
-              example: [{name: CONCOR, strength: 5 mg, schedule: 1-0-0}]
+              example: [{name: Concor 5 mg, schedule: 1-0-0}]
         '400': {$ref: '#/components/responses/Problem'}
         '405': {$ref: '#/components/responses/Problem'}
         '413': {$ref: '#/components/responses/Problem'}

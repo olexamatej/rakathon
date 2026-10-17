@@ -12,10 +12,7 @@ export function loadRegimens() {
   return regimens;
 }
 
-// Keep absent values empty in the UI, including providers that return the literal string "null".
-const photoText = value => typeof value === 'string' && value.trim().toLowerCase() !== 'null' ? value.trim() : '';
-
-// The transcription API separates name, strength and patient schedule.
+// The transcription API returns only name + schedule; map unknown legacy UI fields to empty strings.
 export async function recognizePhoto(file) {
   if (!file?.type.startsWith('image/')) throw new Error('Vyberte prosím fotografii.');
   if (file.size > 20 * 1024 * 1024) throw new Error('Fotografie je příliš velká. Vyberte snímek do 20 MB.');
@@ -39,15 +36,12 @@ export async function recognizePhoto(file) {
   try { rows = await response.json(); } catch { throw new Error('Rozpoznávání nevrátilo platný seznam léčiv.'); }
   const text = value => value === null || (typeof value === 'string' && value.trim().length > 0
     && value.length <= 120 && !/[\u0000-\u001f\u007f]/.test(value));
-  if (!Array.isArray(rows) || rows.length > 200 || rows.some(row => !row
-      || Object.keys(row).some(key => !['name', 'strength', 'schedule'].includes(key))
-      || !Object.hasOwn(row, 'name') || !Object.hasOwn(row, 'schedule') || !text(row.name) || !text(row.schedule)
-      || (Object.hasOwn(row, 'strength') && !text(row.strength)))) {
+  if (!Array.isArray(rows) || rows.length > 200 || rows.some(row => !row || Object.keys(row).length !== 2
+      || !Object.hasOwn(row, 'name') || !Object.hasOwn(row, 'schedule') || !text(row.name) || !text(row.schedule))) {
     throw new Error('Rozpoznávání nevrátilo platný seznam léčiv.');
   }
-  return rows.map(row => ({ id: newId(), name: photoText(row.name), dosage: photoText(row.strength), dosesPerPackage: '',
-    ...(photoText(row.schedule) ? { schedule: photoText(row.schedule) } : {}) }))
-    .filter(item => item.name || item.dosage || item.schedule);
+  return rows.map(row => ({ id: newId(), name: row.name ?? '', dosage: '', dosesPerPackage: '',
+    ...(row.schedule !== null ? { schedule: row.schedule } : {}) }));
 }
 
 export async function sendList(payload) {

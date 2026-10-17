@@ -77,7 +77,7 @@ export function recordSubmission(state, items, receipt, regimen = '') {
   return entry;
 }
 
-// Photo transcription provides a separate name, strength (dosage) and optional schedule.
+// Photo transcription provides name (including visible strength) and optional schedule.
 // Missing strength/package information remains empty, never guessed to satisfy validation.
 export function canSend(items) {
   return Array.isArray(items) && items.length > 0 && items.every(item => item
