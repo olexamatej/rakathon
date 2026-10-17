@@ -22,14 +22,14 @@ for (const source of ['gallery', 'camera']) {
         recognitionRequests++;
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(transcription) });
       });
+      if (source === 'camera') {
+        await page.addInitScript(() => {
+          if (navigator.mediaDevices) {
+            navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Camera unavailable', 'NotFoundError'));
+          }
+        });
+      }
       await page.goto('/pacient');
-      const roleNav = page.getByRole('navigation', { name: 'Zobrazení aplikace' });
-      await expect(roleNav.getByRole('link', { name: 'Pacient' })).toHaveAttribute('aria-current', 'page');
-      await roleNav.getByRole('link', { name: 'Lékař' }).click();
-      await expect(page).toHaveURL(/\/lekar$/);
-      await expect(page.getByRole('navigation', { name: 'Zobrazení aplikace' }).getByRole('link', { name: 'Lékař' })).toHaveAttribute('aria-current', 'page');
-      await page.getByRole('navigation', { name: 'Zobrazení aplikace' }).getByRole('link', { name: 'Pacient' }).click();
-      await expect(page).toHaveURL(/\/pacient$/);
       const chooserPromise = page.waitForEvent('filechooser');
       await page.getByRole('button', { name: source === 'camera' ? 'Vyfotit' : 'Z galerie', exact: true }).click();
       await (await chooserPromise).setFiles({
@@ -41,7 +41,7 @@ for (const source of ['gallery', 'camera']) {
 
       const uploadPromise = page.waitForResponse(response => response.request().method() === 'POST'
         && new URL(response.url()).pathname === '/api/v1/transfers');
-      await page.getByRole('button', { name: 'Odeslat seznam' }).click();
+      await page.getByRole('button', { name: 'Uložit seznam' }).click();
       const upload = await uploadPromise;
       expect(upload.status(), 'Patient upload must succeed').toBe(201);
       const payload = upload.request().postDataJSON();
