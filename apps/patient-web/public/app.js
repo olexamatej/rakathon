@@ -183,12 +183,15 @@ function stopCamera() {
   cameraVideo.srcObject = null;
 }
 
-// Phones use the native camera via <input capture>; desktops ignore `capture`, so stream the webcam instead.
+// Stream the camera in-page everywhere: the native <input capture> app gets the browser OOM-killed on some phones
+// (e.g. Galaxy S23), losing the photo. The file input is only a fallback when getUserMedia is unavailable or denied.
 async function openCamera() {
   const input = document.getElementById('camera');
-  if (matchMedia('(pointer: coarse)').matches || !navigator.mediaDevices?.getUserMedia) return input.click();
+  if (!navigator.mediaDevices?.getUserMedia) return input.click();
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false,
+    });
   } catch {
     return input.click();
   }
