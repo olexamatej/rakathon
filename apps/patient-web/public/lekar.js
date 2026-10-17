@@ -1,6 +1,6 @@
 import { newId } from './lists.js';
 import {
-  createDoctorState, loadDoctorState, saveDoctorState, addList, touch, validateItem,
+  DOCTOR_STORAGE_KEY, createDoctorState, addList, touch, validateItem,
   normalizePin, isPin, formatMedicineLines, formatMedicineInline, applySubstances,
 } from './doctor.js';
 import { fetchListByPin, fetchInteractions, loadRegimenDrugs, loadSuklNames, loadSuklSubstances, researchInteraction, RESEARCH_SITES } from './doctor-services.js';
@@ -24,7 +24,6 @@ const icons = {
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
 
 let state = createDoctorState();
-let loadFailed = false;
 let loading = false;
 let regimenDrugs = {}; // regimen name -> drug names, filled asynchronously
 const research = new Map(); // `${list id}|${pair}|${site}` -> { status, data, error, controller }
@@ -43,38 +42,22 @@ function interactionSignature(list) {
   return JSON.stringify([medicines, regimen]);
 }
 
-try {
-  state = loadDoctorState(localStorage);
-} catch (error) {
-  loadFailed = true;
-  showNotice(`${error.message} Uložená historie zůstala beze změny a nové seznamy se neukládají.`);
-}
+// A doctor's browser must never retain previously opened patient lists.
+try { localStorage.removeItem(DOCTOR_STORAGE_KEY); } catch { /* Private browsing may disable storage. */ }
+if (location.hash) history.replaceState(null, '', `${location.pathname}${location.search}`);
 
-function showNotice(text) {
-  const notice = $('#storage-notice');
-  notice.textContent = text;
-  notice.hidden = !text;
-}
+const currentList = () => state.lists[0] || null;
 
-function persist() {
-  if (loadFailed) return;
-  try {
-    saveDoctorState(localStorage, state);
-    showNotice('');
-  } catch {
-    showNotice('Změny se nepodařilo uložit do prohlížeče. Nezavírejte stránku.');
-  }
-}
-
-const currentList = () => state.lists.find(list => list.id === decodeURIComponent(location.hash.slice(1)));
-
-function historyView(current) {
-  if (!state.lists.length) return '<p class="history-empty">Zatím žádné seznamy.</p>';
-  return state.lists.map(list => `<button type="button" class="history-item" data-action="open" data-id="${escape(list.id)}" ${list.id === current?.id ? 'aria-current="true"' : ''}>
-      <code>${escape(list.pin)}</code>
-      <small>${escape(date(list.loadedAt))} ${escape(time(list.loadedAt))} · ${itemCount(list.items.length)}${list.regimen ? ` · ${escape(list.regimen)}` : ''}</small>
-    </button>`).join('');
-}
+window.addEventListener('pagehide', () => {
+  state = createDoctorState();
+  for (const entry of interactions.values()) entry.controller?.abort();
+  for (const entry of research.values()) entry.controller?.abort();
+  interactions.clear();
+  research.clear();
+  detailRows.clear();
+  if (detailsDialog.open) detailsDialog.close();
+  render();
+});
 
 const regimenOf = list => ({ name: list.regimen, drugs: regimenDrugs[list.regimen] || [] });
 
@@ -260,7 +243,6 @@ function listView(list) {
 
 function render() {
   const list = currentList();
-  $('#history').innerHTML = historyView(list);
   $('#main').innerHTML = list ? listView(list)
     : `<div class="doc-empty">${icon('list')}<strong>Zadejte PIN pacienta</strong>Seznam léčiv se zobrazí zde.</div>`;
   document.title = `${list ? `PIN ${list.pin}` : 'Lékař'} · PillGaze`;
@@ -295,12 +277,10 @@ async function runInteractions(list) {
 
 function afterEdit(list, { redraw = true } = {}) {
   touch(list);
-  persist();
   // Changed substances invalidate the loaded interactions: clear them (this also drops a request in flight).
   if (interactions.get(list.id) && interactions.get(list.id).signature !== interactionSignature(list)) clearInteractions(list);
   if (redraw) render();
   else {
-    $('#history').innerHTML = historyView(list);
     renderInteractions(list);
   }
 }
@@ -376,11 +356,11 @@ $('#pin-form').addEventListener('submit', async event => {
   $('#pin-submit').textContent = 'Načítám…';
   try {
     const received = await fetchListByPin(pin);
-    const list = addList(state, { pin, items: received.items, regimen: received.regimen, sentAt: received.sentAt });
+    const nextState = createDoctorState();
+    const list = addList(nextState, { pin, items: received.items, regimen: received.regimen, sentAt: received.sentAt });
     applySubstances(list.items, await loadSuklSubstances());
-    persist();
+    state = nextState;
     pinInput.value = '';
-    location.hash = encodeURIComponent(list.id);
     render();
   } catch (error) {
     $('#pin-error').textContent = error.message || 'Seznam se nepodařilo načíst.';
@@ -401,18 +381,11 @@ if (sharedPin) {
   $('#pin-form').requestSubmit();
 }
 
-// --- history and list actions ---
-$('#history').addEventListener('click', event => {
-  const button = event.target.closest('[data-action="open"]');
-  if (button) location.hash = encodeURIComponent(button.dataset.id);
-});
-
-window.addEventListener('hashchange', render);
+// --- Supporting catalogues ---
 void loadRegimenDrugs().then(drugs => { regimenDrugs = drugs; render(); });
-// Lists stored earlier (or from an API without substances) get theirs from the catalogue once it loads.
+// Fill missing substances on the currently open list when the catalogue arrives.
 void loadSuklSubstances().then(map => {
-  if (!state.lists.map(list => applySubstances(list.items, map)).some(Boolean)) return;
-  persist();
+  if (!currentList() || !applySubstances(currentList().items, map)) return;
   render();
 });
 

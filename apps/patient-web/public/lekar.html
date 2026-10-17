@@ -9,7 +9,7 @@
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/lekar.css">
-  <script type="module" src="/lekar.js?v=pin-query-1"></script>
+  <script type="module" src="/lekar.js?v=no-doctor-history-1"></script>
 </head>
 <body class="cool-theme">
   <a class="skip-link" href="#main">Přejít k obsahu</a>
@@ -17,9 +17,8 @@
     <header>
       <a class="brand" href="/lekar"><img src="/icons/icon.svg" width="36" height="36" alt="">PillGaze</a>
     </header>
-    <p class="notice" id="storage-notice" role="alert" hidden></p>
     <div class="doc-layout">
-      <aside class="doc-side" aria-label="Zadání PINu a historie">
+      <aside class="doc-side" aria-label="Zadání PINu">
         <form id="pin-form" novalidate>
           <label for="pin">PIN pacienta</label>
           <div class="pin-row">
@@ -28,10 +27,6 @@
           </div>
           <p id="pin-error" class="field-error" role="alert"></p>
         </form>
-        <section aria-labelledby="history-title">
-          <h2 id="history-title">Historie</h2>
-          <div id="history"></div>
-        </section>
       </aside>
       <main id="main" class="doc-main"></main>
     </div>

@@ -60,8 +60,10 @@ for (const source of ['gallery', 'camera']) {
             await expect(doctor.locator(`#main [data-field="${field}"]`).nth(index)).toHaveValue(item[field]);
           }
         }
+        expect(await doctor.evaluate(() => localStorage.getItem('pillgaze:doctor:v1'))).toBeNull();
         await doctor.reload();
-        await expect(doctor.locator('#main tbody tr')).toHaveCount(medicines.length);
+        await expect(doctor.locator('#pin')).toBeVisible();
+        await expect(doctor.locator('#main tbody tr')).toHaveCount(0);
       } finally {
         await doctorContext.close();
       }
