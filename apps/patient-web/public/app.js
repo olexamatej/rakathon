@@ -1,5 +1,5 @@
 import { STORAGE_KEY, createState, loadState, saveState, replaceSubmission, updateSubmission, invalidateSubmission, canSend, medicineSummary } from './lists.js';
-import { recognizePhoto, savePatientList, validateList, renewPatientList, loadRegimens } from './services.js';
+import { recognizePhoto, sendList, savePatientList, validateList, renewPatientList, loadRegimens } from './services.js';
 
 const app = document.querySelector('#app');
 const photos = [];
@@ -28,7 +28,7 @@ try {
 }
 
 // A fresh visit (including a reload of the editor) always returns to the latest saved PIN.
-if (state.submissions.length && !state.submissions[0].expired) {
+if (state.submissions.length && (!state.submissions[0].expired || !state.items.length)) {
   history.replaceState(null, '', `/pacient?pin=${encodeURIComponent(state.submissions[0].id)}`);
 }
 
@@ -124,23 +124,26 @@ function sendHint() {
 
 function render(focus = false) {
   const params = new URLSearchParams(location.search);
-  const receipt = !state.submissions[0]?.expired && !params.has('list') && !params.has('new') ? state.submissions[0] : undefined;
+  const receipt = !params.has('list') && !params.has('new') && (!state.submissions[0]?.expired || !state.items.length) ? state.submissions[0] : undefined;
   const formatDate = value => new Intl.DateTimeFormat('cs-CZ', {
     dateStyle: 'medium', timeStyle: 'short',
   }).format(new Date(value));
   const content = receipt ? `<main id="main" class="pin-screen">
-    <section class="current-submission">${verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
+    <section class="current-submission">${receipt.expired ? '<h1>Platnost seznamu skončila</h1>' : verifiedEntry === receipt ? `<p class="pin-caption">PIN pro lékaře</p>
     <h1 class="pin" aria-label="PIN ${escape(receipt.pin.split('').join(' '))}">${escape(receipt.pin)}</h1>`
       : `<h1>${checking ? 'Ověřuji platnost…' : 'Platnost není ověřena'}</h1>`}
-    <p class="generated-at">Uloženo ${escape(formatDate(receipt.sentAt))}</p>
-    ${receipt.expiresAt ? `<p>Platnost do ${escape(formatDate(receipt.expiresAt))}</p>` : ''}
+    ${receipt.expired ? `<p class="generated-at">Nahráno <time datetime="${escape(receipt.sentAt)}">${escape(formatDate(receipt.sentAt))}</time></p>` : ''}
+    ${receipt.expiresAt ? `<p>${receipt.expired && Date.parse(receipt.expiresAt) <= Date.now() ? 'Platnost vypršela' : 'Platnost do'} <time datetime="${escape(receipt.expiresAt)}">${escape(formatDate(receipt.expiresAt))}</time></p>` : '<p>Datum vypršení platnosti není dostupné.</p>'}
+    ${receipt.expired ? `<p class="notice">Původní PIN už nelze použít pro předání lékaři. Tady vidíte pouze lokální kopii uloženou v tomto zařízení, nikoli aktuálně sdílený seznam. Kopie pochází z data nahrání uvedeného výše. Zkontrolujte, zda jsou léky stále aktuální. Seznam můžete zahodit, nebo jej znovu nahrát a získat nový PIN.</p>
+      ${receipt.invalidatedAt ? `<p>Nedostupnost zjištěna <time datetime="${escape(receipt.invalidatedAt)}">${escape(formatDate(receipt.invalidatedAt))}</time>.</p>` : ''}` : ''}
     <div class="saved-list"><h2>Uložený seznam léčiv</h2>
     ${receipt.regimen ? `<p>${escape(receipt.regimen)}</p>` : ''}
     ${receipt.items.map(item => `<p><strong>${escape(item.name)}</strong><br>${escape(medicineSummary(item))}</p>`).join('')}</div>
-    <p>Po načtení lékařem nebo vypršení platnosti budete muset seznam nahrát znovu.</p>
+    ${receipt.expired ? `<button class="primary" data-action="reupload" ${isBusy() ? 'disabled' : ''}>${sending ? 'Nahrávám…' : 'Znovu nahrát a získat nový PIN'}</button>
+    <button class="secondary" data-action="discard-expired" ${isBusy() ? 'disabled' : ''}>Zahodit seznam</button>` : `<p>Po načtení lékařem nebo vypršení platnosti můžete lokální kopii znovu nahrát pod novým PINem.</p>
     <button class="primary" data-action="renew" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>${sending ? 'Ukládám…' : 'Prodloužit platnost'}</button>
     ${verifiedEntry !== receipt && !checking ? `<button class="secondary" data-action="check-validity" ${loadFailed ? 'disabled' : ''}>Ověřit platnost</button>` : ''}
-    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>
+    <button class="secondary" data-action="open-list" data-id="${escape(receipt.id)}" ${isBusy() || verifiedEntry !== receipt ? 'disabled' : ''}>Zpět k seznamu ${icon('arrow')}</button>`}
     ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
     <p class="save-status" role="status">${saveStatus()}</p><p class="message" role="status">${escape(message)}</p></section>
     </main>`
@@ -402,6 +405,37 @@ app.addEventListener('click', async event => {
   if (!button || button.disabled) return;
   event.preventDefault();
   switch (button.dataset.action) {
+    case 'reupload': {
+      const previous = state.submissions[0];
+      if (isBusy() || !previous?.expired) break;
+      sending = true;
+      message = '';
+      render();
+      try {
+        // Explicit choice: upload exactly the displayed local snapshot, never PUT.
+        const receipt = await sendList({ items: previous.items, regimen: previous.regimen || '' });
+        if (loadFailed || state.submissions[0] !== previous) break;
+        const entry = replaceSubmission(state, previous.items, receipt, previous.regimen || '');
+        state.items = structuredClone(entry.items);
+        state.regimen = entry.regimen || '';
+        verifiedEntry = entry;
+        editingSession = false;
+        persist();
+        history.replaceState(null, '', `/pacient?pin=${encodeURIComponent(entry.id)}`);
+        message = 'Seznam byl znovu nahrán. Pro lékaře použijte nový PIN.';
+      } catch (error) { message = error.message; }
+      finally { sending = false; render(); }
+      break;
+    }
+    case 'discard-expired':
+      if (isBusy() || !state.submissions[0]?.expired) break;
+      if (!window.confirm('Zahodit tento seznam a jeho lokální kopii? Tuto akci nelze vrátit.')) break;
+      state.submissions = [];
+      delete state.invalidatedDraft;
+      verifiedEntry = undefined;
+      persist();
+      navigate();
+      break;
     case 'check-validity': await refreshValidity(true); break;
     case 'renew': {
       if (isBusy()) break;
@@ -499,7 +533,7 @@ function invalidateCurrentList() {
   editingSession = false;
   persist();
   history.replaceState(null, '', '/pacient');
-  message = 'Platnost seznamu vypršela. Nahrajte fotografie léků znovu.';
+  message = 'Lokální kopii můžete zahodit nebo znovu nahrát pod novým PINem.';
 }
 
 function handleUnavailableList() {

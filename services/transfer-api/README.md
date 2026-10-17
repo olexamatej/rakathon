@@ -67,7 +67,9 @@ a PIN later allocated to another upload. Never log the token.
 Patient load checks local expiry before HEAD. Expired deadlines or missing server
 rows mark the local receipt expired and return to fresh photo upload. The invalid
 PIN/list stay locally; unsent edits are retained separately as `invalidatedDraft`.
-Neither is automatically restored or uploaded.
+Neither is automatically restored or uploaded. The expired-copy screen displays
+upload/validity timestamps and offers explicit discard (with confirmation) or
+fresh POST of that saved snapshot. Failed reupload keeps the local copy.
 Network errors retain data for another check; expired lists cannot be restored.
 Saving an active patient draft validates availability first: PUT for an existing
 valid upload, POST with a fresh PIN otherwise. A PUT 404 race permits one POST;

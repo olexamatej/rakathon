@@ -32,6 +32,7 @@ const isSubmission = (value, legacy = false) => value && isId(value.id) && isRec
   && isItems(value.items) && canSend(value.items) && isRegimen(value.regimen)
   && (value.ownerToken === undefined || isOwnerToken(value.ownerToken))
   && (value.expiresAt === undefined || isDate(value.expiresAt))
+  && (value.invalidatedAt === undefined || isDate(value.invalidatedAt))
   && (value.expired === undefined || typeof value.expired === 'boolean');
 const isState = (state, legacy = false) => state && isItems(state.items) && isRegimen(state.regimen) && Array.isArray(state.submissions)
   && (state.invalidatedDraft === undefined || (state.invalidatedDraft && isItems(state.invalidatedDraft.items) && isRegimen(state.invalidatedDraft.regimen)))
@@ -118,6 +119,7 @@ export function invalidateSubmission(state, preserveActiveDraft = false) {
   if (!entry) return;
   const alreadyExpired = entry.expired;
   entry.expired = true;
+  entry.invalidatedAt ??= new Date().toISOString();
   if (preserveActiveDraft || alreadyExpired) return;
   state.invalidatedDraft = { items: structuredClone(state.items), regimen: state.regimen || '' };
   state.items = [];

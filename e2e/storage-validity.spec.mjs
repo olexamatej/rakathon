@@ -13,10 +13,12 @@ async function seed(page, expiresAt = headers['x-expires-at']) {
 }
 
 async function expectFresh(page) {
-  await expect(page.locator('#photo-title')).toHaveText('Nahrajte fotografie léků');
-  await expect(page.locator('h1.pin, .saved-list, .medicine')).toHaveCount(0);
+  await expect(page.locator('h1')).toHaveText('Platnost seznamu skončila');
+  await expect(page.locator('h1.pin, .medicine')).toHaveCount(0);
+  await expect(page.locator('.saved-list')).toContainText(item.name);
   await expect(page.getByRole('button', { name: 'Obnovit platnost' })).toHaveCount(0);
-  await expect(page.locator('#message')).toContainText('vypršela');
+  await expect(page.locator('.notice')).toContainText('v tomto zařízení');
+  await expect(page.getByRole('button', { name: 'Znovu nahrát a získat nový PIN' })).toBeEnabled();
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
   expect(state.items).toEqual([]);
   expect(state.submissions).toHaveLength(1);
@@ -24,7 +26,7 @@ async function expectFresh(page) {
   expect(state.submissions[0].items[0].name).toBe(item.name);
   expect(state.invalidatedDraft.items[0].name).toBe(item.name);
   expect(new URL(page.url()).search).toBe('');
-  await expect(page.getByRole('button', { name: 'Z galerie', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Zahodit seznam' })).toBeEnabled();
 }
 
 test('future local expiry checks HEAD, preserves available flow and clears consumed data', async ({ page }) => {
@@ -52,6 +54,9 @@ test('future local expiry checks HEAD, preserves available flow and clears consu
   available = false;
   await page.reload();
   await expectFresh(page);
+  await expect(page.locator('.current-submission')).toContainText('Platnost do');
+  await expect(page.locator('.current-submission')).toContainText('Nedostupnost zjištěna');
+  await expect(page.locator('.current-submission')).not.toContainText('Platnost vypršela');
   expect(checks).toBe(3);
 });
 
@@ -81,7 +86,7 @@ for (const expiresAt of ['2020-01-15T12:00:00Z', undefined]) {
     await expectFresh(page);
     expect(calls).toBe(0);
     await page.reload();
-    await expect(page.locator('#photo-title')).toHaveText('Nahrajte fotografie léků');
+    await expect(page.locator('h1')).toHaveText('Platnost seznamu skončila');
     expect((await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).submissions[0].expired).toBe(true);
     expect(calls).toBe(0);
     await page.evaluate(item => {
@@ -255,4 +260,46 @@ test('expiry during photo recognition preserves edits and saves them with POST',
   });
   await page.getByRole('button', { name: 'Uložit seznam' }).click();
   await expect(page.locator('h1.pin')).toHaveText('5678');
+});
+
+test('expired local copy shows dates and explicitly reuploads the displayed snapshot', async ({ page }) => {
+  await seed(page, '2026-10-01T12:00:00Z');
+  const writes = [];
+  await page.route('**/api/v1/transfers**', route => {
+    writes.push(route.request().method());
+    expect(route.request().postDataJSON()).toMatchObject({ regimen: 'Uložený režim', items: [{ name: item.name }] });
+    return route.fulfill({ status: 201, json: { pin: '5678' }, headers });
+  });
+  await page.reload();
+  await expectFresh(page);
+  await expect(page.locator('time[datetime="2026-10-17T12:00:00Z"]')).toBeVisible();
+  await expect(page.locator('time[datetime="2026-10-01T12:00:00Z"]')).toBeVisible();
+  expect(writes).toEqual([]);
+  await page.getByRole('button', { name: 'Znovu nahrát a získat nový PIN' }).click();
+  await expect(page.locator('h1.pin')).toHaveText('5678');
+  expect(writes).toEqual(['POST']);
+  await expect(page.locator('.generated-at')).toHaveCount(0);
+  await expect(page.locator('time[datetime="2026-10-17T12:00:00Z"]')).toHaveCount(0);
+  await expect(page.locator('time[datetime="2099-10-31T12:00:00Z"]')).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
+  expect(saved.submissions[0].expired).toBeUndefined();
+});
+
+test('failed reupload retains the expired copy; discard requires confirmation', async ({ page }) => {
+  await seed(page, '2020-01-15T12:00:00Z');
+  await page.route('**/api/v1/transfers', route => route.fulfill({ status: 503 }));
+  await page.reload();
+  await expectFresh(page);
+  await page.getByRole('button', { name: 'Znovu nahrát a získat nový PIN' }).click();
+  await expect(page.locator('.message')).toContainText('nemůže potvrdit');
+  expect((await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')))).submissions[0].expired).toBe(true);
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.getByRole('button', { name: 'Zahodit seznam' }).click();
+  await expect(page.locator('.saved-list')).toContainText(item.name);
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Zahodit seznam' }).click();
+  await expect(page.locator('#photo-title')).toHaveText('Nahrajte fotografie léků');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
+  expect(saved.submissions).toEqual([]);
+  expect(saved.invalidatedDraft).toBeUndefined();
 });

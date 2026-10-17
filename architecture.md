@@ -88,7 +88,15 @@ not shown as usable; unsent items/regimen are retained in `invalidatedDraft`,
 separate from the fresh empty editor. Repeated loads never restore invalid data
 or erase newly uploaded draft items. Network/service failures
 retain local data without showing the unverified PIN. Available lists keep the
-current PIN/editing/extension flow; there is no restore-expired-list button.
+current PIN/editing/extension flow.
+Expired receipts now have an explicit local-copy decision screen: upload and
+validity timestamps, retained medicines, and discard or fresh POST under a new
+receipt. `invalidatedAt` records when unavailability was observed, not the unknown
+doctor-read time; a future original deadline is labelled "Platnost do", never a
+fabricated expiration date. Reupload sends the displayed saved snapshot only,
+without silently adding archived unsent edits. Failure retains the expired copy.
+Discard requires confirmation and removes the invalid receipt and archived draft.
+The valid doctor-PIN screen shows only the expiry timestamp, not upload time.
 Load, save and extension reuse `validateList`: local deadline first, then HEAD.
 Saving an active draft uses PUT only for an available owned upload; otherwise it
 POSTs the current draft and replaces the local receipt after success. A definite

@@ -153,6 +153,8 @@ test('invalidation retains the receipt and draft locally without restoring them 
   invalidateSubmission(state);
   assert.equal(state.submissions[0], receipt);
   assert.equal(receipt.expired, true);
+  assert.ok(Number.isFinite(Date.parse(receipt.invalidatedAt)));
+  const invalidatedAt = receipt.invalidatedAt;
   assert.deepEqual(state.invalidatedDraft, payload);
   assert.deepEqual(state.items, []);
   let serialized;
@@ -161,6 +163,7 @@ test('invalidation retains the receipt and draft locally without restoring them 
   assert.deepEqual(loadState(storage).state, state);
   state.items = structuredClone(payload.items);
   invalidateSubmission(state);
+  assert.equal(receipt.invalidatedAt, invalidatedAt);
   assert.deepEqual(state.items, payload.items);
 });
 
