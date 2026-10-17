@@ -21,9 +21,9 @@ test('patient upload and doctor retrieval use the same server PIN and exact snap
     assert.ok(options.signal instanceof AbortSignal);
     if (options.method === 'POST') {
       snapshot = JSON.parse(options.body);
-      return Response.json({ pin: '01Z9QW' }, { status: 201 });
+      return Response.json({ pin: '0042' }, { status: 201 });
     }
-    assert.equal(url, '/api/v1/transfers/01Z9QW');
+    assert.equal(url, '/api/v1/transfers/0042');
     return Response.json(snapshot);
   });
   const receipt = await sendList({ version: 1, regimen: 'FOLFOX4', items });
@@ -31,7 +31,7 @@ test('patient upload and doctor retrieval use the same server PIN and exact snap
   assert.deepEqual(received, { regimen: 'FOLFOX4', items });
   const list = addList(createDoctorState(), { pin: receipt.pin, ...received });
   assert.deepEqual(list.items.map(({ id, ...item }) => item), items);
-  assert.deepEqual(calls, ['/api/v1/transfers', '/api/v1/transfers/01Z9QW']);
+  assert.deepEqual(calls, ['/api/v1/transfers', '/api/v1/transfers/0042']);
   snapshot = { text: toText([items[1]]) };
   assert.deepEqual(await fetchListByPin(receipt.pin), { regimen: '', items: [items[1]] });
 });
@@ -55,7 +55,9 @@ test('malformed stored data cannot become a partial or demo patient list', () =>
 
 test('invalid PIN does not make a request', async t => {
   const fetch = t.mock.method(globalThis, 'fetch', () => { throw new Error('unexpected request'); });
-  await assert.rejects(fetchListByPin('../'), /6 znaků/);
+  for (const pin of ['../', '12345', 'ABC234', 'ab1234', '123456', '１２３４']) {
+    await assert.rejects(fetchListByPin(pin), /4 číslice/);
+  }
   assert.equal(fetch.mock.callCount(), 0);
 });
 
@@ -63,17 +65,17 @@ test('retrieval errors are readable and never replaced by demo data or retried',
   for (const [status, message] of [[404, /nebyl nalezen/], [429, /minutu/], [503, /není dostupné/]]) {
     await t.test(String(status), async t => {
       const fetch = t.mock.method(globalThis, 'fetch', async () => new Response('', { status }));
-      await assert.rejects(fetchListByPin('ABC234'), message);
+      await assert.rejects(fetchListByPin('1234'), message);
       assert.equal(fetch.mock.callCount(), 1);
     });
   }
   await t.test('network failure', async t => {
     t.mock.method(globalThis, 'fetch', async () => { throw new TypeError('offline'); });
-    await assert.rejects(fetchListByPin('ABC234'), /připojení/);
+    await assert.rejects(fetchListByPin('1234'), /připojení/);
   });
   await t.test('invalid JSON', async t => {
     t.mock.method(globalThis, 'fetch', async () => new Response('{broken'));
-    await assert.rejects(fetchListByPin('ABC234'), /platný seznam/);
+    await assert.rejects(fetchListByPin('1234'), /platný seznam/);
   });
 });
 
@@ -83,7 +85,7 @@ test('minimal recognized medicines reach the doctor without invented fields', ()
   const payload = { version: 1, items };
   assert.deepEqual(parsePatientList(payload).items, items);
   assert.deepEqual(parsePatientList({ text: toText(items) }).items, items);
-  const list = addList(createDoctorState(), { pin: 'ABC234', ...parsePatientList(payload) });
+  const list = addList(createDoctorState(), { pin: '1234', ...parsePatientList(payload) });
   assert.deepEqual(list.items.map(({ id, ...item }) => item), items);
 });
 
@@ -93,7 +95,7 @@ test('doctor uses the storage upload timestamp and never invents a missing or in
     t.mock.method(globalThis, 'fetch', async () => Response.json({ version: 1, regimen: '', items }, {
       headers: timestamp === null ? {} : { 'X-Uploaded-At': timestamp },
     }));
-    const received = await fetchListByPin('ABC234');
+    const received = await fetchListByPin('1234');
     assert.equal(received.sentAt, timestamp === '2026-10-17T12:34:56Z' ? '2026-10-17T12:34:56.000Z' : undefined);
     assert.deepEqual(received.items, items);
     t.mock.restoreAll();

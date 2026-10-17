@@ -1,4 +1,4 @@
-import { newId, buildTransferPayload } from './lists.js';
+import { newId, buildTransferPayload, isPin } from './lists.js';
 
 let regimens;
 
@@ -46,7 +46,7 @@ export async function recognizePhoto(file) {
 
 export async function sendList(payload, existingPin) {
   if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) throw new Error('Seznam je prázdný.');
-  if (existingPin !== undefined && !/^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(existingPin)) {
+  if (existingPin !== undefined && !isPin(existingPin)) {
     throw new Error('Tento PIN nelze upravit v úložišti.');
   }
   const snapshot = buildTransferPayload(payload.items, payload.regimen ?? '');
@@ -72,7 +72,7 @@ export async function sendList(payload, existingPin) {
   let pin;
   try {
     ({ pin } = await response.json());
-    if ((existingPin && pin !== existingPin) || typeof pin !== 'string' || !/^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin)) throw new Error();
+    if ((existingPin && pin !== existingPin) || !isPin(pin)) throw new Error();
   } catch {
     throw new Error('Úložiště nevrátilo platný PIN. Seznam již mohl být uložen.');
   }

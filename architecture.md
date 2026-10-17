@@ -17,7 +17,7 @@
 ## Storage contract
 
 - `POST /v1/transfers`: store any valid JSON as exact bytes; return HTTP 201
-  with only `{"pin":"A7K2QM"}`. No payload fields are interpreted.
+  with only `{"pin":"0042"}`. No payload fields are interpreted.
 - `GET /v1/transfers/{pin}`: return those same bytes as `application/json`;
   return 404 for unknown or invalid PINs. Repeated GETs do not consume the blob.
 - `PUT /v1/transfers/{pin}`: replace an existing JSON blob, return HTTP 200
@@ -33,8 +33,14 @@
 Use `/api` before these paths through the frontend proxy. POST requires
 `Content-Type: application/json`. The API and SQLite enforce a 1 MiB payload
 limit (1,048,576 bytes). The proxy must permit the same limit when deployed.
-PINs are six random Crockford Base32 characters, stored only as HMAC digests;
-collisions do not overwrite data. Keep `TRANSFER_HMAC_SECRET` outside source
+PINs are strings of exactly four ASCII digits (`0000`–`9999`), with leading zeros
+preserved. HMAC digests are the lookup keys; optional admin debug mode also stores
+the readable PIN. Random allocation plus a bounded namespace scan finds remaining
+free PINs; the DB unique key prevents concurrent collisions from overwriting data.
+The 10,000-code capacity returns 503 when full, while PUT remains available.
+Old six-character codes are rejected without deleting their DB rows. Deploy API
+and UI together. Patient v1/v2 receipts migrate to drafts for a new four-digit POST,
+preserving original browser keys; the active patient key is v3 and doctor key v2. Keep `TRANSFER_HMAC_SECRET` outside source
 control and images; rotation invalidates outstanding PINs.
 
 The patient PWA sends `{ "version": 1, "regimen": "…", "items": […] }`,

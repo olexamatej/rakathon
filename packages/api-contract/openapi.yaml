@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   title: PillGaze Blob Storage API
-  version: 0.3.0
+  version: 0.4.0
   description: >-
-    Store opaque JSON and retrieve its exact bytes using a six-character PIN.
+    Store opaque JSON and retrieve its exact bytes using a four-digit PIN.
     No expiry, consumption, revocation, or encryption enforcement. Synthetic data only.
     Optional password-protected admin lists metadata and deletes selected or all blobs.
     Responses use Cache-Control: no-store. POC storage reads log the requested PIN,
@@ -17,7 +17,8 @@ paths:
       description: >-
         Every successful POST creates a separate stored blob with a distinct PIN,
         even for byte-identical payloads. No content deduplication or idempotency;
-        repeated submissions are independent copies.
+        repeated submissions are independent copies. At most 10000 four-digit PINs can
+        be occupied; exhausted capacity returns 503 without overwriting any blob.
       requestBody:
         required: true
         content:
@@ -182,7 +183,8 @@ paths:
                           minimum: 0
                           description: Exact JSON payload byte count, not database disk usage.
                         pin:
-                          $ref: '#/components/schemas/Pin'
+                          type: string
+                          description: Stored debug PIN, including historical six-character codes.
                         payload:
                           type: string
                           description: Exact stored JSON text, available only in debug mode.
@@ -254,9 +256,12 @@ components:
     Pin:
       type: string
       description: >-
-        Six-character PIN. New PINs use 23456789ABCDEFGHJKMNPQRSTVWXYZ;
-        existing PINs containing 0 or 1 remain accepted for retrieval.
-      pattern: '^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$'
+        Exactly four ASCII digits (0000–9999), always a string. Preserve leading zeros.
+        Previous six-character PINs are no longer accepted by GET or PUT.
+      pattern: '^[0-9]{4}$'
+      minLength: 4
+      maxLength: 4
+      example: '0042'
   responses:
     BadRequest:
       description: Request is invalid.

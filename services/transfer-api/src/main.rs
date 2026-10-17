@@ -301,6 +301,19 @@ async fn create_blob(
             return Ok((StatusCode::CREATED, Json(CreateBlobResponse { pin })));
         }
     }
+    // Near capacity, random retries alone can fail while a free PIN still exists.
+    // Scan the finite namespace in memory, then let the unique DB key arbitrate races.
+    let occupied = state.store.occupied_pins().await.map_err(|_| ApiError::Unavailable)?;
+    for number in 0..crypto::PIN_SPACE {
+        let pin = format!("{number:04}");
+        let pin_digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
+        if occupied.contains(pin_digest.as_slice()) { continue; }
+        let debug_pin = state.admin_debug_visibility.then_some(pin.as_str());
+        if state.store.create_blob(&pin_digest, debug_pin, &body, now).await
+            .map_err(|_| ApiError::Unavailable)? {
+            return Ok((StatusCode::CREATED, Json(CreateBlobResponse { pin })));
+        }
+    }
     Err(ApiError::Unavailable)
 }
 
@@ -463,15 +476,14 @@ mod blob_tests {
             json_headers(), Bytes::from_static(b"{\"old\":true}")).await.unwrap_or_else(|_| panic!("create failed"));
         let app = storage_router(state.clone());
         let payload = b" { \"edited\": [true, null] }\n";
+        let missing = if receipt.pin == "1234" { "5678" } else { "1234" };
         for (pin, body, content_type, expected) in [
             (receipt.pin.as_str(), payload.as_slice(), "application/json", StatusCode::OK),
             (receipt.pin.as_str(), b"not json".as_slice(), "application/json", StatusCode::BAD_REQUEST),
             (receipt.pin.as_str(), b"{}".as_slice(), "text/plain", StatusCode::BAD_REQUEST),
-            ("ABC234", b"{}".as_slice(), "application/json", StatusCode::NOT_FOUND),
+            (missing, b"{}".as_slice(), "application/json", StatusCode::NOT_FOUND),
             ("invalid", b"{}".as_slice(), "application/json", StatusCode::NOT_FOUND),
         ] {
-            // Ensure the deterministic missing PIN cannot collide with the generated PIN.
-            if pin == "ABC234" && receipt.pin == pin { continue; }
             let mut request = Request::builder().method("PUT").uri(format!("/v1/transfers/{pin}"))
                 .header(header::CONTENT_TYPE, content_type)
                 .body(axum::body::Body::from(body.to_vec())).unwrap();
@@ -493,6 +505,49 @@ mod blob_tests {
         request.extensions_mut().insert(ConnectInfo(address));
         assert_eq!(app.oneshot(request).await.unwrap().status(), StatusCode::PAYLOAD_TOO_LARGE);
         assert_eq!(state.store.get_blob(&digest).await.unwrap().unwrap(), payload);
+    }
+
+    #[tokio::test]
+    async fn last_free_pin_is_allocated_with_zeros_and_full_storage_never_overwrites() {
+        let mut state = state().await;
+        state.admin_debug_visibility = true;
+        for number in 0..crypto::PIN_SPACE {
+            if number == 42 { continue; }
+            let pin = format!("{number:04}");
+            let digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
+            assert!(state.store.create_blob(&digest, None, b"{\"original\":true}", 1).await.unwrap());
+        }
+        let address = "127.0.0.1:1234".parse::<SocketAddr>().unwrap();
+        // Concurrent uploads compete for the sole remaining PIN. Exactly one succeeds.
+        let upload = || create_blob(State(state.clone()), ConnectInfo(address),
+            json_headers(), Bytes::from_static(b"{\"new\":true}"));
+        let (first, second) = tokio::join!(upload(), upload());
+        let (success, failure) = if first.is_ok() { (first, second) } else { (second, first) };
+        let (_, Json(receipt)) = success.unwrap_or_else(|_| panic!("last free PIN was missed"));
+        assert_eq!(receipt.pin, "0042");
+        assert_eq!(failure.into_response().status(), StatusCode::SERVICE_UNAVAILABLE);
+        let rows = state.store.list_blobs(0, true).await.unwrap();
+        assert_eq!(rows[0].pin.as_deref(), Some("0042"));
+        let response = get_blob(State(state.clone()), ConnectInfo(address), Path("0042".into()))
+            .await.unwrap_or_else(|_| panic!("read failed"));
+        assert_eq!(axum::body::to_bytes(response.into_body(), MAX_BODY_BYTES).await.unwrap(), b"{\"new\":true}"[..]);
+        let Json(updated) = update_blob(State(state.clone()), ConnectInfo(address), Path("0042".into()),
+            json_headers(), Bytes::from_static(b"{\"updated\":true}"))
+            .await.unwrap_or_else(|_| panic!("update failed"));
+        assert_eq!(updated.pin, "0042");
+        assert_eq!(upload().await.into_response().status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(state.store.occupied_pins().await.unwrap().len(), crypto::PIN_SPACE);
+        for (pin, expected) in [("0000", b"{\"original\":true}".as_slice()),
+            ("0042", b"{\"updated\":true}".as_slice())] {
+            let digest = crypto::digest(&state.pepper, b"blob-pin:v1", pin.as_bytes());
+            assert_eq!(state.store.get_blob(&digest).await.unwrap().unwrap(), expected);
+        }
+        for pin in ["42", "00042", "ABC234", "123456"] {
+            assert_eq!(get_blob(State(state.clone()), ConnectInfo(address), Path(pin.into()))
+                .await.into_response().status(), StatusCode::NOT_FOUND);
+            assert_eq!(update_blob(State(state.clone()), ConnectInfo(address), Path(pin.into()),
+                json_headers(), Bytes::from_static(b"{}")).await.into_response().status(), StatusCode::NOT_FOUND);
+        }
     }
 
     #[derive(Clone)]
@@ -520,7 +575,7 @@ mod blob_tests {
             let (_, Json(receipt)) = create_blob(State(state.clone()), ConnectInfo(address),
                 json_headers(), Bytes::from_static(b"{\"secret\":\"not-in-audit\"}"))
                 .await.unwrap_or_else(|_| panic!("create failed"));
-            let missing = if receipt.pin == "ABC234" { "DEF567" } else { "ABC234" };
+            let missing = if receipt.pin == "1234" { "5678" } else { "1234" };
             for (pin, status) in [(receipt.pin.as_str(), StatusCode::OK),
                 (missing, StatusCode::NOT_FOUND), ("bad\nPIN", StatusCode::NOT_FOUND)] {
                 let result = get_blob(State(state.clone()), ConnectInfo(address), Path(pin.to_owned())).await;
@@ -644,7 +699,7 @@ mod blob_tests {
                 Bytes::from(payload),
             ).await.unwrap_or_else(|_| panic!("valid JSON rejected"));
             assert_eq!(status, StatusCode::CREATED);
-            assert_eq!(response.pin.len(), 6);
+            assert_eq!(response.pin.len(), 4);
             let value = serde_json::to_value(response).unwrap();
             assert_eq!(value.as_object().unwrap().len(), 1);
             assert!(value.get("pin").is_some());

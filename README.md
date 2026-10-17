@@ -81,7 +81,7 @@ vyfotit znovu. Podrobnosti: [OpenRouter transcription](docs/gemini-transcription
 „Odeslat seznam“ uloží verzovaný strukturovaný JSON `{ version: 1, regimen, items }` přes
 `POST /api/v1/transfers`. Každá položka obsahuje pouze název, dávkování, počet
 dávek v balení a případný rozpis užívání; lékař tyto položky načte a vykreslí.
-PIN vrací storage API a PWA jej zobrazí po úspěšném odeslání. Blob lze vyzvednout
+Čtyřmístný číselný PIN (`0000`–`9999`, včetně počátečních nul) vrací storage API a PWA jej zobrazí po úspěšném odeslání. Blob lze vyzvednout
 přes `GET /api/v1/transfers/{pin}`. Lékař nadále
 umí načíst i dřívější textový formát `{ text }`.
 Používejte pouze syntetická data: storage nevynucuje šifrování ani expiraci.

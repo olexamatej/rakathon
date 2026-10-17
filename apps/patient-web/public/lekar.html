@@ -22,7 +22,7 @@
         <form id="pin-form" novalidate>
           <label for="pin">PIN pacienta</label>
           <div class="pin-row">
-            <input id="pin" name="pin" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC234" aria-describedby="pin-error" autofocus>
+            <input id="pin" name="pin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" autocomplete="off" spellcheck="false" placeholder="0042" aria-describedby="pin-error" autofocus>
             <button type="submit" class="primary" id="pin-submit">Zobrazit</button>
           </div>
           <p id="pin-error" class="field-error" role="alert"></p>

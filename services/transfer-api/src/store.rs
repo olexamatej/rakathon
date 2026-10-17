@@ -1,4 +1,4 @@
-use std::net::IpAddr;
+use std::{collections::HashSet, net::IpAddr};
 
 use chrono::Utc;
 use serde::Serialize;
@@ -79,6 +79,12 @@ impl TransferStore {
         .execute(&self.pool)
         .await?;
         Ok(result.rows_affected() == 1)
+    }
+
+    pub async fn occupied_pins(&self) -> Result<HashSet<Vec<u8>>, sqlx::Error> {
+        let digests: Vec<Vec<u8>> = sqlx::query_scalar("SELECT pin_digest FROM blob_transfers")
+            .fetch_all(&self.pool).await?;
+        Ok(digests.into_iter().collect())
     }
 
     pub async fn update_blob(&self, pin_digest: &[u8; 32], payload: &[u8], uploaded_at: i64) -> Result<bool, sqlx::Error> {

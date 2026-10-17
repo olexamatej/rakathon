@@ -19,7 +19,7 @@ test('remote backend preserves storage bytes, query, auth, status and retry-afte
     if (req.method === 'DELETE') return res.writeHead(204, headers).end();
     if (req.url.includes('offset=100')) return res.writeHead(429, { ...headers, 'Retry-After': '60' }).end('{"status":429}');
     if (req.url.endsWith('/MISSING')) return res.writeHead(404, headers).end('{"status":404}');
-    if (req.method === 'POST') return res.writeHead(201, headers).end('{"pin":"A7K2QM"}');
+    if (req.method === 'POST') return res.writeHead(201, headers).end('{"pin":"4729"}');
     res.writeHead(200, headers).end(' {"version":1,"regimen":"žádný","items":[]}\n');
   });
   const backendUrl = await listen(t, upstream);
@@ -29,14 +29,14 @@ test('remote backend preserves storage bytes, query, auth, status and retry-afte
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ignored', Cookie: 'ignored=yes', 'X-Forwarded-For': '1.2.3.4' }, body: payload,
   });
   assert.equal(upload.status, 201);
-  assert.deepEqual(await upload.json(), { pin: 'A7K2QM' });
+  assert.deepEqual(await upload.json(), { pin: '4729' });
   assert.equal(upload.headers.get('cache-control'), 'no-store');
   assert.equal(upload.headers.get('set-cookie'), null);
   assert.equal(requests[0].url, '/api/v1/transfers');
   assert.equal(requests[0].body.toString(), payload);
   assert.equal(requests[0].headers['content-type'], 'application/json');
   for (const name of ['authorization', 'cookie', 'x-forwarded-for']) assert.equal(requests[0].headers[name], undefined);
-  const retrieval = await fetch(base + '/api/v1/transfers/A7K2QM');
+  const retrieval = await fetch(base + '/api/v1/transfers/4729');
   assert.equal(await retrieval.text(), payload);
   assert.equal(retrieval.headers.get('x-uploaded-at'), '2026-10-17T12:34:56Z');
   assert.equal((await fetch(base + '/api/v1/transfers/MISSING')).status, 404);
@@ -116,16 +116,16 @@ test('remote proxy allows PUT only for an existing transfer path and preserves J
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     assert.equal(req.method, 'PUT');
-    assert.equal(req.url, '/api/v1/transfers/ABC234');
+    assert.equal(req.url, '/api/v1/transfers/1234');
     assert.equal(Buffer.concat(chunks).toString(), payload);
-    res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"pin":"ABC234"}');
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"pin":"1234"}');
   }));
   const base = await listen(t, createAppServer({ backendUrl }));
-  const response = await fetch(base + '/api/v1/transfers/ABC234', {
+  const response = await fetch(base + '/api/v1/transfers/1234', {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: payload,
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { pin: 'ABC234' });
+  assert.deepEqual(await response.json(), { pin: '1234' });
   assert.equal((await fetch(base + '/api/v1/transfers', { method: 'PUT', body: '{}' })).status, 405);
   assert.equal(calls, 1);
 });

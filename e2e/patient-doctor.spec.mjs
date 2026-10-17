@@ -45,7 +45,7 @@ for (const source of ['mobile', 'desktop']) {
       const payload = upload.request().postDataJSON();
       expect(payload).toEqual({ version: 1, regimen: '', items: medicines });
       const { pin } = await upload.json();
-      expect(typeof pin === 'string' && /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
+      expect(typeof pin === 'string' && /^[0-9]{4}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
       await expect(page.locator('h1.pin')).toBeVisible();
       expect(await page.locator('h1.pin').textContent() === pin, 'Patient must display the server PIN').toBe(true);
 

@@ -13,7 +13,7 @@ function memoryStorage() {
   };
 }
 const medicine = () => ({ id: newId(), name: 'Ukázkové léčivo', dosage: '10 mg', dosesPerPackage: '30' });
-const receipt = () => ({ pin: 'ABC234', sentAt: '2026-10-16T12:00:00.000Z' });
+const receipt = () => ({ pin: '1234', sentAt: '2026-10-16T12:00:00.000Z' });
 const legacyList = (updatedAt, items = [medicine()], sent = null) => ({
   id: newId(), createdAt: updatedAt, updatedAt, items, receipt: sent,
 });
@@ -75,7 +75,7 @@ test('saving again keeps one PIN and updates its snapshot without clearing the d
 test('invalid server responses cannot create a submission', () => {
   const state = createState();
   state.items.push(medicine());
-  for (const invalid of [null, { pin: '!', sentAt: 'today' }, { pin: 'ABC234' }]) {
+  for (const invalid of [null, { pin: '!', sentAt: 'today' }, { pin: '1234' }]) {
     assert.throws(() => recordSubmission(state, state.items, invalid));
   }
   assert.equal(state.submissions.length, 0);
@@ -174,7 +174,7 @@ test('optional oncology regimen is stored, validated and handed off', () => {
   assert.equal(loadState(fake).state.regimen, 'FOLFOX');
   assert.throws(() => saveState(fake, { ...state, regimen: 'x'.repeat(201) }));
   assert.equal(toText([medicine()], ' FOLFOX\n').split('\n')[0], 'Režim onkologické léčby\tFOLFOX');
-  assert.equal(recordSubmission(state, [medicine()], { pin: 'ABC234', sentAt: new Date().toISOString() }, 'FOLFOX').regimen, 'FOLFOX');
+  assert.equal(recordSubmission(state, [medicine()], { pin: '1234', sentAt: new Date().toISOString() }, 'FOLFOX').regimen, 'FOLFOX');
 });
 
 test('optional API-provided schedule is passed to the handoff but never required', () => {
@@ -216,13 +216,46 @@ test('previous patient history migrates to just the latest PIN and preserves the
   const state = createState();
   state.items.push(medicine());
   const latest = { id: newId(), ...receipt(), items: [medicine()] };
-  const older = { id: newId(), ...receipt(), pin: 'DEF567', items: [medicine()] };
+  const older = { id: newId(), ...receipt(), pin: '5678', items: [medicine()] };
   storage.setItem(STORAGE_KEY, JSON.stringify({ ...state, submissions: [latest, older] }));
   const loaded = loadState(storage).state;
   assert.deepEqual(loaded.items, state.items);
   assert.deepEqual(loaded.submissions, [latest]);
   saveState(storage, loaded);
   assert.deepEqual(JSON.parse(storage.getItem(STORAGE_KEY)).submissions, [latest]);
-  assert.throws(() => recordSubmission(loaded, loaded.items, { ...receipt(), pin: 'DEF567' }));
+  assert.throws(() => recordSubmission(loaded, loaded.items, { ...receipt(), pin: '5678' }));
   assert.deepEqual(loaded.submissions, [latest]);
+});
+
+
+test('old six-character receipts become a draft for a new PIN without changing original storage', () => {
+  for (const draft of [[], [medicine()]]) {
+    const storage = memoryStorage();
+    const snapshot = [medicine()];
+    const previous = { items: draft, regimen: draft.length ? 'draft regimen' : '', submissions: [{
+      id: newId(), pin: 'ABC234', sentAt: receipt().sentAt, items: snapshot, regimen: 'saved regimen',
+    }] };
+    const original = JSON.stringify(previous);
+    storage.setItem('pillgaze:patient:v2', original);
+    const loaded = loadState(storage);
+    assert.equal(loaded.pinMigrated, true);
+    assert.deepEqual(loaded.state.submissions, []);
+    assert.deepEqual(loaded.state.items, draft.length ? draft : snapshot);
+    assert.equal(loaded.state.regimen, draft.length ? 'draft regimen' : 'saved regimen');
+    saveState(storage, loaded.state);
+    assert.equal(storage.getItem('pillgaze:patient:v2'), original);
+    assert.deepEqual(loadState(storage).state, loaded.state);
+  }
+});
+
+test('legacy v1 receipt migrates to a draft and cannot be saved as a current receipt', () => {
+  const storage = memoryStorage();
+  const list = legacyList(receipt().sentAt, [medicine()], { ...receipt(), pin: 'ABC234' });
+  saveLegacy(storage, list);
+  const loaded = loadState(storage);
+  assert.equal(loaded.pinMigrated, true);
+  assert.deepEqual(loaded.state.items, list.items);
+  assert.deepEqual(loaded.state.submissions, []);
+  assert.throws(() => recordSubmission(loaded.state, list.items, list.receipt));
+  assert.equal(JSON.parse(storage.getItem('pillgaze:list:v1:' + list.id)).receipt.pin, 'ABC234');
 });

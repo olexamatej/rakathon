@@ -41,7 +41,7 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
     submissions: [],
   };
   await page.goto('/pacient');
-  await page.evaluate(value => localStorage.setItem('pillgaze:patient:v2', JSON.stringify(value)), draft);
+  await page.evaluate(value => localStorage.setItem('pillgaze:patient:v3', JSON.stringify(value)), draft);
   await page.reload();
   const send = page.getByRole('button', { name: 'Uložit seznam' });
   await expect(send).toBeEnabled();
@@ -54,7 +54,7 @@ test('Odeslat seznam stores one record visible in storage admin', async ({ page,
   expect(payload.version).toBe(1);
   expect(payload.items).toEqual([{ name: draft.items[0].name, dosage: 'TEST', dosesPerPackage: '1' }]);
   const { pin } = await upload.json();
-  expect(typeof pin === 'string' && /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
+  expect(typeof pin === 'string' && /^[0-9]{4}$/.test(pin), 'Server must issue a valid PIN').toBe(true);
   await expect(page.locator('h1.pin')).toBeVisible();
   expect(await page.locator('h1.pin').textContent() === pin, 'Displayed PIN must match server receipt').toBe(true);
 

@@ -348,7 +348,7 @@ function clearInteractions(list) {
 // --- PIN entry ---
 const pinInput = $('#pin');
 pinInput.addEventListener('input', () => {
-  pinInput.value = normalizePin(pinInput.value).slice(0, 6);
+  pinInput.value = normalizePin(pinInput.value);
   $('#pin-error').textContent = '';
   pinInput.removeAttribute('aria-invalid');
 });
@@ -358,7 +358,7 @@ $('#pin-form').addEventListener('submit', async event => {
   if (loading) return;
   const pin = normalizePin(pinInput.value);
   if (!isPin(pin)) {
-    $('#pin-error').textContent = 'PIN má 6 znaků (písmena A–Z a číslice 0–9).';
+    $('#pin-error').textContent = 'PIN musí mít přesně 4 číslice.';
     pinInput.setAttribute('aria-invalid', 'true');
     return;
   }
@@ -394,7 +394,7 @@ $('#pin-form').addEventListener('submit', async event => {
 // Load it through the same form flow so errors are shown in the usual place.
 const sharedPin = new URLSearchParams(location.search).get('pin');
 if (sharedPin) {
-  pinInput.value = normalizePin(sharedPin).slice(0, 6);
+  pinInput.value = normalizePin(sharedPin);
   $('#pin-form').requestSubmit();
 }
 

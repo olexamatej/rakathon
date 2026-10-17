@@ -20,7 +20,7 @@ test('transcribed photo uploads a structured list readable by the actual doctor 
   let stored;
   t.mock.method(globalThis, 'fetch', async (_, options) => {
     stored = JSON.parse(options.body);
-    return Response.json({ pin: '01Z9QW' }, { status: 201 });
+    return Response.json({ pin: '0042' }, { status: 201 });
   });
   const receipt = await sendList({ items: items.map(item => ({ ...item, photo: 'local photo metadata' })) });
   assert.deepEqual(stored, { version: 1, regimen: '', items: expected });
@@ -57,20 +57,20 @@ test('patient uploads its structured JSON and records exactly the storage-issued
     assert.equal(options.redirect, 'error');
     assert.ok(options.signal instanceof AbortSignal);
     stored = JSON.parse(options.body);
-    return new Response(JSON.stringify({ pin: '0AZ9QW' }), { status: 201 });
+    return new Response(JSON.stringify({ pin: '0123' }), { status: 201 });
   });
   const receipt = await sendList(payload);
   assert.deepEqual(stored, payload);
   assert.ok(!JSON.stringify(stored).includes('local-id'));
-  assert.equal(receipt.pin, '0AZ9QW');
+  assert.equal(receipt.pin, '0123');
   assert.ok(Number.isFinite(Date.parse(receipt.sentAt)));
   const entry = recordSubmission(state, state.items, receipt, 'FOLFOX');
-  assert.equal(entry.pin, '0AZ9QW');
+  assert.equal(entry.pin, '0123');
   assert.equal(state.submissions[0].pin, receipt.pin);
   let saved;
   const storage = { setItem: (_, value) => { saved = value; }, getItem: () => saved };
   saveState(storage, state);
-  assert.equal(loadState(storage).state.submissions[0].pin, '0AZ9QW');
+  assert.equal(loadState(storage).state.submissions[0].pin, '0123');
   assert.equal(fetch.mock.callCount(), 1);
 });
 
@@ -78,7 +78,7 @@ test('saving the same patient list twice reuses its PIN and keeps one receipt', 
   const state = createState();
   state.items.push({ id: 'local-id', name: 'Ukázkové léčivo', dosage: '10 mg', dosesPerPackage: '30' });
   const payload = { version: 1, regimen: '', items: [{ name: state.items[0].name, dosage: state.items[0].dosage, dosesPerPackage: state.items[0].dosesPerPackage }] };
-  const pin = '01Z9QW';
+  const pin = '0042';
   const bodies = [];
   t.mock.method(globalThis, 'fetch', async (_, options) => {
     bodies.push(options.body);
@@ -98,8 +98,8 @@ test('saving the same patient list twice reuses its PIN and keeps one receipt', 
   assert.deepEqual(loadState(storage).state.submissions, state.submissions);
 });
 
-test('storage PINs containing 0 and 1 and old simulated PINs remain readable', () => {
-  for (const pin of ['01Z9QW', 'ILOU23']) {
+test('four-digit PINs retain leading zeros in local storage', () => {
+  for (const pin of ['0042', '0000']) {
     const state = createState();
     state.items.push({ id: 'local-id', name: 'Ukázkové léčivo', dosage: '10 mg', dosesPerPackage: '30' });
     recordSubmission(state, state.items, { pin, sentAt: new Date().toISOString() });
@@ -133,8 +133,8 @@ test('storage failures do not return a receipt or retry the upload', async t => 
   }
 });
 
-test('only a valid six-character Crockford storage PIN is accepted', async t => {
-  for (const body of ['{broken', 'null', '{}', '{"pin":123456}', '{"pin":"ABC"}', '{"pin":"ABC23I"}', '{"pin":"abc234"}', '{"pin":"ABC2347"}']) {
+test('only a four-digit ASCII string storage PIN is accepted', async t => {
+  for (const body of ['{broken', 'null', '{}', '{"pin":1234}', '{"pin":"123"}', '{"pin":"12345"}', '{"pin":"ABC234"}', '{"pin":"１２３４"}', '{"pin":"ABC"}', '{"pin":"ABC23I"}', '{"pin":"abc234"}', '{"pin":"12347"}']) {
     await t.test(body, async t => {
       const fetch = t.mock.method(globalThis, 'fetch', async () => new Response(body, { status: 201 }));
       await assert.rejects(sendList(validPayload), /nevrátilo platný PIN/);
@@ -147,13 +147,13 @@ test('only a valid six-character Crockford storage PIN is accepted', async t => 
 test('editing replaces the same server PIN and local snapshot without adding history', async t => {
   const state = createState();
   state.items = [{ id: 'local-id', ...validPayload.items[0] }];
-  const original = recordSubmission(state, state.items, { pin: 'ABC234', sentAt: '2026-10-16T12:00:00Z' }, 'old');
+  const original = recordSubmission(state, state.items, { pin: '1234', sentAt: '2026-10-16T12:00:00Z' }, 'old');
   state.items[0].name = 'Upravené léčivo';
   const fetch = t.mock.method(globalThis, 'fetch', async (url, options) => {
-    assert.equal(url, '/api/v1/transfers/ABC234');
+    assert.equal(url, '/api/v1/transfers/1234');
     assert.equal(options.method, 'PUT');
     assert.deepEqual(JSON.parse(options.body), { version: 1, regimen: 'new', items: [{ ...validPayload.items[0], name: 'Upravené léčivo' }] });
-    return Response.json({ pin: 'ABC234' });
+    return Response.json({ pin: '1234' });
   });
   const receipt = await sendList({ items: state.items, regimen: 'new' }, original.pin);
   const saved = updateSubmission(state, original.id, state.items, receipt, 'new');
@@ -171,12 +171,12 @@ test('editing replaces the same server PIN and local snapshot without adding his
 });
 
 test('failed updates never fall back to POST or change saved history', async t => {
-  for (const [status, body] of [[404, {}], [503, {}], [200, { pin: 'DEF567' }]]) {
+  for (const [status, body] of [[404, {}], [503, {}], [200, { pin: '5678' }]]) {
     const fetch = t.mock.method(globalThis, 'fetch', async (_, options) => {
       assert.equal(options.method, 'PUT');
       return Response.json(body, { status });
     });
-    await assert.rejects(sendList(validPayload, 'ABC234'));
+    await assert.rejects(sendList(validPayload, '1234'));
     assert.equal(fetch.mock.callCount(), 1);
     fetch.mock.restore();
   }

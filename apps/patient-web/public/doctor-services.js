@@ -39,7 +39,7 @@ export function parsePatientList(blob) {
 
 export async function fetchListByPin(value) {
   const pin = normalizePin(value);
-  if (!isPin(pin)) throw new Error('PIN musí mít 6 znaků.');
+  if (!isPin(pin)) throw new Error('PIN musí mít přesně 4 číslice.');
   let response;
   try {
     response = await fetch(`/api/v1/transfers/${encodeURIComponent(pin)}`, {

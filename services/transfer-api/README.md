@@ -4,16 +4,19 @@ Rust/Axum + SQLite. Two public data endpoints, plus optional protected administr
 
 | Endpoint | Behavior |
 | --- | --- |
-| `POST /v1/transfers` | Store any valid JSON, preserving exact request bytes; return HTTP 201 with only `{"pin":"A7K2QM"}`. |
+| `POST /v1/transfers` | Store any valid JSON, preserving exact request bytes; return HTTP 201 with only `{"pin":"0042"}`. |
 | `GET /v1/transfers/{pin}` | Return the original JSON bytes, HTTP 200 and `Content-Type: application/json`; unknown or invalid PIN returns 404. |
 
 Through the VPS frontend proxy, prefix these paths with `/api`.
 POST requires `Content-Type: application/json`; the maximum body is 1 MiB
 (1,048,576 bytes), enforced by the API and SQLite.
 No medication schema, wrapper, or encryption envelope is required.
-New PINs use six uniformly random characters from `23456789ABCDEFGHJKMNPQRSTVWXYZ`,
-excluding ambiguous `0`, `1`, `I`, `L`, and `O` (and the previously excluded `U`).
-Previously issued PINs containing `0` or `1` remain valid for retrieval.
+PINs are exactly four ASCII digits, returned and accepted as strings (`0000`–`9999`).
+Leading zeros are significant. Generation uses unbiased cryptographic randomness.
+There are at most 10,000 simultaneously occupied four-digit PINs. After bounded
+random collision retries, allocation scans the remaining codes; concurrent uploads
+are resolved by the database unique key. Full storage returns HTTP 503 without
+modifying existing records. PUT still works when all PINs are occupied.
 Collisions never overwrite data;
 only keyed PIN digests are stored in SQLite. GET is repeatable and does not delete
 or consume the blob. There is no expiry, public DELETE, revocation, or idempotency key.
@@ -24,8 +27,8 @@ content-based deduplication, including retries. Copies can be deleted independen
 ```sh
 curl http://127.0.0.1:3000/v1/transfers \
   -H 'Content-Type: application/json' --data-binary '{"items":["synthetic"]}'
-# {"pin":"A7K2QM"} (random)
-curl http://127.0.0.1:3000/v1/transfers/A7K2QM
+# {"pin":"0042"} (random)
+curl http://127.0.0.1:3000/v1/transfers/0042
 # {"items":["synthetic"]}
 ```
 
@@ -72,9 +75,18 @@ Ensure gateways, analytics, and access logs do not record those URLs either.
 
 This is a synthetic-data prototype, not a clinically approved or production-safe
 patient data service. Encryption is not enforced; anyone with a PIN can retrieve
-the blob. Six-character PINs and indefinite retention are not a production
+or replace the blob. Four-digit PINs and indefinite retention are not a production
 security design. Storage grows indefinitely; backups, retention, authentication,
 and production monitoring need separate work.
+
+This changes the previous six-character contract. GET/PUT now reject those old
+PINs (404); their database rows remain available to the protected admin and are
+not deleted or renumbered. Deploy API and patient/doctor UI together. The patient
+migrates its old local receipt to an editable draft for a new POST, preserving any
+unfinished draft; original v1/v2 browser storage stays intact. New receipts use
+`pillgaze:patient:v3`; doctor history uses `pillgaze:doctor:v2`, leaving v1 intact.
+Deleting a record releases its PIN for future uploads; an old shared PIN must not
+be treated as a permanent patient identifier.
 
 The old encrypted upload, redeem, revoke, and browser demo routes are removed.
 Historical SQLite migrations are intentionally retained unchanged so existing

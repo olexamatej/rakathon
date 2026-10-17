@@ -9,17 +9,17 @@ test('patient returns from the latest PIN to the original photo upload screen an
   const { pin } = await upload.json();
   await page.goto('/pacient');
   await page.evaluate(({ pin, item }) => {
-    localStorage.setItem('pillgaze:patient:v2', JSON.stringify({
+    localStorage.setItem('pillgaze:patient:v3', JSON.stringify({
       items: [], submissions: [{ id: 'latest-local-id', pin, sentAt: '2026-10-17T12:00:00Z',
         items: [{ id: 'medicine-local-id', ...item }], regimen: 'Původní režim' },
-        { id: 'older-local-id', pin: 'ABC234', sentAt: '2026-10-16T12:00:00Z',
+        { id: 'older-local-id', pin: '1234', sentAt: '2026-10-16T12:00:00Z',
           items: [{ id: 'older-medicine-id', ...item }] }],
     }));
   }, { pin, item });
   await page.goto('/pacient?new=1');
   await expect(page.locator('h1.pin')).toHaveText(pin);
   await expect(page.locator('.submission-history, #history-title')).toHaveCount(0);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v2')).submissions.length)).toBe(1);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')).submissions.length)).toBe(1);
   await page.getByRole('button', { name: 'Zpět k seznamu' }).click();
   await expect(page.locator('.medicine-info strong')).toHaveText(item.name);
   await expect(page.locator('.medicine input')).toHaveCount(0);
@@ -35,7 +35,7 @@ test('patient returns from the latest PIN to the original photo upload screen an
   const expected = { ...payload, regimen: 'Upravený režim', items: [item] };
   const stored = await context.request.get(`/api/v1/transfers/${pin}`);
   expect(await stored.json()).toEqual(expected);
-  const state = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v2')));
+  const state = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')));
   expect(state.submissions).toHaveLength(1);
   expect(state.submissions[0].id).toBe('latest-local-id');
   expect(state.submissions[0].pin).toBe(pin);
@@ -70,7 +70,7 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
   const upload = await context.request.post('/api/v1/transfers', { data: { version: 1, regimen: '', items: [item] } });
   const { pin } = await upload.json();
   await page.goto('/pacient');
-  await page.evaluate(({ pin, item }) => localStorage.setItem('pillgaze:patient:v2', JSON.stringify({
+  await page.evaluate(({ pin, item }) => localStorage.setItem('pillgaze:patient:v3', JSON.stringify({
     items: [], submissions: [{ id: 'latest-local-id', pin, sentAt: '2026-10-17T12:00:00Z', items: [{ id: 'medicine-local-id', ...item }] }],
   })), { pin, item });
   await page.reload();
@@ -87,7 +87,7 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
   await expect(page.locator('#message')).toContainText('nemůže potvrdit');
   await expect(page.locator('#regimen')).toHaveValue('Neuložená změna');
   await expect(page.getByRole('button', { name: 'Z galerie', exact: true })).toBeVisible();
-  const history = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v2')).submissions);
+  const history = await page.evaluate(() => JSON.parse(localStorage.getItem('pillgaze:patient:v3')).submissions);
   expect(history).toHaveLength(1);
   expect(history[0].pin).toBe(pin);
   expect(history[0].items[0].name).toBe(item.name);
@@ -142,4 +142,30 @@ test('patient can queue more photos during recognition and a failed photo does n
   const response = await saved;
   expect(response.status()).toBe(201);
   expect(response.request().postDataJSON().items.map(item => item.name)).toEqual(['První léčivo', 'Třetí léčivo']);
+});
+
+
+test('an old six-character receipt becomes a preserved draft and receives a fresh four-digit PIN', async ({ page }) => {
+  await page.goto('/pacient');
+  const original = JSON.stringify({ items: [], submissions: [{ id: 'legacy-local-id', pin: 'ABC234',
+    sentAt: '2026-10-16T12:00:00Z', items: [{ id: 'medicine-local-id', ...item }], regimen: 'Původní režim' }] });
+  await page.evaluate(value => {
+    localStorage.removeItem('pillgaze:patient:v3');
+    localStorage.setItem('pillgaze:patient:v2', value);
+  }, original);
+  await page.reload();
+  await expect(page.locator('.medicine-info strong')).toHaveText(item.name);
+  await expect(page.locator('#regimen')).toHaveValue('Původní režim');
+  await expect(page.locator('h1.pin')).toHaveCount(0);
+  const upload = page.waitForResponse(response => response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/v1/transfers');
+  await page.getByRole('button', { name: 'Uložit seznam' }).click();
+  const response = await upload;
+  expect(response.status()).toBe(201);
+  const { pin } = await response.json();
+  expect(pin).toMatch(/^[0-9]{4}$/);
+  await expect(page.locator('h1.pin')).toHaveText(pin);
+  expect(await page.evaluate(() => localStorage.getItem('pillgaze:patient:v2'))).toBe(original);
+  await page.reload();
+  await expect(page.locator('h1.pin')).toHaveText(pin);
 });

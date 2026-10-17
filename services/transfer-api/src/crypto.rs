@@ -2,19 +2,18 @@ use hmac::{Hmac, Mac};
 use rand::{rngs::OsRng, RngCore};
 use sha2::Sha256;
 
-const CODE_ALPHABET: &[u8; 32] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-const GENERATED_PIN_ALPHABET: &[u8; 30] = b"23456789ABCDEFGHJKMNPQRSTVWXYZ";
+pub const PIN_SPACE: usize = 10_000;
 
 pub fn new_pin() -> Result<String, rand::Error> {
-    let mut pin = String::with_capacity(6);
+    let mut pin = String::with_capacity(4);
     loop {
-        let mut random = [0_u8; 6];
+        let mut random = [0_u8; 4];
         OsRng.try_fill_bytes(&mut random)?;
         for byte in random {
-            // Reject the two unused indices to keep all 30 characters equally likely.
-            if let Some(&character) = GENERATED_PIN_ALPHABET.get((byte & 0b1_1111) as usize) {
-                pin.push(character as char);
-                if pin.len() == 6 {
+            // Rejection sampling avoids modulo bias; leading zeros are significant.
+            if byte < 250 {
+                pin.push((b'0' + byte % 10) as char);
+                if pin.len() == 4 {
                     return Ok(pin);
                 }
             }
@@ -27,21 +26,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn pin_is_six_alphanumeric_characters() {
-        for _ in 0..100 {
+    fn pin_is_four_ascii_digits() {
+        for _ in 0..1000 {
             let pin = new_pin().unwrap();
-            assert_eq!(pin.len(), 6);
-            assert!(pin.bytes().all(|byte| GENERATED_PIN_ALPHABET.contains(&byte)));
-            assert!(pin.bytes().all(|byte| !b"01ILO".contains(&byte)));
+            assert_eq!(pin.len(), 4);
             assert!(valid_pin(&pin));
         }
     }
 
     #[test]
-    fn previously_issued_pins_with_zero_and_one_remain_valid() {
-        assert!(valid_pin("01ABCD"));
-        assert!(valid_pin("10XYZA"));
-        for pin in ["IOABCD", "LOABCD", "abcdef", "ABC23", "ABC2345"] {
+    fn pin_validation_preserves_zeros_and_rejects_old_or_malformed_codes() {
+        for pin in ["0000", "0042", "1234", "9999"] { assert!(valid_pin(pin)); }
+        for pin in ["123", "12345", "ABC234", "123456", "12a4", "１２３４", " 1234", "1234\n"] {
             assert!(!valid_pin(pin));
         }
     }
@@ -66,8 +62,5 @@ pub fn verify_digest(pepper: &[u8], purpose: &[u8], value: &[u8], expected: &[u8
 }
 
 pub fn valid_pin(code: &str) -> bool {
-    code.len() == 6
-        && code
-            .bytes()
-            .all(|byte| CODE_ALPHABET.contains(&byte))
+    code.len() == 4 && code.bytes().all(|byte| byte.is_ascii_digit())
 }
