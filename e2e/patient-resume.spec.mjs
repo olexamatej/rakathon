@@ -88,3 +88,43 @@ test('failed save keeps the photo upload screen and the previous snapshot withou
   expect(history[0].items[0].name).toBe(item.name);
   expect(writes).toBe(1);
 });
+
+test('patient can queue more photos during recognition and a failed photo does not stop the queue', async ({ page }) => {
+  const requests = [];
+  await page.route('**/api/transcribe', route => { requests.push(route); });
+  await page.goto('/pacient');
+  const photo = name => ({ name, mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p7sAAAAASUVORK5CYII=', 'base64') });
+  await page.locator('#gallery').setInputFiles(photo('first.png'));
+  await expect.poll(() => requests.length).toBe(1);
+  await page.locator('#gallery').evaluate(input => { input.queueTestMarker = true; });
+  await expect(page.getByRole('button', { name: 'Z galerie', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Vyfotit', exact: true })).toBeEnabled();
+  await page.locator('#gallery').setInputFiles([photo('second.png'), photo('third.png')]);
+  await expect(page.locator('.photo-job')).toHaveCount(3);
+  await expect(page.locator('.photo-job').nth(1)).toContainText('Čeká na zpracování');
+  await expect(page.locator('#send')).toBeDisabled();
+  expect(requests).toHaveLength(1);
+  await requests[0].fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify([{ name: 'První léčivo', strength: '10 mg', schedule: null }]) });
+  await expect.poll(() => requests.length).toBe(2);
+  await expect(page.locator('.medicine-info strong')).toHaveText('První léčivo');
+  await expect(page.locator('#send')).toBeDisabled();
+  await requests[1].fulfill({ status: 503, contentType: 'application/json', body: '{}' });
+  await expect.poll(() => requests.length).toBe(3);
+  await expect(page.locator('.photo-job').nth(1)).toHaveClass(/photo-error/);
+  await requests[2].fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify([{ name: 'Třetí léčivo', strength: '5 mg', schedule: null }]) });
+  await expect(page.locator('.medicine-info strong')).toHaveText(['První léčivo', 'Třetí léčivo']);
+  await expect(page.locator('.photo-job').nth(0)).toContainText('Hotovo');
+  await expect(page.locator('.photo-job').nth(2)).toContainText('Hotovo');
+  await expect(page.locator('#send')).toBeEnabled();
+  expect(await page.locator('#gallery').evaluate(input => input.queueTestMarker)).toBe(true);
+  await expect(page.locator('#gallery')).toHaveValue('');
+  const saved = page.waitForResponse(response => response.request().method() === 'POST'
+    && new URL(response.url()).pathname === '/api/v1/transfers');
+  await page.locator('#send').click();
+  const response = await saved;
+  expect(response.status()).toBe(201);
+  expect(response.request().postDataJSON().items.map(item => item.name)).toEqual(['První léčivo', 'Třetí léčivo']);
+});

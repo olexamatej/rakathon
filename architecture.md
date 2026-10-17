@@ -64,6 +64,12 @@ PostgreSQL is not implemented; its old schema is historical only.
 
 ## Photo transcription
 
+The patient can keep selecting or taking photos while recognition runs. A single
+background worker processes the growing queue in order, appending each result
+as it finishes. A failed photo is shown individually and does not stop the queue.
+Saving waits for all queued photos to finish. Native file inputs survive UI
+updates so an open file chooser is preserved.
+
 The patient photo UI currently passes `{ mode: 'demo' }` to `recognizePhoto`,
 producing three complete synthetic medicines without calling Gemini. Calling
 `recognizePhoto(file)` retains real transcription, with no automatic mock fallback.

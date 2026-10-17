@@ -86,6 +86,7 @@ function photoRows() {
 
 function editor() {
   const busy = isBusy();
+  const photoInputBlocked = loadFailed || sending;
   return `<h1 id="medicines-title" class="sr-only">Seznam léčiv</h1>
     <form id="list-form"><section class="medicines" aria-labelledby="medicines-title">
       ${state.items.length ? `<fieldset ${busy ? 'disabled' : ''}>
@@ -104,10 +105,8 @@ function editor() {
       : `<button type="button" class="add-link" data-action="add-regimen" ${busy ? 'disabled' : ''}>${icon('plus')} Přidat režim onkologické léčby</button>`}
     <section class="photo-section" aria-labelledby="photo-title"><div class="section-heading"><h2 id="photo-title">Přidejte fotografie</h2></div>
       <p>Z fotografie přepíšeme názvy léčiv a uvedené dávkování. Po zpracování seznam zkontrolujte.</p>
-      <div class="photo-actions"><button type="button" class="secondary" data-action="gallery" ${busy ? 'disabled' : ''}>${icon('image')} Z galerie</button>
-        <button type="button" class="secondary" data-action="camera" ${busy ? 'disabled' : ''}>${icon('camera')} Vyfotit</button></div>
-      <input type="file" id="camera" accept="image/*" capture="environment" hidden ${busy ? 'disabled' : ''}>
-      <input type="file" id="gallery" accept="image/*" multiple hidden ${busy ? 'disabled' : ''}>
+      <div class="photo-actions"><button type="button" class="secondary" data-action="gallery" ${photoInputBlocked ? 'disabled' : ''}>${icon('image')} Z galerie</button>
+        <button type="button" class="secondary" data-action="camera" ${photoInputBlocked ? 'disabled' : ''}>${icon('camera')} Vyfotit</button></div>
       ${photoRows()}
     </section>
     <div class="send-panel"><button type="submit" id="send" class="primary full" ${!canSend(state.items) || busy ? 'disabled' : ''}>
@@ -116,7 +115,8 @@ function editor() {
 }
 
 function sendHint() {
-  if (processing || !state.items.length || canSend(state.items)) return '';
+  if (processing) return 'Fotografie se zpracovávají. Mezitím můžete přidat další.';
+  if (!state.items.length || canSend(state.items)) return '';
   return 'Některá léčiva jsou neúplná. Odstraňte je a přidejte znovu.';
 }
 
@@ -152,6 +152,10 @@ function render(focus = false) {
       ${storageWarning ? `<p class="notice" role="alert">${escape(storageWarning)}</p>` : ''}
       <p class="save-status" id="save-status" role="status">${saveStatus()}</p>
       ${content}<p class="message" role="status" id="message">${escape(message)}</p></main></div>`;
+  // File inputs live outside #app so pending recognition cannot replace an open chooser.
+  for (const id of ['camera', 'gallery']) {
+    document.getElementById(id).disabled = loadFailed || sending || Boolean(receipt);
+  }
   document.title = `${receipt ? 'PIN' : 'Seznam'} · PillGaze`;
   if (focus) {
     app.querySelector('h1').tabIndex = -1;
@@ -161,12 +165,18 @@ function render(focus = false) {
 }
 
 async function addPhotos(files) {
-  if (!files.length || isBusy()) return;
+  if (!files.length || loadFailed || sending) return;
   const jobs = files.map(file => ({ file, name: file.name, status: 'waiting', url: null }));
   photos.push(...jobs);
+  // One worker drains the queue, including photos added while recognition is pending.
+  if (processing) {
+    render();
+    return;
+  }
   processing = true;
   render();
-  for (const job of jobs) {
+  let job;
+  while ((job = photos.find(photo => photo.status === 'waiting'))) {
     job.status = 'processing';
     render();
     try {
@@ -192,6 +202,7 @@ async function addPhotos(files) {
       job.url = null;
     } finally {
       delete job.file;
+      render();
     }
   }
   processing = false;
@@ -218,7 +229,7 @@ async function openCamera() {
       video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false,
     });
   } catch {
-    return input.click();
+    return document.getElementById('camera')?.click();
   }
   cameraVideo.srcObject = cameraStream;
   cameraDialog.showModal();
@@ -347,11 +358,13 @@ app.addEventListener('mousedown', event => {
   pickSuggestion(option.dataset.name);
 });
 
-app.addEventListener('change', event => {
-  if (['camera', 'gallery'].includes(event.target.id)) {
-    void addPhotos(Array.from(event.target.files || []));
-  }
-});
+for (const id of ['camera', 'gallery']) {
+  document.getElementById(id).addEventListener('change', event => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    void addPhotos(files);
+  });
+}
 
 app.addEventListener('submit', async event => {
   event.preventDefault();
